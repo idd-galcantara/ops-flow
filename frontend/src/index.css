@@ -1,0 +1,195 @@
+:root {
+  /* Design tokens — shared visual language with our-flow (see docs/DESIGN-SYSTEM.md) */
+  --ink: #202735;
+  --muted: #7d8799;
+  --line: #e3e6eb;
+  --panel: #fbfbfc;
+  --canvas: #f5f6f8;
+  --navy: #334258;
+
+  --accent: #df7045;
+  --accent-soft: #fff0ea;
+  --accent-hover: #ca5e37;
+
+  --ok: #5cb78a;
+  --ok-soft: #e4f5ec;
+  --warn: #a17b3c;
+  --warn-soft: #fffaf0;
+  --error: #bd5d58;
+  --error-soft: #fff5f4;
+  --info: #6685a4;
+
+  --mono: 'DM Mono', ui-monospace, Consolas, monospace;
+  --sans: 'Manrope', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--sans);
+  color: var(--ink);
+  background: #f3f4f6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+/* Topbar + brand — mirrors our-flow */
+.topbar {
+  height: 66px;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--ink);
+  border-radius: 8px;
+}
+
+.brand-lockup strong {
+  display: block;
+  font-size: 14px;
+  letter-spacing: -0.3px;
+}
+
+.brand-lockup span {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.topbar-status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-ok {
+  color: #4f896e;
+  background: var(--ok-soft);
+}
+.status-ok .status-dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px #e4f5ec;
+}
+
+.status-error {
+  color: #a94f4a;
+  background: var(--error-soft);
+}
+.status-error .status-dot {
+  background: var(--error);
+}
+
+.status-loading {
+  color: var(--muted);
+  background: #f0f2f4;
+}
+.status-loading .status-dot {
+  background: var(--muted);
+}
+
+/* Content */
+.content {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.welcome-card {
+  width: min(560px, 100%);
+  padding: 34px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.06) 0 10px 24px -12px;
+}
+
+.welcome-card .eyebrow {
+  display: block;
+  color: #a2aab6;
+  font: 9px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.welcome-card h1 {
+  margin: 8px 0 6px;
+  font-size: 26px;
+  letter-spacing: -0.6px;
+}
+
+.welcome-card p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.welcome-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
