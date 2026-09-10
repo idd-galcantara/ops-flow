@@ -45,3 +45,60 @@ export type GroupingMode = 'namespace' | 'cluster' | 'flat';
 export function targetKey(target: Target): string {
   return `${target.cluster}/${target.namespace}`;
 }
+
+/** A container's resource picture inside the describe payload. */
+export interface ContainerDetail {
+  name: string;
+  image: string;
+  ready: boolean;
+  restartCount: number;
+  state: string;
+  reason?: string;
+  requests?: Record<string, string>;
+  limits?: Record<string, string>;
+  /** True for native sidecars (init containers with restartPolicy: Always). */
+  sidecar: boolean;
+}
+
+export interface PodEvent {
+  type: string;
+  reason: string;
+  message: string;
+  count: number;
+  lastSeen?: string;
+}
+
+export interface PodDescribe {
+  cluster: string;
+  namespace: string;
+  name: string;
+  status: string;
+  node: string;
+  podIP?: string;
+  serviceAccount?: string;
+  qosClass?: string;
+  createdAt?: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  conditions: { type: string; status: string; reason?: string; message?: string }[];
+  containers: ContainerDetail[];
+  events: PodEvent[];
+  eventsError?: string;
+}
+
+/** `available: false` means the cluster has no metrics-server (expected case). */
+export interface PodMetricsResult {
+  available: boolean;
+  containers?: { name: string; cpu: string; memory: string }[];
+  window?: string;
+  timestamp?: string;
+  reason?: string;
+}
+
+/** Identifies the pod currently opened in the details panel. */
+export interface PodRef {
+  cluster: string;
+  namespace: string;
+  name: string;
+  containers: string[];
+}

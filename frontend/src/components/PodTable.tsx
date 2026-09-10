@@ -13,6 +13,14 @@ const ROWS_PER_PAGE = 100;
 interface PodTableProps {
   pods: NormalizedPod[];
   grouping: GroupingMode;
+  /** Key of the pod currently open in the details panel. */
+  selectedPod?: string;
+  onSelectPod: (pod: NormalizedPod) => void;
+}
+
+/** Stable identity for a pod row across clusters and namespaces. */
+export function podRowKey(pod: { cluster: string; namespace: string; name: string }): string {
+  return `${pod.cluster}/${pod.namespace}/${pod.name}`;
 }
 
 /**
@@ -20,7 +28,7 @@ interface PodTableProps {
  * same data reads correctly whether it is grouped by namespace, by cluster, or
  * shown flat.
  */
-export function PodTable({ pods, grouping }: PodTableProps) {
+export function PodTable({ pods, grouping, selectedPod, onSelectPod }: PodTableProps) {
   const groups = groupPods(pods, grouping);
   // In grouped modes the grouping dimension is shown in the group header, so the
   // redundant column is dropped from the rows.
@@ -36,6 +44,8 @@ export function PodTable({ pods, grouping }: PodTableProps) {
           grouping={grouping}
           showCluster={showCluster}
           showNamespace={showNamespace}
+          selectedPod={selectedPod}
+          onSelectPod={onSelectPod}
         />
       ))}
     </div>
@@ -47,11 +57,15 @@ function PodGroupTable({
   grouping,
   showCluster,
   showNamespace,
+  selectedPod,
+  onSelectPod,
 }: {
   group: PodGroup;
   grouping: GroupingMode;
   showCluster: boolean;
   showNamespace: boolean;
+  selectedPod?: string;
+  onSelectPod: (pod: NormalizedPod) => void;
 }) {
   const [limit, setLimit] = useState(ROWS_PER_PAGE);
   const visible = group.pods.slice(0, limit);
@@ -99,7 +113,20 @@ function PodGroupTable({
         </thead>
         <tbody>
           {visible.map((pod) => (
-            <tr key={`${pod.cluster}/${pod.namespace}/${pod.name}`}>
+            <tr
+              key={podRowKey(pod)}
+              className={`pod-row ${selectedPod === podRowKey(pod) ? 'is-selected' : ''}`}
+              onClick={() => onSelectPod(pod)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectPod(pod);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Ver detalhes de ${pod.name}`}
+            >
               {showCluster && <td className="mono-cell">{pod.cluster}</td>}
               {showNamespace && <td className="mono-cell">{pod.namespace}</td>}
               <td className="pod-name-cell" title={pod.name}>

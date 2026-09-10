@@ -16,25 +16,66 @@ const defaultPodLister: PodLister = async (target) => {
   return list.items ?? [];
 };
 
+/** Pulls the `message` field out of a Kubernetes Status payload, if present. */
+function kubernetesStatusMessage(body: unknown): string | undefined {
+  if (body && typeof body === 'object' && typeof (body as { message?: unknown }).message === 'string') {
+    return (body as { message: string }).message;
+  }
+  if (typeof body === 'string' && body.includes('"message"')) {
+    try {
+      const parsed = JSON.parse(body) as { message?: unknown };
+      if (typeof parsed.message === 'string') return parsed.message;
+    } catch {
+      // Not JSON after all; fall through.
+    }
+  }
+  return undefined;
+}
+
 /**
- * Turns any thrown value into a short, safe message. Kubernetes client errors
- * can carry response bodies; we keep only a concise reason and never echo
- * credentials or full payloads.
+ * Turns any thrown value into a short, safe message.
+ *
+ * The Kubernetes client raises `ApiException`, whose `message` concatenates the
+ * status code, the raw response body and every response header. Surfacing that
+ * verbatim would be unreadable and could echo sensitive headers, so we extract
+ * just the Kubernetes `Status.message` when available.
  */
 export function safeErrorMessage(reason: unknown): string {
   if (reason && typeof reason === 'object') {
-    const anyReason = reason as { code?: unknown; body?: { message?: unknown }; message?: unknown };
-    if (anyReason.body && typeof anyReason.body === 'object' && typeof anyReason.body.message === 'string') {
-      return anyReason.body.message;
-    }
+    const anyReason = reason as { code?: unknown; body?: unknown; message?: unknown };
+
+    const statusMessage = kubernetesStatusMessage(anyReason.body);
+    if (statusMessage) return statusMessage;
+
+    // Node system errors (ECONNREFUSED, UNABLE_TO_GET_ISSUER_CERT, ...) use string codes.
     if (typeof anyReason.code === 'string' && anyReason.code) {
       return `Falha de conexão (${anyReason.code}).`;
     }
+
     if (typeof anyReason.message === 'string' && anyReason.message) {
+      // Never leak the ApiException dump: its message embeds the raw body and
+      // every response header. Keep the status and the short reason line only.
+      const lines = anyReason.message.split('\n');
+      const codeLine = /^HTTP-Code:\s*(\d+)/.exec(lines[0]);
+      if (codeLine) {
+        const status = codeLine[1];
+        const reason = lines
+          .find((line) => line.startsWith('Message:'))
+          ?.replace(/^Message:\s*/, '')
+          .trim();
+        const useful = reason && reason !== 'Unknown API Status Code!' ? ` ${reason}` : '';
+        return `A API do cluster respondeu ${status}.${useful}`;
+      }
       return anyReason.message;
     }
   }
   return 'Falha ao consultar o alvo.';
+}
+
+/** HTTP status carried by a Kubernetes client error, when there is one. */
+export function errorStatusCode(reason: unknown): number | undefined {
+  const code = (reason as { code?: unknown })?.code;
+  return typeof code === 'number' ? code : undefined;
 }
 
 /**

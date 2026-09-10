@@ -84,34 +84,34 @@ são incrementais — cada uma constrói sobre a anterior.
 
 ## Fase 4 — Describe e métricas
 
-- [ ] 10. Endpoints `describe` e `metrics` (backend)
+- [x] 10. Endpoints `describe` e `metrics` (backend)
   - `GET .../describe`; `GET .../metrics` via `metrics.k8s.io` com `{available:false}` quando não houver metrics-server.
   - _Agente: ops-flow-backend_
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 11. `PodDetailsPanel` (frontend)
+- [x] 11. `PodDetailsPanel` (frontend)
   - Abas Describe e Metrics; mensagem clara quando métricas indisponíveis.
   - _Agente: ops-flow-frontend_
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 11.1 Validar degradação sem metrics-server
+- [x] 11.1 Validar degradação sem metrics-server
   - Testar em cluster sem metrics-server e confirmar que a tela não quebra.
   - _Agente: ops-flow-integration-qa_
   - _Requirements: 4.3_
 
 ## Fase 5 — Logs em streaming
 
-- [ ] 12. WebSocket de logs (backend)
+- [x] 12. WebSocket de logs (backend)
   - `WS .../logs` com container/follow/tailLines; abortar o stream ao fechar o socket.
   - _Agente: ops-flow-backend_
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 13. `LogViewer` (frontend)
+- [x] 13. `LogViewer` (frontend)
   - Conectar no WebSocket; seleção de container, auto-scroll, pausar, limpar, filtro.
   - _Agente: ops-flow-frontend_
   - _Requirements: 5.1, 5.2, 5.4_
 
-- [ ] 13.1 Validar logs ao vivo
+- [x] 13.1 Validar logs ao vivo
   - Acompanhar logs de um pod real; confirmar encerramento limpo ao desconectar.
   - _Agente: ops-flow-integration-qa_
   - _Requirements: 5.1, 5.2, 5.3_

@@ -1,4 +1,4 @@
-import { CoreV1Api, KubeConfig } from '@kubernetes/client-node';
+import { CoreV1Api, KubeConfig, Log, Metrics } from '@kubernetes/client-node';
 import { buildFullCaChain } from './caChain.js';
 
 /**
@@ -50,8 +50,36 @@ export function listContexts(): ContextInfo[] {
   }));
 }
 
-/** Per-context client cache so we don't rebuild an API client on every request. */
+/** Per-context caches so we don't rebuild clients on every request. */
+const scopedConfigCache = new Map<string, KubeConfig>();
 const clientCache = new Map<string, CoreV1Api>();
+const metricsCache = new Map<string, Metrics>();
+const logCache = new Map<string, Log>();
+
+/**
+ * Builds (and caches) a KubeConfig scoped to a single context, with a complete
+ * CA chain applied.
+ *
+ * Scoping a *copy* matters: concurrent fan-out across different contexts must
+ * never mutate a shared "current context".
+ */
+export function scopedConfigForContext(context: string): KubeConfig {
+  const cached = scopedConfigCache.get(context);
+  if (cached) return cached;
+
+  const kc = getKubeConfig();
+  const known = kc.getContexts().some((ctx) => ctx.name === context);
+  if (!known) {
+    throw new Error(`Context desconhecido: ${context}`);
+  }
+
+  const scoped = new KubeConfig();
+  scoped.loadFromDefault();
+  scoped.setCurrentContext(context);
+  completeCaChain(scoped, context);
+  scopedConfigCache.set(context, scoped);
+  return scoped;
+}
 
 /**
  * Builds (and caches) a CoreV1Api scoped to a given context.
@@ -61,21 +89,29 @@ export function coreClientForContext(context: string): CoreV1Api {
   const cached = clientCache.get(context);
   if (cached) return cached;
 
-  const kc = getKubeConfig();
-  const known = kc.getContexts().some((ctx) => ctx.name === context);
-  if (!known) {
-    throw new Error(`Context desconhecido: ${context}`);
-  }
-
-  // Scope a copy of the config to the requested context so concurrent fan-out
-  // against different contexts never mutates a shared "current context".
-  const scoped = new KubeConfig();
-  scoped.loadFromDefault();
-  scoped.setCurrentContext(context);
-  completeCaChain(scoped, context);
-  const client = scoped.makeApiClient(CoreV1Api);
+  const client = scopedConfigForContext(context).makeApiClient(CoreV1Api);
   clientCache.set(context, client);
   return client;
+}
+
+/** Builds (and caches) a metrics.k8s.io reader for a context. */
+export function metricsForContext(context: string): Metrics {
+  const cached = metricsCache.get(context);
+  if (cached) return cached;
+
+  const metrics = new Metrics(scopedConfigForContext(context));
+  metricsCache.set(context, metrics);
+  return metrics;
+}
+
+/** Builds (and caches) a pod log reader for a context. */
+export function logForContext(context: string): Log {
+  const cached = logCache.get(context);
+  if (cached) return cached;
+
+  const log = new Log(scopedConfigForContext(context));
+  logCache.set(context, log);
+  return log;
 }
 
 /**
@@ -111,5 +147,8 @@ function completeCaChain(scoped: KubeConfig, context: string): void {
 /** Test/utility hook to reset cached state. */
 export function resetKubeConfigCache(): void {
   kubeConfig = null;
+  scopedConfigCache.clear();
   clientCache.clear();
+  metricsCache.clear();
+  logCache.clear();
 }

@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
-import { getPods } from '../kube/podsService.js';
+import { errorStatusCode, getPods, safeErrorMessage } from '../kube/podsService.js';
+import { getPodDescribe, getPodMetrics } from '../kube/podDetailsService.js';
 import { parseTargets } from '../kube/parseTargets.js';
 
 /**
@@ -25,4 +26,48 @@ podsRouter.post('/', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : 'Erro ao consultar pods.';
     res.status(500).json({ error: message });
   }
+});
+
+/** Validates the shared :cluster/:namespace/:pod path params. */
+function parsePodParams(
+  params: Record<string, string | undefined>,
+): { cluster: string; namespace: string; pod: string } | { error: string } {
+  const cluster = params.cluster?.trim();
+  const namespace = params.namespace?.trim();
+  const pod = params.pod?.trim();
+  if (!cluster || !namespace || !pod) {
+    return { error: 'Informe cluster, namespace e pod.' };
+  }
+  return { cluster, namespace, pod };
+}
+
+podsRouter.get('/:cluster/:namespace/:pod/describe', async (req: Request, res: Response) => {
+  const parsed = parsePodParams(req.params);
+  if ('error' in parsed) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  try {
+    const describe = await getPodDescribe(parsed.cluster, parsed.namespace, parsed.pod);
+    res.json(describe);
+  } catch (err) {
+    // Preserve 404 (pod gone) and 403 (no permission); anything else is upstream.
+    const status = errorStatusCode(err);
+    const httpStatus = status === 404 || status === 403 ? status : 502;
+    res.status(httpStatus).json({ error: safeErrorMessage(err) });
+  }
+});
+
+podsRouter.get('/:cluster/:namespace/:pod/metrics', async (req: Request, res: Response) => {
+  const parsed = parsePodParams(req.params);
+  if ('error' in parsed) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  // getPodMetrics never throws for a missing metrics-server; it reports
+  // { available: false } so the UI can degrade gracefully.
+  const metrics = await getPodMetrics(parsed.cluster, parsed.namespace, parsed.pod);
+  res.json(metrics);
 });

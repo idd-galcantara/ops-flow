@@ -1,4 +1,10 @@
-import type { ContextInfo, PodsResponse, Target } from './types';
+import type {
+  ContextInfo,
+  PodDescribe,
+  PodMetricsResult,
+  PodsResponse,
+  Target,
+} from './types';
 
 /** Extracts a readable message from a non-OK response. */
 async function errorFrom(res: Response): Promise<Error> {
@@ -32,4 +38,50 @@ export async function fetchPods(targets: Target[]): Promise<PodsResponse> {
   });
   if (!res.ok) throw await errorFrom(res);
   return (await res.json()) as PodsResponse;
+}
+
+/** Path-safe encoding for the cluster/namespace/pod segments. */
+function podPath(cluster: string, namespace: string, pod: string): string {
+  return `/api/pods/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(pod)}`;
+}
+
+/** Reads describe-equivalent details for a pod. */
+export async function fetchPodDescribe(
+  cluster: string,
+  namespace: string,
+  pod: string,
+): Promise<PodDescribe> {
+  const res = await fetch(`${podPath(cluster, namespace, pod)}/describe`);
+  if (!res.ok) throw await errorFrom(res);
+  return (await res.json()) as PodDescribe;
+}
+
+/**
+ * Reads CPU/memory for a pod. Always resolves: clusters without metrics-server
+ * report `available: false` rather than failing.
+ */
+export async function fetchPodMetrics(
+  cluster: string,
+  namespace: string,
+  pod: string,
+): Promise<PodMetricsResult> {
+  const res = await fetch(`${podPath(cluster, namespace, pod)}/metrics`);
+  if (!res.ok) throw await errorFrom(res);
+  return (await res.json()) as PodMetricsResult;
+}
+
+/** Builds the WebSocket URL for streaming a container's logs. */
+export function podLogsUrl(
+  cluster: string,
+  namespace: string,
+  pod: string,
+  options: { container: string; follow: boolean; tailLines: number },
+): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const params = new URLSearchParams({
+    container: options.container,
+    follow: String(options.follow),
+    tailLines: String(options.tailLines),
+  });
+  return `${protocol}//${window.location.host}${podPath(cluster, namespace, pod)}/logs?${params}`;
 }

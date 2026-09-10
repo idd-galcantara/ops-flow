@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CircleAlert, Layers, Search, Workflow } from 'lucide-react';
-import { PodTable } from './components/PodTable';
+import { PodDetailsPanel } from './components/PodDetailsPanel';
+import { PodTable, podRowKey } from './components/PodTable';
 import { TargetErrorBanner } from './components/TargetErrorBanner';
 import { TargetSelector } from './components/TargetSelector';
 import { ViewToolbar } from './components/ViewToolbar';
 import { matchesFilter } from './podPresentation';
 import { useOpsFlowStore } from './store';
+import type { NormalizedPod, PodRef } from './types';
 
 type HealthState = 'loading' | 'ok' | 'error';
 
 export default function App() {
   const [health, setHealth] = useState<HealthState>('loading');
+  const [selected, setSelected] = useState<PodRef | null>(null);
+
+  const openPod = (pod: NormalizedPod) => {
+    setSelected({
+      cluster: pod.cluster,
+      namespace: pod.namespace,
+      name: pod.name,
+      containers: pod.containers,
+    });
+  };
 
   const targets = useOpsFlowStore((s) => s.targets);
   const pods = useOpsFlowStore((s) => s.pods);
@@ -62,7 +74,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="app-body">
+      <div className={`app-body ${selected ? 'has-details' : ''}`}>
         <TargetSelector />
 
         <section className="main-panel">
@@ -109,7 +121,12 @@ export default function App() {
             <TargetErrorBanner errors={targetErrors} />
 
             {pods.length > 0 && visiblePods.length > 0 && (
-              <PodTable pods={visiblePods} grouping={grouping} />
+              <PodTable
+                pods={visiblePods}
+                grouping={grouping}
+                selectedPod={selected ? podRowKey(selected) : undefined}
+                onSelectPod={openPod}
+              />
             )}
 
             {pods.length > 0 && visiblePods.length === 0 && (
@@ -149,6 +166,8 @@ export default function App() {
             )}
           </div>
         </section>
+
+        {selected && <PodDetailsPanel pod={selected} onClose={() => setSelected(null)} />}
       </div>
     </div>
   );
