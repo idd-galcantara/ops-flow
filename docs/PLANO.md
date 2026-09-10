@@ -173,3 +173,13 @@ O `istio-proxy` é injetado como **init container com `restartPolicy: Always`** 
 nativo, Kubernetes 1.29+). O `kubectl` conta esses sidecars nas colunas `READY` e
 `RESTARTS`. A normalização do ops-flow faz o mesmo, garantindo paridade com o terminal,
 e expõe o sidecar na lista de containers para seleção de logs.
+
+## Nota de escala: paginação de linhas na tabela
+
+Na validação da Fase 3, incluir `kube-system` entre os alvos trouxe **1339 pods** num
+único grupo. Renderizar tudo de uma vez colocaria dezenas de milhares de nós no DOM e
+travaria a interface.
+
+A tabela passa a renderizar **100 linhas por grupo**, com ações "Mostrar mais" e
+"Mostrar todos" no rodapé de cada grupo. O agrupamento e os contadores continuam
+refletindo o total real — nenhum pod é descartado, apenas a renderização é adiada.

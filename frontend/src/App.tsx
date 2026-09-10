@@ -1,36 +1,48 @@
-import { useEffect, useState } from 'react';
-import { Layers, Workflow } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CircleAlert, Layers, Search, Workflow } from 'lucide-react';
+import { PodTable } from './components/PodTable';
+import { TargetErrorBanner } from './components/TargetErrorBanner';
+import { TargetSelector } from './components/TargetSelector';
+import { ViewToolbar } from './components/ViewToolbar';
+import { matchesFilter } from './podPresentation';
+import { useOpsFlowStore } from './store';
 
-type HealthState =
-  | { kind: 'loading' }
-  | { kind: 'ok'; service: string }
-  | { kind: 'error'; message: string };
+type HealthState = 'loading' | 'ok' | 'error';
 
-/**
- * Fase 0: shell visual do ops-flow com a linha do our-flow (topbar, brand-mark,
- * paleta terracota) e uma checagem de conectividade com o backend via /api/health.
- * As telas de seleção de alvos e a tabela unificada de pods chegam na Fase 3.
- */
 export default function App() {
-  const [health, setHealth] = useState<HealthState>({ kind: 'loading' });
+  const [health, setHealth] = useState<HealthState>('loading');
+
+  const targets = useOpsFlowStore((s) => s.targets);
+  const pods = useOpsFlowStore((s) => s.pods);
+  const targetErrors = useOpsFlowStore((s) => s.targetErrors);
+  const podsLoading = useOpsFlowStore((s) => s.podsLoading);
+  const podsError = useOpsFlowStore((s) => s.podsError);
+  const hasQueried = useOpsFlowStore((s) => s.hasQueried);
+  const grouping = useOpsFlowStore((s) => s.grouping);
+  const setGrouping = useOpsFlowStore((s) => s.setGrouping);
+  const filter = useOpsFlowStore((s) => s.filter);
+  const setFilter = useOpsFlowStore((s) => s.setFilter);
+  const loadPods = useOpsFlowStore((s) => s.loadPods);
 
   useEffect(() => {
     let active = true;
     fetch('/api/health')
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
+        if (!res.ok) throw new Error();
+        if (active) setHealth('ok');
       })
-      .then((data: { service?: string }) => {
-        if (active) setHealth({ kind: 'ok', service: data.service ?? 'backend' });
-      })
-      .catch((err: unknown) => {
-        if (active) setHealth({ kind: 'error', message: err instanceof Error ? err.message : 'unknown' });
+      .catch(() => {
+        if (active) setHealth('error');
       });
     return () => {
       active = false;
     };
   }, []);
+
+  const visiblePods = useMemo(() => pods.filter((p) => matchesFilter(p, filter)), [filter, pods]);
+
+  const clusterCount = useMemo(() => new Set(pods.map((p) => p.cluster)).size, [pods]);
+  const namespaceCount = useMemo(() => new Set(pods.map((p) => p.namespace)).size, [pods]);
 
   return (
     <div className="app-shell">
@@ -44,42 +56,118 @@ export default function App() {
             <span>Kubernetes unified view</span>
           </div>
         </div>
-        <div className={`topbar-status ${statusClass(health)}`}>
+        <div className={`topbar-status ${health === 'ok' ? 'status-ok' : health === 'error' ? 'status-error' : 'status-loading'}`}>
           <span className="status-dot" />
-          {statusLabel(health)}
+          {health === 'ok' ? 'Read-only' : health === 'error' ? 'Backend offline' : 'Conectando...'}
         </div>
       </header>
 
-      <main className="content">
-        <section className="welcome-card">
-          <div className="welcome-icon">
-            <Layers size={22} />
+      <div className="app-body">
+        <TargetSelector />
+
+        <section className="main-panel">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Visão unificada</span>
+              <h2>Pods</h2>
+            </div>
+            {pods.length > 0 && (
+              <div className="panel-summary">
+                <span>
+                  <strong>{pods.length}</strong> pods
+                </span>
+                <span>
+                  <strong>{clusterCount}</strong> cluster(s)
+                </span>
+                <span>
+                  <strong>{namespaceCount}</strong> namespace(s)
+                </span>
+              </div>
+            )}
           </div>
-          <span className="eyebrow">Fase 0 · Fundação</span>
-          <h1>ops-flow</h1>
-          <p>
-            Visualização unificada e read-only de recursos Kubernetes de múltiplos clusters e
-            namespaces ao mesmo tempo. A seleção de alvos e a tabela unificada de pods entram nas
-            próximas fases.
-          </p>
-          <div className={`topbar-status ${statusClass(health)}`}>
-            <span className="status-dot" />
-            {statusLabel(health)}
+
+          {pods.length > 0 && (
+            <ViewToolbar
+              grouping={grouping}
+              onGroupingChange={setGrouping}
+              filter={filter}
+              onFilterChange={setFilter}
+              visibleCount={visiblePods.length}
+              totalCount={pods.length}
+              onRefresh={() => void loadPods()}
+              loading={podsLoading}
+            />
+          )}
+
+          <div className="panel-content">
+            {podsError && (
+              <p className="panel-error" role="alert">
+                <CircleAlert size={14} /> {podsError}
+              </p>
+            )}
+
+            <TargetErrorBanner errors={targetErrors} />
+
+            {pods.length > 0 && visiblePods.length > 0 && (
+              <PodTable pods={visiblePods} grouping={grouping} />
+            )}
+
+            {pods.length > 0 && visiblePods.length === 0 && (
+              <EmptyState
+                icon={<Search size={21} />}
+                title="Nenhum pod corresponde ao filtro"
+                description="Ajuste ou limpe o filtro para ver os resultados."
+              />
+            )}
+
+            {pods.length === 0 && !podsLoading && (
+              <EmptyState
+                icon={<Layers size={21} />}
+                title={
+                  targets.length === 0
+                    ? 'Monte sua visão unificada'
+                    : hasQueried
+                      ? 'Nenhum pod encontrado'
+                      : 'Pronto para consultar'
+                }
+                description={
+                  targets.length === 0
+                    ? 'Selecione um ou mais contexts, informe o namespace e adicione os alvos. Você pode combinar vários clusters e vários namespaces na mesma visão.'
+                    : hasQueried
+                      ? 'Os alvos consultados não retornaram pods. Verifique o namespace informado.'
+                      : 'Clique em "Buscar pods" para consultar os alvos selecionados.'
+                }
+              />
+            )}
+
+            {podsLoading && pods.length === 0 && (
+              <EmptyState
+                icon={<Layers size={21} />}
+                title="Consultando alvos..."
+                description={`Buscando pods em ${targets.length} alvo(s) em paralelo.`}
+              />
+            )}
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 }
 
-function statusClass(health: HealthState): string {
-  if (health.kind === 'ok') return 'status-ok';
-  if (health.kind === 'error') return 'status-error';
-  return 'status-loading';
-}
-
-function statusLabel(health: HealthState): string {
-  if (health.kind === 'ok') return `Backend online · ${health.service}`;
-  if (health.kind === 'error') return `Backend offline · ${health.message}`;
-  return 'Conectando ao backend...';
+function EmptyState({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="empty-state">
+      <div className="empty-icon">{icon}</div>
+      <h3>{title}</h3>
+      <p>{description}</p>
+    </div>
+  );
 }

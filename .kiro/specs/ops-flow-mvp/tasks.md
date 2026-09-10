@@ -62,22 +62,22 @@ são incrementais — cada uma constrói sobre a anterior.
 
 ## Fase 3 — Seleção de alvos e tabela unificada
 
-- [ ] 7. `TargetSelector` (frontend)
+- [x] 7. `TargetSelector` (frontend)
   - Carregar contexts de `/api/contexts`; montar lista de pares (cluster, namespace), incluindo múltiplos namespaces no mesmo cluster.
   - _Agente: ops-flow-frontend_
   - _Requirements: 3.1, 3.2_
 
-- [ ] 8. `PodTable` unificada + estados de erro por alvo
+- [x] 8. `PodTable` unificada + estados de erro por alvo
   - Colunas Cluster/Namespace/Pod/Status/Ready/Restarts/Idade; `TargetErrorBanner` sem esconder resultados válidos.
   - _Agente: ops-flow-frontend_
   - _Requirements: 3.3, 3.6_
 
-- [ ] 9. `GroupingControl` + `FilterBar`
+- [x] 9. `GroupingControl` + `FilterBar`
   - Agrupar por namespace | por cluster | flat; filtro textual.
   - _Agente: ops-flow-frontend_
   - _Requirements: 3.4, 3.5_
 
-- [ ] 9.1 Validar visão unificada ponta a ponta
+- [x] 9.1 Validar visão unificada ponta a ponta
   - Verificar múltiplos clusters + múltiplos namespaces na tela e troca de agrupamento.
   - _Agente: ops-flow-integration-qa_
   - _Requirements: 3.2, 3.3, 3.4_
