@@ -1,4 +1,5 @@
 import { CoreV1Api, KubeConfig } from '@kubernetes/client-node';
+import { buildFullCaChain } from './caChain.js';
 
 /**
  * Loads the user's kubeconfig once and exposes read-only helpers over it.
@@ -71,9 +72,40 @@ export function coreClientForContext(context: string): CoreV1Api {
   const scoped = new KubeConfig();
   scoped.loadFromDefault();
   scoped.setCurrentContext(context);
+  completeCaChain(scoped, context);
   const client = scoped.makeApiClient(CoreV1Api);
   clientCache.set(context, client);
   return client;
+}
+
+/**
+ * Ensures the scoped config carries a *complete* CA chain for its current cluster.
+ *
+ * The kubeconfig here only embeds the intermediate CA, while its issuers live in
+ * the OS trust store. `@kubernetes/client-node` builds its HTTPS agent solely
+ * from `caData`, so without this the TLS handshake fails with
+ * UNABLE_TO_GET_ISSUER_CERT. TLS verification remains fully enabled.
+ */
+function completeCaChain(scoped: KubeConfig, context: string): void {
+  const cluster = scoped.getCurrentCluster();
+  if (!cluster?.caData) return;
+
+  const kubeconfigCa = Buffer.from(cluster.caData as string, 'base64').toString('utf8');
+  const fullChain = buildFullCaChain(kubeconfigCa);
+  if (fullChain === kubeconfigCa) return;
+
+  const patchedClusters = scoped.clusters.map((c) =>
+    c.name === cluster.name
+      ? { ...c, caData: Buffer.from(fullChain, 'utf8').toString('base64'), caFile: undefined }
+      : c,
+  );
+
+  scoped.loadFromOptions({
+    clusters: patchedClusters,
+    users: scoped.users,
+    contexts: scoped.contexts,
+    currentContext: context,
+  });
 }
 
 /** Test/utility hook to reset cached state. */

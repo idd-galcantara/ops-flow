@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { parseTargets } from './parseTargets.js';
+
+test('parseTargets accepts a valid list and trims values', () => {
+  const result = parseTargets({
+    targets: [{ cluster: ' kubernetes-qa-tb ', namespace: ' bank-overdraft ' }],
+  });
+  assert.ok('targets' in result);
+  if ('targets' in result) {
+    assert.deepEqual(result.targets, [
+      { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
+    ]);
+  }
+});
+
+test('parseTargets accepts multiple namespaces on the same cluster', () => {
+  const result = parseTargets({
+    targets: [
+      { cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft' },
+      { cluster: 'kubernetes-qa-gt', namespace: 'bank-payments' },
+    ],
+  });
+  assert.ok('targets' in result);
+  if ('targets' in result) assert.equal(result.targets.length, 2);
+});
+
+test('parseTargets rejects a non-object body', () => {
+  assert.ok('error' in parseTargets(null));
+  assert.ok('error' in parseTargets('nope'));
+});
+
+test('parseTargets rejects an empty or missing targets list', () => {
+  assert.ok('error' in parseTargets({}));
+  assert.ok('error' in parseTargets({ targets: [] }));
+});
+
+test('parseTargets rejects targets with missing or empty fields', () => {
+  assert.ok('error' in parseTargets({ targets: [{ cluster: 'a' }] }));
+  assert.ok('error' in parseTargets({ targets: [{ cluster: '', namespace: 'x' }] }));
+  assert.ok('error' in parseTargets({ targets: [{ cluster: 'a', namespace: '  ' }] }));
+  assert.ok('error' in parseTargets({ targets: ['not-an-object'] }));
+});

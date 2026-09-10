@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { contextsRouter } from './routes/contexts.js';
+import { podsRouter } from './routes/pods.js';
 
 /**
  * Builds the Express app. Kept separate from the server bootstrap so it can be
@@ -17,6 +18,7 @@ export function createApp(): Express {
   });
 
   app.use('/api/contexts', contextsRouter);
+  app.use('/api/pods', podsRouter);
 
   return app;
 }

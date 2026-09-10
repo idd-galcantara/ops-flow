@@ -33,29 +33,29 @@ são incrementais — cada uma constrói sobre a anterior.
 
 ## Fase 2 — Fan-out de pods
 
-- [ ] 4. Serviço de fan-out com tolerância a falha parcial
+- [x] 4. Serviço de fan-out com tolerância a falha parcial
   - `Promise.allSettled` sobre os alvos; coletar `pods` e `errors[]` por alvo.
   - Higienizar mensagens de erro (sem segredos/caminhos sensíveis).
   - _Agente: ops-flow-backend_
   - _Requirements: 2.1, 2.4, 6.2_
 
-- [ ] 5. Normalização de pod e anotação de origem
+- [x] 5. Normalização de pod e anotação de origem
   - Mapear para `NormalizedPod` (nome, status, ready, restarts, node, ageSeconds, containers).
   - Anotar cada pod com `{ cluster, namespace }`.
   - _Agente: ops-flow-backend_
   - _Requirements: 2.2, 2.3_
 
-- [ ] 6. Endpoint `POST /api/pods` + validação de entrada
+- [x] 6. Endpoint `POST /api/pods` + validação de entrada
   - Validar `targets`; 4xx para lista vazia/malformada; 200 com `{pods, errors}`.
   - _Agente: ops-flow-backend_
   - _Requirements: 2.1, 2.5_
 
-- [ ] 6.1 Testes unitários de fan-out e normalização
+- [x] 6.1 Testes unitários de fan-out e normalização
   - Cobrir falha parcial (um alvo falha, outros ok) e mapeamento de campos.
   - _Agente: ops-flow-backend_
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 6.2 Validar fan-out contra clusters reais
+- [x] 6.2 Validar fan-out contra clusters reais
   - `POST /api/pods` com `kubernetes-qa-tb` e `kubernetes-qa-gt` em `bank-overdraft`; conferir unificação e isolamento de falha.
   - _Agente: ops-flow-integration-qa_
   - _Requirements: 2.1, 2.2, 2.4_

@@ -143,3 +143,33 @@ Browser: visão unificada com agrupamento (namespace | cluster | flat),
 - **Read-only** no MVP: nenhuma operação de mutação é exposta.
 - Falha de um alvo é isolada e reportada, nunca quebra a agregação inteira.
 - O backend nunca ecoa segredos do kubeconfig; contexts são referenciados por nome.
+
+## Nota de ambiente: cadeia de CA e TLS
+
+Durante a Fase 2 o fan-out falhava em todos os alvos com `UNABLE_TO_GET_ISSUER_CERT`,
+embora o `kubectl` funcionasse com o mesmo kubeconfig. Causa raiz:
+
+- Os clusters apresentam **apenas o certificado folha**.
+- O `certificate-authority-data` do kubeconfig contém somente a CA **intermediária**
+  (ex.: `CN = kubernetes-qa-tb CA`).
+- Os emissores acima dela — `SSL Kubernetes CA v1` → `PagPKI Root CA v1` — vivem no
+  **trust store do sistema** (`/etc/ssl/certs/ca-certificates.crt`).
+- O `@kubernetes/client-node` monta seu agente HTTPS a partir do `caData` apenas, então
+  a cadeia ficava incompleta e o handshake falhava.
+
+**Solução aplicada** (`backend/src/kube/caChain.ts`): compor a cadeia completa concatenando
+a CA do kubeconfig com o bundle de CAs do sistema, e injetá-la no cluster carregado antes
+de criar o client.
+
+Importante:
+- A **verificação TLS permanece totalmente ativa** — não usamos `skipTLSVerify` nem
+  `NODE_TLS_REJECT_UNAUTHORIZED`.
+- O trust store do sistema é apenas **lido**; nada no ambiente do usuário é alterado.
+- Se nenhum bundle do sistema for legível, a CA do kubeconfig é usada como está.
+
+## Nota de ambiente: sidecars nativos (Istio)
+
+O `istio-proxy` é injetado como **init container com `restartPolicy: Always`** (sidecar
+nativo, Kubernetes 1.29+). O `kubectl` conta esses sidecars nas colunas `READY` e
+`RESTARTS`. A normalização do ops-flow faz o mesmo, garantindo paridade com o terminal,
+e expõe o sidecar na lista de containers para seleção de logs.
