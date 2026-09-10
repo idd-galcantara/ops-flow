@@ -69,7 +69,7 @@ export function normalizePod(pod: V1Pod, target: Target, now: number = Date.now(
   return {
     cluster: target.cluster,
     namespace: target.namespace,
-    name: pod.metadata?.name ?? '(sem nome)',
+    name: pod.metadata?.name ?? '(unnamed)',
     status: derivePodStatus(pod),
     ready: readyString(pod),
     restarts: countRestarts(pod),

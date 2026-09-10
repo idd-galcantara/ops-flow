@@ -74,17 +74,17 @@ export async function getNamespaces(
 /** Validates the request body into a clean list of cluster names. */
 export function parseClusters(body: unknown): { clusters: string[] } | { error: string } {
   if (!body || typeof body !== 'object') {
-    return { error: 'Corpo inválido: esperado um objeto com "clusters".' };
+    return { error: 'Invalid body: expected an object with "clusters".' };
   }
   const raw = (body as { clusters?: unknown }).clusters;
   if (!Array.isArray(raw) || raw.length === 0) {
-    return { error: '"clusters" deve ser uma lista não vazia de nomes de context.' };
+    return { error: '"clusters" must be a non-empty list of context names.' };
   }
 
   const clusters: string[] = [];
   for (const item of raw) {
     if (typeof item !== 'string' || !item.trim()) {
-      return { error: 'Cada cluster deve ser uma string não vazia.' };
+      return { error: 'Each cluster must be a non-empty string.' };
     }
     clusters.push(item.trim());
   }

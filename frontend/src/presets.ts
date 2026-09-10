@@ -63,7 +63,6 @@ export function describePreset(preset: Preset): string {
   const clusters = new Set(preset.targets.map((t) => t.cluster));
   const namespaces = [...new Set(preset.targets.map((t) => t.namespace))];
   const clusterPart = `${clusters.size} cluster${clusters.size === 1 ? '' : 's'}`;
-  const namespacePart =
-    namespaces.length === 1 ? namespaces[0] : `${namespaces.length} namespaces`;
+  const namespacePart = namespaces.length === 1 ? namespaces[0] : `${namespaces.length} namespaces`;
   return `${clusterPart} · ${namespacePart}`;
 }

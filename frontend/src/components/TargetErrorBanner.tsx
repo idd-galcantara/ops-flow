@@ -11,16 +11,16 @@ export function TargetErrorBanner({ errors }: { errors: TargetError[] }) {
   if (errors.length === 0) return null;
 
   return (
-    <section className="target-error-banner" role="alert" aria-label="Alvos com falha">
+    <section className="target-error-banner" role="alert" aria-label="Failed targets">
       <div className="target-error-heading">
         <span className="target-error-icon">
           <CircleAlert size={15} />
         </span>
         <div>
           <strong>
-            {errors.length} {errors.length === 1 ? 'alvo falhou' : 'alvos falharam'}
+            {errors.length} {errors.length === 1 ? 'target failed' : 'targets failed'}
           </strong>
-          <small>Os alvos abaixo não responderam. Os demais resultados seguem exibidos.</small>
+          <small>The targets below did not respond. All other results are still shown.</small>
         </div>
       </div>
       <ul className="target-error-list">

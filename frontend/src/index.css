@@ -1035,16 +1035,40 @@ button {
 /* ---------- Details panel ---------- */
 
 .app-body.has-details {
-  grid-template-columns: 292px minmax(0, 1fr) 420px;
+  /* --details-width is set by the resize handle; the fallback covers first paint. */
+  grid-template-columns: 292px minmax(0, 1fr) var(--details-width, 420px);
 }
 
 .details-panel {
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--panel);
   border-left: 1px solid var(--line);
   overflow: hidden;
+}
+
+/* Drag handle straddling the panel's left edge. */
+.details-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  z-index: 15;
+  width: 7px;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.details-resize-handle:hover,
+.details-resize-handle.is-resizing,
+.details-resize-handle:focus-visible {
+  background: rgba(223, 112, 69, 0.25);
+  outline: none;
 }
 
 .details-header {
@@ -1616,12 +1640,6 @@ button {
   font: 9px var(--mono);
 }
 
-@media (max-width: 1400px) {
-  .app-body.has-details {
-    grid-template-columns: 292px minmax(0, 1fr) 380px;
-  }
-}
-
 @media (max-width: 1000px) {
   /* Stacked layout needs the page itself to scroll again. */
   .app-shell {
@@ -1638,6 +1656,11 @@ button {
     min-height: 560px;
     border-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  /* Stacked panels are full width, so horizontal resizing makes no sense. */
+  .details-resize-handle {
+    display: none;
   }
 
   .log-output {

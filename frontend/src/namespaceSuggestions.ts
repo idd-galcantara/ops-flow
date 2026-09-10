@@ -52,11 +52,11 @@ export function suggestNamespaces(
   return ranked.slice(0, limit).map((entry) => entry.ns);
 }
 
-/** Short label describing where a namespace exists, e.g. "2 de 2 clusters". */
+/** Short label describing where a namespace exists, e.g. "2 of 2". */
 export function describeNamespaceReach(
   suggestion: NamespaceSuggestion,
   selectedClusterCount: number,
 ): string {
   if (selectedClusterCount <= 1) return '';
-  return `${suggestion.clusters.length} de ${selectedClusterCount}`;
+  return `${suggestion.clusters.length} of ${selectedClusterCount}`;
 }

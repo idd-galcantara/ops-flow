@@ -23,7 +23,7 @@ namespacesRouter.post('/', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     // getNamespaces isolates per-cluster failures, so reaching here is unexpected.
-    const message = err instanceof Error ? err.message : 'Erro ao listar namespaces.';
+    const message = err instanceof Error ? err.message : 'Error listing namespaces.';
     res.status(500).json({ error: message });
   }
 });

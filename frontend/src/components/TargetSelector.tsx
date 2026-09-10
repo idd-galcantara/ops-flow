@@ -63,14 +63,14 @@ export function TargetSelector() {
     <aside className="sidebar">
       <div className="sidebar-heading">
         <div>
-          <span className="eyebrow">Alvos</span>
+          <span className="eyebrow">Targets</span>
           <h1>Clusters & namespaces</h1>
         </div>
         <button
           type="button"
           className="icon-button subtle"
-          title="Recarregar contexts do kubeconfig"
-          aria-label="Recarregar contexts do kubeconfig"
+          title="Reload contexts from kubeconfig"
+          aria-label="Reload contexts from kubeconfig"
           onClick={() => void loadContexts()}
         >
           <RefreshCw size={15} />
@@ -79,12 +79,12 @@ export function TargetSelector() {
 
       <label className="sidebar-search">
         <Search size={14} />
-        <span className="visually-hidden">Filtrar contexts</span>
+        <span className="visually-hidden">Filter contexts</span>
         <input
           value={contextFilter}
           onChange={(e) => setContextFilter(e.target.value)}
-          placeholder="Filtrar contexts..."
-          aria-label="Filtrar contexts"
+          placeholder="Filter contexts..."
+          aria-label="Filter contexts"
         />
       </label>
 
@@ -103,11 +103,11 @@ export function TargetSelector() {
 
       {contextsLoading && (
         <div className="sidebar-feedback">
-          <LoadingState message="Carregando contexts..." />
+          <LoadingState message="Loading contexts..." />
         </div>
       )}
 
-      <div className="context-list" role="group" aria-label="Contexts disponíveis">
+      <div className="context-list" role="group" aria-label="Available contexts">
         {visibleContexts.map((ctx) => {
           const active = selectedClusters.includes(ctx.name);
           return (
@@ -126,7 +126,7 @@ export function TargetSelector() {
           );
         })}
         {!contextsLoading && visibleContexts.length === 0 && (
-          <p className="sidebar-hint">Nenhum context corresponde ao filtro.</p>
+          <p className="sidebar-hint">No context matches the filter.</p>
         )}
       </div>
 
@@ -144,21 +144,21 @@ export function TargetSelector() {
           disabled={!canAdd}
           title={
             canAdd
-              ? 'Adicionar um alvo por cluster selecionado'
-              : 'Selecione ao menos um context e informe o namespace'
+              ? 'Add one target per selected cluster'
+              : 'Select at least one context and type a namespace'
           }
         >
-          <Plus size={15} /> Adicionar
+          <Plus size={15} /> Add
         </button>
       </div>
 
       <div className="sidebar-section-label">
         <span>
-          Alvos selecionados <b>{targets.length}</b>
+          Selected targets <b>{targets.length}</b>
         </span>
         {targets.length > 0 && (
           <button type="button" className="text-button" onClick={clearTargets}>
-            Limpar
+            Clear
           </button>
         )}
       </div>
@@ -173,8 +173,8 @@ export function TargetSelector() {
             <button
               type="button"
               className="icon-button subtle danger"
-              title={`Remover ${targetKey(t)}`}
-              aria-label={`Remover alvo ${targetKey(t)}`}
+              title={`Remove ${targetKey(t)}`}
+              aria-label={`Remove target ${targetKey(t)}`}
               onClick={() => removeTarget(t)}
             >
               <X size={13} />
@@ -183,7 +183,7 @@ export function TargetSelector() {
         ))}
         {targets.length === 0 && (
           <p className="sidebar-hint">
-            Selecione contexts, informe um namespace e adicione para montar a visão unificada.
+            Pick contexts, type a namespace and add them to build the unified view.
           </p>
         )}
       </div>
@@ -199,17 +199,17 @@ export function TargetSelector() {
         >
           {podsLoading ? (
             <>
-              <RefreshCw size={15} className="spinning" /> Consultando...
+              <RefreshCw size={15} className="spinning" /> Querying...
             </>
           ) : (
             <>
-              <Layers size={15} /> Buscar pods
+              <Layers size={15} /> Fetch pods
             </>
           )}
         </button>
         {targets.length > 1 && (
           <p className="sidebar-hint centered">
-            {targets.length} alvos serão consultados em paralelo
+            {targets.length} targets will be queried in parallel
           </p>
         )}
       </div>
@@ -246,7 +246,7 @@ function PresetSection() {
         </span>
         {targets.length > 0 && !naming && (
           <button type="button" className="text-button" onClick={() => setNaming(true)}>
-            Salvar atual
+            Save current
           </button>
         )}
       </div>
@@ -267,8 +267,8 @@ function PresetSection() {
                 setName('');
               }
             }}
-            placeholder="Nome do preset"
-            aria-label="Nome do preset"
+            placeholder="Preset name"
+            aria-label="Preset name"
           />
           <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim()}>
             <Save size={13} />
@@ -280,7 +280,7 @@ function PresetSection() {
               setNaming(false);
               setName('');
             }}
-            aria-label="Cancelar"
+            aria-label="Cancel"
           >
             <X size={13} />
           </button>
@@ -306,8 +306,8 @@ function PresetSection() {
               type="button"
               className="icon-button subtle danger"
               onClick={() => deletePreset(preset.id)}
-              title={`Remover preset ${preset.name}`}
-              aria-label={`Remover preset ${preset.name}`}
+              title={`Remove preset ${preset.name}`}
+              aria-label={`Remove preset ${preset.name}`}
             >
               <Trash2 size={12} />
             </button>
@@ -315,7 +315,7 @@ function PresetSection() {
         ))}
         {presets.length === 0 && !naming && (
           <p className="sidebar-hint">
-            Salve combinações de alvos que você usa com frequência.
+            Save target combinations you use often.
           </p>
         )}
       </div>

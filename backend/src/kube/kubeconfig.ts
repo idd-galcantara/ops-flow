@@ -40,7 +40,7 @@ export function listContexts(): ContextInfo[] {
     kc = getKubeConfig();
   } catch {
     // Never surface the underlying path/credentials in the error.
-    throw new Error('Não foi possível ler o kubeconfig.');
+    throw new Error('Could not read the kubeconfig.');
   }
 
   return kc.getContexts().map((ctx) => ({
@@ -70,7 +70,7 @@ export function scopedConfigForContext(context: string): KubeConfig {
   const kc = getKubeConfig();
   const known = kc.getContexts().some((ctx) => ctx.name === context);
   if (!known) {
-    throw new Error(`Context desconhecido: ${context}`);
+    throw new Error(`Unknown context: ${context}`);
   }
 
   const scoped = new KubeConfig();

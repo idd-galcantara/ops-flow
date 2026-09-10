@@ -23,7 +23,7 @@ podsRouter.post('/', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     // getPods isolates per-target failures, so reaching here is unexpected.
-    const message = err instanceof Error ? err.message : 'Erro ao consultar pods.';
+    const message = err instanceof Error ? err.message : 'Error querying pods.';
     res.status(500).json({ error: message });
   }
 });
@@ -36,7 +36,7 @@ function parsePodParams(
   const namespace = params.namespace?.trim();
   const pod = params.pod?.trim();
   if (!cluster || !namespace || !pod) {
-    return { error: 'Informe cluster, namespace e pod.' };
+    return { error: 'Provide cluster, namespace and pod.' };
   }
   return { cluster, namespace, pod };
 }

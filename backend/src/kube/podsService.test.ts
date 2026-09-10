@@ -69,9 +69,9 @@ test('safeErrorMessage never leaks the ApiException dump with body and headers',
       'HTTP-Code: 500\nMessage: Unknown API Status Code!\nBody: "{}"\nHeaders: {"authorization":"Bearer secret-token"}',
   };
   const message = safeErrorMessage(reason);
-  assert.ok(!message.includes('secret-token'), 'não vaza headers');
-  assert.ok(!message.includes('Headers'), 'não inclui o dump');
-  assert.equal(message, 'A API do cluster respondeu 500.');
+  assert.ok(!message.includes('secret-token'), 'does not leak headers');
+  assert.ok(!message.includes('Headers'), 'does not include the dump');
+  assert.equal(message, 'The cluster API responded 500.');
 });
 
 test('safeErrorMessage keeps a useful reason line from a log request failure', () => {
@@ -82,8 +82,8 @@ test('safeErrorMessage keeps a useful reason line from a log request failure', (
       'HTTP-Code: 400\nMessage: Error occurred in log request\nBody: undefined\nHeaders: {"audit-id":"abc"}',
   };
   const message = safeErrorMessage(reason);
-  assert.ok(!message.includes('audit-id'), 'não vaza headers');
-  assert.equal(message, 'A API do cluster respondeu 400. Error occurred in log request');
+  assert.ok(!message.includes('audit-id'), 'does not leak headers');
+  assert.equal(message, 'The cluster API responded 400. Error occurred in log request');
 });
 
 test('normalizeTailLines clamps to a sane range', () => {
@@ -102,9 +102,9 @@ test('errorStatusCode extracts a numeric HTTP status', () => {
 });
 
 test('safeErrorMessage surfaces a connection code without leaking internals', () => {
-  assert.equal(safeErrorMessage({ code: 'ECONNREFUSED' }), 'Falha de conexão (ECONNREFUSED).');
+  assert.equal(safeErrorMessage({ code: 'ECONNREFUSED' }), 'Connection failure (ECONNREFUSED).');
 });
 
 test('safeErrorMessage falls back to a generic message', () => {
-  assert.equal(safeErrorMessage(42), 'Falha ao consultar o alvo.');
+  assert.equal(safeErrorMessage(42), 'Failed to query the target.');
 });

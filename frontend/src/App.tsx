@@ -8,13 +8,25 @@ import { TargetSelector } from './components/TargetSelector';
 import { ViewToolbar } from './components/ViewToolbar';
 import { matchesFilter } from './podPresentation';
 import { useOpsFlowStore } from './store';
+import { useResizablePanel } from './useResizablePanel';
 import type { NormalizedPod, PodRef } from './types';
 
 type HealthState = 'loading' | 'ok' | 'error';
 
+const DETAILS_MIN = 320;
+const DETAILS_MAX = 900;
+const DETAILS_DEFAULT = 420;
+
 export default function App() {
   const [health, setHealth] = useState<HealthState>('loading');
   const [selected, setSelected] = useState<PodRef | null>(null);
+
+  const details = useResizablePanel({
+    storageKey: 'ops-flow.detailsWidth.v1',
+    defaultWidth: DETAILS_DEFAULT,
+    min: DETAILS_MIN,
+    max: DETAILS_MAX,
+  });
 
   const openPod = (pod: NormalizedPod) => {
     setSelected({
@@ -83,19 +95,31 @@ export default function App() {
             <span>Kubernetes unified view</span>
           </div>
         </div>
-        <div className={`topbar-status ${health === 'ok' ? 'status-ok' : health === 'error' ? 'status-error' : 'status-loading'}`}>
+        <div
+          className={`topbar-status ${
+            health === 'ok' ? 'status-ok' : health === 'error' ? 'status-error' : 'status-loading'
+          }`}
+        >
           <span className="status-dot" />
-          {health === 'ok' ? 'Read-only' : health === 'error' ? 'Backend offline' : 'Conectando...'}
+          {health === 'ok' ? 'Read-only' : health === 'error' ? 'Backend offline' : 'Connecting...'}
         </div>
       </header>
 
-      <div className={`app-body ${selected ? 'has-details' : ''}`}>
+      <div
+        className={`app-body ${selected ? 'has-details' : ''}`}
+        /*
+         * The width travels as a custom property rather than an inline
+         * grid-template-columns: inline styles outrank media queries, which would
+         * keep the three-column layout on narrow screens where it must collapse.
+         */
+        style={{ ['--details-width' as string]: `${details.width}px` }}
+      >
         <TargetSelector />
 
         <section className="main-panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">Visão unificada</span>
+              <span className="eyebrow">Unified view</span>
               <h2>Pods</h2>
             </div>
             {pods.length > 0 && (
@@ -147,8 +171,8 @@ export default function App() {
             {pods.length > 0 && visiblePods.length === 0 && (
               <EmptyState
                 icon={<Search size={21} />}
-                title="Nenhum pod corresponde ao filtro"
-                description="Ajuste ou limpe o filtro para ver os resultados."
+                title="No pod matches the filter"
+                description="Adjust or clear the filter to see results."
               />
             )}
 
@@ -157,17 +181,17 @@ export default function App() {
                 icon={<Layers size={21} />}
                 title={
                   targets.length === 0
-                    ? 'Monte sua visão unificada'
+                    ? 'Build your unified view'
                     : hasQueried
-                      ? 'Nenhum pod encontrado'
-                      : 'Pronto para consultar'
+                      ? 'No pods found'
+                      : 'Ready to query'
                 }
                 description={
                   targets.length === 0
-                    ? 'Selecione um ou mais contexts, informe o namespace e adicione os alvos. Você pode combinar vários clusters e vários namespaces na mesma visão.'
+                    ? 'Pick one or more contexts, type a namespace and add the targets. You can combine several clusters and several namespaces in the same view.'
                     : hasQueried
-                      ? 'Os alvos consultados não retornaram pods. Verifique o namespace informado.'
-                      : 'Clique em "Buscar pods" para consultar os alvos selecionados.'
+                      ? 'The queried targets returned no pods. Check the namespace you entered.'
+                      : 'Click "Fetch pods" to query the selected targets.'
                 }
               />
             )}
@@ -175,14 +199,22 @@ export default function App() {
             {podsLoading && pods.length === 0 && (
               <EmptyState
                 icon={<Layers size={21} />}
-                title="Consultando alvos..."
-                description={`Buscando pods em ${targets.length} alvo(s) em paralelo.`}
+                title="Querying targets..."
+                description={`Fetching pods from ${targets.length} target(s) in parallel.`}
               />
             )}
           </div>
         </section>
 
-        {selected && <PodDetailsPanel pod={selected} onClose={() => setSelected(null)} />}
+        {selected && (
+          <PodDetailsPanel
+            pod={selected}
+            onClose={() => setSelected(null)}
+            resizing={details.resizing}
+            onResizeStart={details.startResize}
+            onResizeNudge={details.nudge}
+          />
+        )}
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <span className="feedback-error-message">{message}</span>
       {onRetry && (
         <button type="button" className="text-button" onClick={onRetry}>
-          Tentar novamente
+          Try again
         </button>
       )}
     </div>

@@ -89,7 +89,7 @@ export function LogViewer({ pod }: { pod: PodRef }) {
         return;
       }
       if (message.type === 'error') {
-        setError(message.message ?? 'Erro no stream de logs.');
+        setError(message.message ?? 'Log stream error.');
         setState('error');
         return;
       }
@@ -100,7 +100,7 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
     socket.onerror = () => {
       if (!active) return;
-      setError('Não foi possível conectar ao stream de logs.');
+      setError('Could not connect to the log stream.');
       setState('error');
     };
 
@@ -155,23 +155,23 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
         <span className={`log-state log-state-${state}`}>
           <span className="status-dot" />
-          {state === 'connecting' && 'conectando'}
-          {state === 'streaming' && (paused ? 'pausado' : 'ao vivo')}
-          {state === 'ended' && 'encerrado'}
-          {state === 'error' && 'erro'}
+          {state === 'connecting' && 'connecting'}
+          {state === 'streaming' && (paused ? 'paused' : 'live')}
+          {state === 'ended' && 'ended'}
+          {state === 'error' && 'error'}
         </span>
 
         <label className="log-filter">
           <Search size={13} />
-          <span className="visually-hidden">Filtrar linhas</span>
+          <span className="visually-hidden">Filter lines</span>
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filtrar linhas..."
-            aria-label="Filtrar linhas de log"
+            placeholder="Filter lines..."
+            aria-label="Filter log lines"
           />
           {filter && (
-            <button type="button" className="filter-clear" onClick={() => setFilter('')} aria-label="Limpar filtro">
+            <button type="button" className="filter-clear" onClick={() => setFilter('')} aria-label="Clear filter">
               <X size={11} />
             </button>
           )}
@@ -182,8 +182,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
             type="button"
             className="icon-button subtle"
             onClick={() => setPaused((p) => !p)}
-            title={paused ? 'Retomar' : 'Pausar'}
-            aria-label={paused ? 'Retomar stream' : 'Pausar stream'}
+            title={paused ? 'Resume' : 'Pause'}
+            aria-label={paused ? 'Resume stream' : 'Pause stream'}
           >
             {paused ? <Play size={14} /> : <Pause size={14} />}
           </button>
@@ -191,8 +191,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
             type="button"
             className="icon-button subtle"
             onClick={() => setLines([])}
-            title="Limpar"
-            aria-label="Limpar linhas"
+            title="Clear"
+            aria-label="Clear lines"
           >
             <Trash2 size={14} />
           </button>
@@ -201,14 +201,14 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
       {error && <ErrorState message={error} />}
 
-      <div className="log-output" ref={scrollRef} onScroll={onScroll} tabIndex={0} aria-label="Saída de logs">
+      <div className="log-output" ref={scrollRef} onScroll={onScroll} tabIndex={0} aria-label="Log output">
         {visibleLines.length === 0 ? (
           <p className="log-empty">
             {state === 'connecting'
-              ? 'Conectando ao container...'
+              ? 'Connecting to container...'
               : filter
-                ? 'Nenhuma linha corresponde ao filtro.'
-                : 'Nenhuma linha recebida ainda.'}
+                ? 'No line matches the filter.'
+                : 'No lines received yet.'}
           </p>
         ) : (
           visibleLines.map((line, i) => <LogLine key={i} line={line} query={filter} />)
@@ -217,8 +217,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
       <div className="log-footer">
         <span>
-          {filter ? `${visibleLines.length} de ${lines.length}` : `${lines.length}`} linhas
-          {lines.length >= MAX_LINES && ' (limite atingido, mantendo as mais recentes)'}
+          {filter ? `${visibleLines.length} of ${lines.length}` : `${lines.length}`} lines
+          {lines.length >= MAX_LINES && ' (limit reached, keeping the most recent)'}
         </span>
         {!autoScroll && (
           <button
@@ -230,7 +230,7 @@ export function LogViewer({ pod }: { pod: PodRef }) {
               if (el) el.scrollTop = el.scrollHeight;
             }}
           >
-            Ir para o fim
+            Jump to end
           </button>
         )}
       </div>

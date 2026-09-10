@@ -8,11 +8,30 @@ import type { ContainerDetail, PodDescribe, PodMetricsResult, PodRef } from '../
 
 type Tab = 'describe' | 'metrics' | 'logs';
 
+interface PodDetailsPanelProps {
+  pod: PodRef;
+  onClose: () => void;
+  /** True while the panel is being dragged, to keep the handle highlighted. */
+  resizing: boolean;
+  onResizeStart: (event: React.MouseEvent | React.TouchEvent) => void;
+  /** Keyboard resizing, in pixels (negative narrows). */
+  onResizeNudge: (delta: number) => void;
+}
+
+/** Pixels moved per arrow key press on the resize handle. */
+const KEYBOARD_STEP = 24;
+
 /**
  * Drill-down for a single pod: describe, metrics and live logs.
  * Read-only — no action is ever offered here.
  */
-export function PodDetailsPanel({ pod, onClose }: { pod: PodRef; onClose: () => void }) {
+export function PodDetailsPanel({
+  pod,
+  onClose,
+  resizing,
+  onResizeStart,
+  onResizeNudge,
+}: PodDetailsPanelProps) {
   const [tab, setTab] = useState<Tab>('describe');
   const [describe, setDescribe] = useState<PodDescribe | null>(null);
   const [describeError, setDescribeError] = useState<string>();
@@ -49,14 +68,37 @@ export function PodDetailsPanel({ pod, onClose }: { pod: PodRef; onClose: () => 
   }, [pod.cluster, pod.namespace, pod.name]);
 
   return (
-    <section className="details-panel" aria-label={`Detalhes do pod ${pod.name}`}>
+    <section className="details-panel" aria-label={`Details for pod ${pod.name}`}>
+      {/* Drag handle on the panel's leading edge; also focusable for keyboard use. */}
+      <div
+        className={`details-resize-handle ${resizing ? 'is-resizing' : ''}`}
+        onMouseDown={onResizeStart}
+        onTouchStart={onResizeStart}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            onResizeNudge(KEYBOARD_STEP);
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            onResizeNudge(-KEYBOARD_STEP);
+          }
+        }}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize details panel"
+        tabIndex={0}
+      />
+
       <header className="details-header">
         <div className="details-heading">
           <span className="details-icon">
             <Info size={15} />
           </span>
           <div>
-            <span className="eyebrow">{pod.cluster} · {pod.namespace}</span>
+            <span className="eyebrow">
+              {pod.cluster} · {pod.namespace}
+            </span>
             <h3 title={pod.name}>{pod.name}</h3>
           </div>
         </div>
@@ -64,19 +106,19 @@ export function PodDetailsPanel({ pod, onClose }: { pod: PodRef; onClose: () => 
           type="button"
           className="icon-button subtle"
           onClick={onClose}
-          title="Fechar detalhes"
-          aria-label="Fechar detalhes"
+          title="Close details"
+          aria-label="Close details"
         >
           <X size={17} />
         </button>
       </header>
 
-      <div className="details-tabs" role="tablist" aria-label="Seções do pod">
+      <div className="details-tabs" role="tablist" aria-label="Pod sections">
         <TabButton active={tab === 'describe'} onClick={() => setTab('describe')} icon={<FileText size={13} />}>
           Describe
         </TabButton>
         <TabButton active={tab === 'metrics'} onClick={() => setTab('metrics')} icon={<Activity size={13} />}>
-          Métricas
+          Metrics
         </TabButton>
         <TabButton active={tab === 'logs'} onClick={() => setTab('logs')} icon={<ScrollText size={13} />}>
           Logs
@@ -107,7 +149,7 @@ export function PodDetailsPanel({ pod, onClose }: { pod: PodRef; onClose: () => 
 }
 
 function messageOf(reason: unknown): string {
-  return reason instanceof Error ? reason.message : 'Falha ao carregar.';
+  return reason instanceof Error ? reason.message : 'Failed to load.';
 }
 
 function TabButton({
@@ -137,7 +179,7 @@ function DescribeTab({
   describe: PodDescribe | null;
   error?: string;
 }) {
-  if (loading) return <LoadingState message="Carregando detalhes..." />;
+  if (loading) return <LoadingState message="Loading details..." />;
   if (error) return <ErrorState message={error} />;
   if (!describe) return null;
 
@@ -149,7 +191,7 @@ function DescribeTab({
         <Detail label="Pod IP" value={describe.podIP ?? '—'} mono />
         <Detail label="QoS" value={describe.qosClass ?? '—'} />
         <Detail label="Service account" value={describe.serviceAccount ?? '—'} mono />
-        <Detail label="Criado em" value={formatTimestamp(describe.createdAt)} />
+        <Detail label="Created at" value={formatTimestamp(describe.createdAt)} />
       </dl>
 
       <DetailSection title={`Containers (${describe.containers.length})`}>
@@ -175,10 +217,10 @@ function DescribeTab({
 
       <DetailSection title={`Events (${describe.events.length})`}>
         {describe.eventsError && (
-          <p className="details-note">Não foi possível ler os events: {describe.eventsError}</p>
+          <p className="details-note">Could not read events: {describe.eventsError}</p>
         )}
         {describe.events.length === 0 && !describe.eventsError && (
-          <p className="details-note">Nenhum event recente para este pod.</p>
+          <p className="details-note">No recent events for this pod.</p>
         )}
         <ul className="event-list">
           {describe.events.map((e, i) => (
@@ -217,7 +259,7 @@ function ContainerCard({ container }: { container: ContainerDetail }) {
       </p>
       <div className="container-meta">
         <span>restarts: {container.restartCount}</span>
-        {container.reason && <span>motivo: {container.reason}</span>}
+        {container.reason && <span>reason: {container.reason}</span>}
         {container.requests && (
           <span>
             requests: {container.requests.cpu ?? '—'} / {container.requests.memory ?? '—'}
@@ -244,7 +286,7 @@ function MetricsTab({
   error?: string;
   containers: ContainerDetail[];
 }) {
-  if (loading) return <LoadingState message="Carregando métricas..." />;
+  if (loading) return <LoadingState message="Loading metrics..." />;
   if (error) return <ErrorState message={error} />;
   if (!metrics) return null;
 
@@ -255,11 +297,9 @@ function MetricsTab({
         <div className="empty-icon">
           <Activity size={21} />
         </div>
-        <h4>Métricas indisponíveis</h4>
-        <p>{metrics.reason ?? 'Este cluster não expõe a API de métricas.'}</p>
-        <p className="details-note">
-          O describe e os logs continuam disponíveis normalmente.
-        </p>
+        <h4>Metrics unavailable</h4>
+        <p>{metrics.reason ?? 'This cluster does not expose the metrics API.'}</p>
+        <p className="details-note">Describe and logs remain fully available.</p>
       </div>
     );
   }
@@ -269,7 +309,7 @@ function MetricsTab({
   return (
     <div className="metrics-body">
       <p className="details-note">
-        Janela de coleta: {metrics.window ?? '—'} · {formatTimestamp(metrics.timestamp)}
+        Collection window: {metrics.window ?? '—'} · {formatTimestamp(metrics.timestamp)}
       </p>
       <div className="metric-cards">
         {(metrics.containers ?? []).map((c) => {
@@ -284,7 +324,7 @@ function MetricsTab({
                 limit={limits?.cpu}
               />
               <MetricRow
-                label="Memória"
+                label="Memory"
                 value={formatMemory(c.memory)}
                 ratio={usageRatio(c.memory, limits?.memory, 'memory')}
                 limit={limits?.memory}
@@ -348,7 +388,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 
 function KeyValueList({ entries }: { entries: Record<string, string> }) {
   const keys = Object.keys(entries).sort();
-  if (keys.length === 0) return <p className="details-note">Nenhum.</p>;
+  if (keys.length === 0) return <p className="details-note">None.</p>;
   return (
     <ul className="kv-list">
       {keys.map((key) => (

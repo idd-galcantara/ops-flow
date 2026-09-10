@@ -90,7 +90,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     } catch (err) {
       set({
         contextsLoading: false,
-        contextsError: err instanceof Error ? err.message : 'Falha ao carregar contexts.',
+        contextsError: err instanceof Error ? err.message : 'Failed to load contexts.',
       });
     }
   },
@@ -124,7 +124,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         // Partial failure: report it but keep whatever namespaces did come back.
         namespacesError:
           errors.length > 0
-            ? `${errors.length} cluster(s) não retornaram namespaces: ${errors
+            ? `${errors.length} cluster(s) returned no namespaces: ${errors
                 .map((e) => e.cluster)
                 .join(', ')}`
             : undefined,
@@ -132,7 +132,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     } catch (err) {
       set({
         namespacesLoading: false,
-        namespacesError: err instanceof Error ? err.message : 'Falha ao carregar namespaces.',
+        namespacesError: err instanceof Error ? err.message : 'Failed to load namespaces.',
       });
     }
   },
@@ -184,7 +184,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
       set({
         podsLoading: false,
         refreshing: false,
-        podsError: err instanceof Error ? err.message : 'Falha ao consultar pods.',
+        podsError: err instanceof Error ? err.message : 'Failed to query pods.',
       });
     }
   },

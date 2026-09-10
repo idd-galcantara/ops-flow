@@ -99,7 +99,7 @@ export function NamespaceInput({
           Namespace
           {namespacesLoading && <Loader size={10} className="spinning inline-loader" />}
           {!namespacesLoading && namespaces.length > 0 && (
-            <b className="namespace-count">{namespaces.length} disponíveis</b>
+            <b className="namespace-count">{namespaces.length} available</b>
           )}
         </span>
         <input
@@ -115,7 +115,7 @@ export function NamespaceInput({
           }}
           onKeyDown={handleKeyDown}
           placeholder={
-            selectedClusters.length === 0 ? 'selecione um context primeiro' : 'ex.: bank-overdraft'
+            selectedClusters.length === 0 ? 'select a context first' : 'e.g. bank-overdraft'
           }
           aria-label="Namespace"
           role="combobox"
@@ -126,8 +126,8 @@ export function NamespaceInput({
       </label>
 
       {value.trim() && hasExactMatch && (
-        <span className="namespace-valid" title="Este namespace existe nos clusters selecionados">
-          <Check size={11} /> existe
+        <span className="namespace-valid" title="This namespace exists in the selected clusters">
+          <Check size={11} /> exists
         </span>
       )}
 
@@ -164,12 +164,12 @@ export function NamespaceInput({
           {suggestions.length === 0 && !namespacesLoading && (
             <p className="namespace-note">
               {namespaces.length === 0
-                ? 'Nenhum namespace carregado para os contexts selecionados.'
-                : 'Nenhum namespace corresponde. Você ainda pode usar o valor digitado.'}
+                ? 'No namespaces loaded for the selected contexts.'
+                : 'No namespace matches. You can still use the value you typed.'}
             </p>
           )}
 
-          {namespacesLoading && <p className="namespace-note">Carregando namespaces...</p>}
+          {namespacesLoading && <p className="namespace-note">Loading namespaces...</p>}
         </div>
       )}
     </div>

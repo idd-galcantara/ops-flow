@@ -93,7 +93,7 @@ function PodGroupTable({
 
       <table className="pod-table">
         <caption className="visually-hidden">
-          {group.key ? `Pods de ${group.key}` : 'Pods de todos os alvos'}
+          {group.key ? `Pods in ${group.key}` : 'Pods from all targets'}
         </caption>
         <thead>
           <tr>
@@ -106,7 +106,7 @@ function PodGroupTable({
               Restarts
             </th>
             <th scope="col" className="numeric">
-              Idade
+              Age
             </th>
             <th scope="col">Node</th>
           </tr>
@@ -159,11 +159,11 @@ function PodGroupTable({
                   className="secondary-button"
                   onClick={() => setLimit((current) => current + ROWS_PER_PAGE)}
                 >
-                  <ChevronDown size={14} /> Mostrar mais {Math.min(hidden, ROWS_PER_PAGE)} de{' '}
-                  {hidden} restantes
+                  <ChevronDown size={14} /> Show {Math.min(hidden, ROWS_PER_PAGE)} more of {hidden}{' '}
+                  remaining
                 </button>
                 <button type="button" className="text-button" onClick={() => setLimit(group.pods.length)}>
-                  Mostrar todos
+                  Show all
                 </button>
               </td>
             </tr>

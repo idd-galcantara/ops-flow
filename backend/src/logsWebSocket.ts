@@ -64,7 +64,7 @@ function handleLogSocket(
   };
 
   if (!options.container) {
-    send({ type: 'error', message: 'Informe o container (parâmetro "container").' });
+    send({ type: 'error', message: 'Provide the container (the "container" parameter).' });
     ws.close();
     return;
   }

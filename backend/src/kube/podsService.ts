@@ -49,7 +49,7 @@ export function safeErrorMessage(reason: unknown): string {
 
     // Node system errors (ECONNREFUSED, UNABLE_TO_GET_ISSUER_CERT, ...) use string codes.
     if (typeof anyReason.code === 'string' && anyReason.code) {
-      return `Falha de conexão (${anyReason.code}).`;
+      return `Connection failure (${anyReason.code}).`;
     }
 
     if (typeof anyReason.message === 'string' && anyReason.message) {
@@ -64,12 +64,12 @@ export function safeErrorMessage(reason: unknown): string {
           ?.replace(/^Message:\s*/, '')
           .trim();
         const useful = reason && reason !== 'Unknown API Status Code!' ? ` ${reason}` : '';
-        return `A API do cluster respondeu ${status}.${useful}`;
+        return `The cluster API responded ${status}.${useful}`;
       }
       return anyReason.message;
     }
   }
-  return 'Falha ao consultar o alvo.';
+  return 'Failed to query the target.';
 }
 
 /** HTTP status carried by a Kubernetes client error, when there is one. */

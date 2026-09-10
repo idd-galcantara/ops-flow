@@ -77,7 +77,7 @@ test('normalizePod computes age in seconds from a fixed now', () => {
 
 test('normalizePod is resilient to missing fields', () => {
   const result = normalizePod({}, target);
-  assert.equal(result.name, '(sem nome)');
+  assert.equal(result.name, '(unnamed)');
   assert.equal(result.ready, '0/0');
   assert.equal(result.restarts, 0);
   assert.equal(result.node, '');

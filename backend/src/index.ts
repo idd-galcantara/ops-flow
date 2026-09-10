@@ -16,12 +16,12 @@ attachLogsWebSocket(server);
 server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
     console.error(
-      `\nA porta ${config.port} já está em uso — provavelmente há outro ops-flow rodando.\n` +
-        `Encerre o processo anterior ou use outra porta: OPS_FLOW_PORT=4001 npm run dev\n`,
+      `\nPort ${config.port} is already in use — there is probably another ops-flow running.\n` +
+        `Stop the previous process or use another port: OPS_FLOW_PORT=4001 npm run dev\n`,
     );
     process.exit(1);
   }
-  console.error(`Falha ao iniciar o servidor: ${err.message}`);
+  console.error(`Failed to start the server: ${err.message}`);
   process.exit(1);
 });
 

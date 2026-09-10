@@ -13,7 +13,7 @@ contextsRouter.get('/', (_req: Request, res: Response) => {
     const contexts = listContexts();
     res.json({ contexts });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro ao listar contexts.';
+    const message = err instanceof Error ? err.message : 'Error listing contexts.';
     res.status(500).json({ error: message });
   }
 });

@@ -208,7 +208,7 @@ export async function getPodMetrics(
     if (!found) {
       return {
         available: false,
-        reason: 'Métricas ainda não disponíveis para este pod.',
+        reason: 'Metrics are not available for this pod yet.',
       };
     }
 
@@ -226,7 +226,7 @@ export async function getPodMetrics(
     if (looksLikeMissingMetricsServer(err)) {
       return {
         available: false,
-        reason: 'Este cluster não expõe a API de métricas (metrics-server ausente).',
+        reason: 'This cluster does not expose the metrics API (metrics-server missing).',
       };
     }
     return { available: false, reason: safeErrorMessage(err) };

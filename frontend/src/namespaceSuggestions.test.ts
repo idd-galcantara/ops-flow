@@ -69,6 +69,6 @@ test('suggestNamespaces marks nothing as inAllClusters when no cluster is select
 
 test('describeNamespaceReach reports coverage only for multi-cluster selections', () => {
   const suggestion = { ...ns('bank-overdraft'), inAllClusters: true };
-  assert.equal(describeNamespaceReach(suggestion, 2), '2 de 2');
-  assert.equal(describeNamespaceReach(suggestion, 1), '', 'com 1 cluster não há o que comparar');
+  assert.equal(describeNamespaceReach(suggestion, 2), '2 of 2');
+  assert.equal(describeNamespaceReach(suggestion, 1), '', 'nothing to compare with 1 cluster');
 });

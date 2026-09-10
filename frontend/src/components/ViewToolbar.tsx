@@ -8,15 +8,15 @@ const GROUPING_OPTIONS: { mode: GroupingMode; label: string; icon: React.ReactNo
     mode: 'namespace',
     label: 'Namespace',
     icon: <Layers size={13} />,
-    hint: 'Agrupa por namespace, comparando clusters lado a lado',
+    hint: 'Group by namespace, comparing clusters side by side',
   },
   {
     mode: 'cluster',
     label: 'Cluster',
     icon: <Server size={13} />,
-    hint: 'Agrupa por cluster',
+    hint: 'Group by cluster',
   },
-  { mode: 'flat', label: 'Flat', icon: <Rows3 size={13} />, hint: 'Lista única, sem agrupamento' },
+  { mode: 'flat', label: 'Flat', icon: <Rows3 size={13} />, hint: 'Single list, no grouping' },
 ];
 
 interface ViewToolbarProps {
@@ -61,8 +61,8 @@ export function ViewToolbar({
 
   return (
     <div className="view-toolbar">
-      <div className="grouping-control" role="group" aria-label="Agrupamento da visão">
-        <span className="toolbar-label">Agrupar por</span>
+      <div className="grouping-control" role="group" aria-label="View grouping">
+        <span className="toolbar-label">Group by</span>
         {GROUPING_OPTIONS.map((option) => (
           <button
             type="button"
@@ -79,20 +79,20 @@ export function ViewToolbar({
 
       <label className="filter-bar">
         <Search size={14} />
-        <span className="visually-hidden">Filtrar pods</span>
+        <span className="visually-hidden">Filter pods</span>
         <input
           value={filter}
           onChange={(e) => onFilterChange(e.target.value)}
-          placeholder="Filtrar por pod, status, node, container..."
-          aria-label="Filtrar pods"
+          placeholder="Filter by pod, status, node, container..."
+          aria-label="Filter pods"
         />
         {filtering && (
           <button
             type="button"
             className="filter-clear"
             onClick={() => onFilterChange('')}
-            title="Limpar filtro"
-            aria-label="Limpar filtro"
+            title="Clear filter"
+            aria-label="Clear filter"
           >
             <X size={12} />
           </button>
@@ -101,16 +101,16 @@ export function ViewToolbar({
 
       <div className="toolbar-meta">
         <span aria-live="polite">
-          {filtering ? `${visibleCount} de ${totalCount}` : `${totalCount}`} pods
+          {filtering ? `${visibleCount} of ${totalCount}` : `${totalCount}`} pods
         </span>
 
         <label className="refresh-control">
-          <span className="visually-hidden">Atualização automática</span>
+          <span className="visually-hidden">Auto-refresh</span>
           <select
             value={refreshSeconds}
             onChange={(e) => onRefreshSecondsChange(Number(e.target.value))}
-            aria-label="Intervalo de atualização automática"
-            title="Atualização automática"
+            aria-label="Auto-refresh interval"
+            title="Auto-refresh"
           >
             {REFRESH_INTERVALS.map((seconds) => (
               <option key={seconds} value={seconds}>
@@ -127,8 +127,8 @@ export function ViewToolbar({
           className="icon-button subtle"
           onClick={onRefresh}
           disabled={loading}
-          title="Atualizar agora"
-          aria-label="Atualizar pods"
+          title="Refresh now"
+          aria-label="Refresh pods"
         >
           <RefreshCw size={14} className={loading || refreshing ? 'spinning' : ''} />
         </button>
@@ -137,12 +137,12 @@ export function ViewToolbar({
   );
 }
 
-/** "agora", "há 12s", "há 3min" — keeps the freshness of the data visible. */
+/** "just now", "12s ago", "3min ago" — keeps the freshness of the data visible. */
 function formatRelative(timestamp: number): string {
   const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
-  if (seconds < 5) return 'agora';
-  if (seconds < 60) return `há ${seconds}s`;
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `há ${minutes}min`;
-  return `há ${Math.round(minutes / 60)}h`;
+  if (minutes < 60) return `${minutes}min ago`;
+  return `${Math.round(minutes / 60)}h ago`;
 }
