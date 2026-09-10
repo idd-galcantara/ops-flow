@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { contextsRouter } from './routes/contexts.js';
+import { namespacesRouter } from './routes/namespaces.js';
 import { podsRouter } from './routes/pods.js';
 
 /**
@@ -18,6 +19,7 @@ export function createApp(): Express {
   });
 
   app.use('/api/contexts', contextsRouter);
+  app.use('/api/namespaces', namespacesRouter);
   app.use('/api/pods', podsRouter);
 
   return app;

@@ -45,6 +45,17 @@ export function LogViewer({ pod }: { pod: PodRef }) {
     setError(undefined);
     setState('connecting');
 
+    /**
+     * Guards against a superseded socket writing state.
+     *
+     * Closing a socket that is still CONNECTING makes the browser fire `error`.
+     * That happens on every teardown — React's StrictMode double-invokes effects
+     * in development, and switching containers closes the previous socket — so
+     * without this flag a stale socket would raise a phantom "could not connect"
+     * banner while the current socket streams fine.
+     */
+    let active = true;
+
     const socket = new WebSocket(
       podLogsUrl(pod.cluster, pod.namespace, pod.name, {
         container,
@@ -54,6 +65,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
     );
 
     socket.onmessage = (event: MessageEvent<string>) => {
+      if (!active) return;
+
       let message: InboundMessage;
       try {
         message = JSON.parse(event.data) as InboundMessage;
@@ -86,15 +99,18 @@ export function LogViewer({ pod }: { pod: PodRef }) {
     };
 
     socket.onerror = () => {
+      if (!active) return;
       setError('Não foi possível conectar ao stream de logs.');
       setState('error');
     };
 
     socket.onclose = () => {
+      if (!active) return;
       setState((current) => (current === 'error' ? current : 'ended'));
     };
 
     return () => {
+      active = false;
       socket.close();
     };
   }, [container, pod.cluster, pod.namespace, pod.name]);

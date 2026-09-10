@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { fetchContexts, fetchPods } from './api';
+import { fetchContexts, fetchNamespaces, fetchPods } from './api';
 import { createPreset, loadPresets, savePresets, type Preset } from './presets';
 import {
   targetKey,
   type ContextInfo,
   type GroupingMode,
+  type NamespaceInfo,
   type NormalizedPod,
   type Target,
   type TargetError,
@@ -40,10 +41,18 @@ interface OpsFlowState {
   /** Auto-refresh period in seconds; 0 disables it. */
   refreshSeconds: number;
 
+  /** Namespaces discovered in the currently selected clusters (for autocomplete). */
+  namespaces: NamespaceInfo[];
+  namespacesLoading: boolean;
+  namespacesError?: string;
+  /** Clusters the namespace list was loaded for, to avoid redundant fetches. */
+  namespacesFor: string[];
+
   /** Saved target combinations. */
   presets: Preset[];
 
   loadContexts: () => Promise<void>;
+  loadNamespaces: (clusters: string[]) => Promise<void>;
   addTarget: (target: Target) => void;
   removeTarget: (target: Target) => void;
   clearTargets: () => void;
@@ -68,6 +77,9 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   grouping: 'namespace',
   filter: '',
   refreshSeconds: 0,
+  namespaces: [],
+  namespacesLoading: false,
+  namespacesFor: [],
   presets: loadPresets(),
 
   loadContexts: async () => {
@@ -79,6 +91,48 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
       set({
         contextsLoading: false,
         contextsError: err instanceof Error ? err.message : 'Falha ao carregar contexts.',
+      });
+    }
+  },
+
+  /**
+   * Loads the namespaces that exist in the given clusters, for autocomplete.
+   * Skips the request when the same cluster set is already loaded, since these
+   * clusters can return ~2000 namespaces.
+   */
+  loadNamespaces: async (clusters) => {
+    const key = [...clusters].sort();
+    const current = get();
+
+    if (key.length === 0) {
+      set({ namespaces: [], namespacesFor: [], namespacesError: undefined });
+      return;
+    }
+
+    const alreadyLoaded =
+      current.namespacesFor.length === key.length &&
+      current.namespacesFor.every((c, i) => c === key[i]);
+    if (alreadyLoaded && !current.namespacesError) return;
+
+    set({ namespacesLoading: true, namespacesError: undefined });
+    try {
+      const { namespaces, errors } = await fetchNamespaces(key);
+      set({
+        namespaces,
+        namespacesFor: key,
+        namespacesLoading: false,
+        // Partial failure: report it but keep whatever namespaces did come back.
+        namespacesError:
+          errors.length > 0
+            ? `${errors.length} cluster(s) não retornaram namespaces: ${errors
+                .map((e) => e.cluster)
+                .join(', ')}`
+            : undefined,
+      });
+    } catch (err) {
+      set({
+        namespacesLoading: false,
+        namespacesError: err instanceof Error ? err.message : 'Falha ao carregar namespaces.',
       });
     }
   },

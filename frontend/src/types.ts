@@ -102,3 +102,20 @@ export interface PodRef {
   name: string;
   containers: string[];
 }
+
+/** A namespace and the clusters (within the current selection) that have it. */
+export interface NamespaceInfo {
+  name: string;
+  clusters: string[];
+}
+
+/** An error for a single cluster during a namespace listing. */
+export interface ClusterError {
+  cluster: string;
+  message: string;
+}
+
+export interface NamespacesResponse {
+  namespaces: NamespaceInfo[];
+  errors: ClusterError[];
+}

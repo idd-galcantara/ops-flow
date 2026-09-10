@@ -1,5 +1,6 @@
 import type {
   ContextInfo,
+  NamespacesResponse,
   PodDescribe,
   PodMetricsResult,
   PodsResponse,
@@ -38,6 +39,20 @@ export async function fetchPods(targets: Target[]): Promise<PodsResponse> {
   });
   if (!res.ok) throw await errorFrom(res);
   return (await res.json()) as PodsResponse;
+}
+
+/**
+ * Lists the namespaces available across the given clusters, each annotated with
+ * where it exists. Read-only.
+ */
+export async function fetchNamespaces(clusters: string[]): Promise<NamespacesResponse> {
+  const res = await fetch('/api/namespaces', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clusters }),
+  });
+  if (!res.ok) throw await errorFrom(res);
+  return (await res.json()) as NamespacesResponse;
 }
 
 /** Path-safe encoding for the cluster/namespace/pod segments. */

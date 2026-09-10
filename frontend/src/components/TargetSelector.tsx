@@ -4,6 +4,7 @@ import { describePreset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
+import { NamespaceInput } from './NamespaceInput';
 
 /**
  * Builds the list of (cluster, namespace) targets to query.
@@ -53,13 +54,6 @@ export function TargetSelector() {
     selectedClusters.forEach((cluster) => addTarget({ cluster, namespace: ns }));
     // Keep the cluster selection so another namespace can be added quickly.
     setNamespace('');
-  };
-
-  const submitOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      addSelection();
-    }
   };
 
   return (
@@ -134,16 +128,12 @@ export function TargetSelector() {
       </div>
 
       <div className="namespace-row">
-        <label className="inspector-field">
-          <span>Namespace</span>
-          <input
-            value={namespace}
-            onChange={(e) => setNamespace(e.target.value)}
-            onKeyDown={submitOnEnter}
-            placeholder="ex.: bank-overdraft"
-            aria-label="Namespace"
-          />
-        </label>
+        <NamespaceInput
+          value={namespace}
+          onChange={setNamespace}
+          onSubmit={addSelection}
+          selectedClusters={selectedClusters}
+        />
         <button
           type="button"
           className="primary-button add-target-button"
