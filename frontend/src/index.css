@@ -1612,3 +1612,170 @@ button {
     border-top: 1px solid var(--line);
   }
 }
+
+/* ---------- Presets ---------- */
+
+.preset-form {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  margin-bottom: 8px;
+}
+
+.preset-form input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  color: #445064;
+  background: #fff;
+  border: 1px solid #e1e5ea;
+  border-radius: 4px;
+  outline: 0;
+  font-size: 11px;
+}
+
+.preset-form input:focus {
+  border-color: #d99a80;
+  box-shadow: 0 0 0 2px rgba(223, 112, 69, 0.1);
+}
+
+.preset-form .primary-button {
+  min-height: 30px;
+  padding: 0 9px;
+}
+
+.preset-list {
+  display: grid;
+  gap: 4px;
+  padding: 0 2px;
+  margin-bottom: 4px;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-apply {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  text-align: left;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.preset-apply:hover {
+  border-color: #e4a289;
+  background: #fffaf8;
+}
+
+.preset-apply > svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.preset-text {
+  min-width: 0;
+}
+
+.preset-text strong,
+.preset-text small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-text strong {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.preset-text small {
+  margin-top: 2px;
+  color: var(--muted);
+  font: 9px var(--mono);
+}
+
+/* ---------- Refresh control ---------- */
+
+.refresh-control select {
+  height: 26px;
+  padding: 0 4px;
+  color: #566276;
+  background: #fff;
+  border: 1px solid #e4e7eb;
+  border-radius: 4px;
+  font: 9px var(--mono);
+}
+
+.last-updated {
+  color: var(--muted);
+  font: 9px var(--mono);
+  white-space: nowrap;
+}
+
+/* ---------- Shared feedback states ---------- */
+
+.feedback-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.feedback-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  color: var(--error-ink);
+  background: var(--error-soft);
+  border: 1px solid #f0ceca;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.feedback-error > svg {
+  flex: 0 0 auto;
+}
+
+.feedback-error-message {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.feedback-error .text-button {
+  flex: 0 0 auto;
+  color: var(--error-ink);
+  text-decoration: underline;
+}
+
+.sidebar-feedback {
+  padding: 0 6px;
+}
+
+.sidebar-feedback .feedback-loading,
+.sidebar-feedback .feedback-error {
+  padding: 8px 9px;
+  font-size: 10px;
+}
+
+.log-viewer .feedback-error {
+  margin: 8px 12px;
+}

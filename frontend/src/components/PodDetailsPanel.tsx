@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Activity, CircleAlert, FileText, Info, ScrollText, X } from 'lucide-react';
+import { Activity, FileText, Info, ScrollText, X } from 'lucide-react';
 import { fetchPodDescribe, fetchPodMetrics } from '../api';
 import { formatCpu, formatMemory, formatTimestamp, usageRatio } from '../k8sUnits';
+import { ErrorState, LoadingState } from './Feedback';
 import { LogViewer } from './LogViewer';
 import type { ContainerDetail, PodDescribe, PodMetricsResult, PodRef } from '../types';
 
@@ -131,14 +132,8 @@ function DescribeTab({
   describe: PodDescribe | null;
   error?: string;
 }) {
-  if (loading) return <p className="details-loading">Carregando detalhes...</p>;
-  if (error) {
-    return (
-      <p className="panel-error" role="alert">
-        <CircleAlert size={14} /> {error}
-      </p>
-    );
-  }
+  if (loading) return <LoadingState message="Carregando detalhes..." />;
+  if (error) return <ErrorState message={error} />;
   if (!describe) return null;
 
   return (
@@ -244,14 +239,8 @@ function MetricsTab({
   error?: string;
   containers: ContainerDetail[];
 }) {
-  if (loading) return <p className="details-loading">Carregando métricas...</p>;
-  if (error) {
-    return (
-      <p className="panel-error" role="alert">
-        <CircleAlert size={14} /> {error}
-      </p>
-    );
-  }
+  if (loading) return <LoadingState message="Carregando métricas..." />;
+  if (error) return <ErrorState message={error} />;
   if (!metrics) return null;
 
   // A cluster without metrics-server is expected, not an error.

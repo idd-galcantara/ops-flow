@@ -118,17 +118,17 @@ são incrementais — cada uma constrói sobre a anterior.
 
 ## Fase 6 — Polimento e garantia read-only
 
-- [ ] 14. Auto-refresh opcional e presets de alvos
+- [x] 14. Auto-refresh opcional e presets de alvos
   - Refresh opcional da lista; salvar/carregar presets de alvos localmente.
   - _Agente: ops-flow-frontend_
   - _Requirements: 3.2_
 
-- [ ] 15. Estados de loading/erro consistentes
+- [x] 15. Estados de loading/erro consistentes
   - Padronizar loading e mensagens de erro em toda a UI.
   - _Agente: ops-flow-frontend_
   - _Requirements: 3.6, 4.3_
 
-- [ ] 16. Auditoria read-only ponta a ponta
+- [x] 16. Auditoria read-only ponta a ponta
   - Revisar backend e front: nenhum método de mutação exposto/chamado; nenhum segredo logado/retornado; app só em localhost.
   - _Agente: ops-flow-integration-qa_
   - _Requirements: 6.1, 6.2, 6.3_

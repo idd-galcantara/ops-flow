@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleAlert, Pause, Play, Search, Trash2, X } from 'lucide-react';
+import { Pause, Play, Search, Trash2, X } from 'lucide-react';
 import { podLogsUrl } from '../api';
+import { ErrorState } from './Feedback';
 import type { PodRef } from '../types';
 
 /** Keeps memory bounded on chatty containers. */
@@ -178,11 +179,7 @@ export function LogViewer({ pod }: { pod: PodRef }) {
         </div>
       </div>
 
-      {error && (
-        <p className="panel-error" role="alert">
-          <CircleAlert size={14} /> {error}
-        </p>
-      )}
+      {error && <ErrorState message={error} />}
 
       <div className="log-output" ref={scrollRef} onScroll={onScroll} tabIndex={0} aria-label="Saída de logs">
         {visibleLines.length === 0 ? (

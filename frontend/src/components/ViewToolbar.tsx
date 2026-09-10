@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Layers, RefreshCw, Rows3, Search, Server, X } from 'lucide-react';
+import { REFRESH_INTERVALS } from '../store';
 import type { GroupingMode } from '../types';
 
 const GROUPING_OPTIONS: { mode: GroupingMode; label: string; icon: React.ReactNode; hint: string }[] = [
@@ -26,9 +28,14 @@ interface ViewToolbarProps {
   totalCount: number;
   onRefresh: () => void;
   loading: boolean;
+  /** True during a silent auto-refresh (table stays visible). */
+  refreshing: boolean;
+  refreshSeconds: number;
+  onRefreshSecondsChange: (seconds: number) => void;
+  lastUpdatedAt?: number;
 }
 
-/** Grouping switch + text filter for the unified view. */
+/** Grouping switch, text filter and refresh controls for the unified view. */
 export function ViewToolbar({
   grouping,
   onGroupingChange,
@@ -38,8 +45,19 @@ export function ViewToolbar({
   totalCount,
   onRefresh,
   loading,
+  refreshing,
+  refreshSeconds,
+  onRefreshSecondsChange,
+  lastUpdatedAt,
 }: ViewToolbarProps) {
   const filtering = filter.trim().length > 0;
+  // The "last updated" label is relative, so it needs its own tick to stay honest.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!lastUpdatedAt) return;
+    const timer = setInterval(() => forceTick((n) => n + 1), 10_000);
+    return () => clearInterval(timer);
+  }, [lastUpdatedAt]);
 
   return (
     <div className="view-toolbar">
@@ -85,17 +103,46 @@ export function ViewToolbar({
         <span aria-live="polite">
           {filtering ? `${visibleCount} de ${totalCount}` : `${totalCount}`} pods
         </span>
+
+        <label className="refresh-control">
+          <span className="visually-hidden">Atualização automática</span>
+          <select
+            value={refreshSeconds}
+            onChange={(e) => onRefreshSecondsChange(Number(e.target.value))}
+            aria-label="Intervalo de atualização automática"
+            title="Atualização automática"
+          >
+            {REFRESH_INTERVALS.map((seconds) => (
+              <option key={seconds} value={seconds}>
+                {seconds === 0 ? 'manual' : `${seconds}s`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {lastUpdatedAt && <span className="last-updated">{formatRelative(lastUpdatedAt)}</span>}
+
         <button
           type="button"
           className="icon-button subtle"
           onClick={onRefresh}
           disabled={loading}
-          title="Atualizar"
+          title="Atualizar agora"
           aria-label="Atualizar pods"
         >
-          <RefreshCw size={14} className={loading ? 'spinning' : ''} />
+          <RefreshCw size={14} className={loading || refreshing ? 'spinning' : ''} />
         </button>
       </div>
     </div>
   );
+}
+
+/** "agora", "há 12s", "há 3min" — keeps the freshness of the data visible. */
+function formatRelative(timestamp: number): string {
+  const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+  if (seconds < 5) return 'agora';
+  if (seconds < 60) return `há ${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `há ${minutes}min`;
+  return `há ${Math.round(minutes / 60)}h`;
 }

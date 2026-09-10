@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CircleAlert, Layers, Search, Workflow } from 'lucide-react';
+import { Layers, Search, Workflow } from 'lucide-react';
+import { EmptyState, ErrorState } from './components/Feedback';
 import { PodDetailsPanel } from './components/PodDetailsPanel';
 import { PodTable, podRowKey } from './components/PodTable';
 import { TargetErrorBanner } from './components/TargetErrorBanner';
@@ -35,6 +36,20 @@ export default function App() {
   const filter = useOpsFlowStore((s) => s.filter);
   const setFilter = useOpsFlowStore((s) => s.setFilter);
   const loadPods = useOpsFlowStore((s) => s.loadPods);
+  const refreshing = useOpsFlowStore((s) => s.refreshing);
+  const refreshSeconds = useOpsFlowStore((s) => s.refreshSeconds);
+  const setRefreshSeconds = useOpsFlowStore((s) => s.setRefreshSeconds);
+  const lastUpdatedAt = useOpsFlowStore((s) => s.lastUpdatedAt);
+
+  // Auto-refresh: silent so the table keeps its content between ticks. Only runs
+  // while there are targets, and is torn down on interval change or unmount.
+  useEffect(() => {
+    if (refreshSeconds <= 0 || targets.length === 0) return;
+    const timer = setInterval(() => {
+      void loadPods({ silent: true });
+    }, refreshSeconds * 1000);
+    return () => clearInterval(timer);
+  }, [refreshSeconds, targets.length, loadPods]);
 
   useEffect(() => {
     let active = true;
@@ -108,15 +123,15 @@ export default function App() {
               totalCount={pods.length}
               onRefresh={() => void loadPods()}
               loading={podsLoading}
+              refreshing={refreshing}
+              refreshSeconds={refreshSeconds}
+              onRefreshSecondsChange={setRefreshSeconds}
+              lastUpdatedAt={lastUpdatedAt}
             />
           )}
 
           <div className="panel-content">
-            {podsError && (
-              <p className="panel-error" role="alert">
-                <CircleAlert size={14} /> {podsError}
-              </p>
-            )}
+            {podsError && <ErrorState message={podsError} onRetry={() => void loadPods()} />}
 
             <TargetErrorBanner errors={targetErrors} />
 
@@ -169,24 +184,6 @@ export default function App() {
 
         {selected && <PodDetailsPanel pod={selected} onClose={() => setSelected(null)} />}
       </div>
-    </div>
-  );
-}
-
-function EmptyState({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="empty-state">
-      <div className="empty-icon">{icon}</div>
-      <h3>{title}</h3>
-      <p>{description}</p>
     </div>
   );
 }

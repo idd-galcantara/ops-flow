@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { Bookmark, Layers, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-react';
+import { describePreset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey } from '../types';
+import { ErrorState, LoadingState } from './Feedback';
 
 /**
  * Builds the list of (cluster, namespace) targets to query.
@@ -97,12 +99,16 @@ export function TargetSelector() {
       </div>
 
       {contextsError && (
-        <p className="sidebar-error" role="alert">
-          {contextsError}
-        </p>
+        <div className="sidebar-feedback">
+          <ErrorState message={contextsError} onRetry={() => void loadContexts()} />
+        </div>
       )}
 
-      {contextsLoading && <p className="sidebar-hint">Carregando contexts...</p>}
+      {contextsLoading && (
+        <div className="sidebar-feedback">
+          <LoadingState message="Carregando contexts..." />
+        </div>
+      )}
 
       <div className="context-list" role="group" aria-label="Contexts disponíveis">
         {visibleContexts.map((ctx) => {
@@ -189,6 +195,8 @@ export function TargetSelector() {
         )}
       </div>
 
+      <PresetSection />
+
       <div className="sidebar-footer">
         <button
           type="button"
@@ -213,5 +221,111 @@ export function TargetSelector() {
         )}
       </div>
     </aside>
+  );
+}
+
+/**
+ * Saved target combinations, so a recurring investigation (e.g. "QA overdraft =
+ * tb + gt") can be restored in one click instead of rebuilt every time.
+ */
+function PresetSection() {
+  const presets = useOpsFlowStore((s) => s.presets);
+  const targets = useOpsFlowStore((s) => s.targets);
+  const savePreset = useOpsFlowStore((s) => s.savePreset);
+  const applyPreset = useOpsFlowStore((s) => s.applyPreset);
+  const deletePreset = useOpsFlowStore((s) => s.deletePreset);
+
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState('');
+
+  const confirmSave = () => {
+    if (!name.trim()) return;
+    savePreset(name);
+    setName('');
+    setNaming(false);
+  };
+
+  return (
+    <>
+      <div className="sidebar-section-label">
+        <span>
+          Presets <b>{presets.length}</b>
+        </span>
+        {targets.length > 0 && !naming && (
+          <button type="button" className="text-button" onClick={() => setNaming(true)}>
+            Salvar atual
+          </button>
+        )}
+      </div>
+
+      {naming && (
+        <div className="preset-form">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmSave();
+              }
+              if (e.key === 'Escape') {
+                setNaming(false);
+                setName('');
+              }
+            }}
+            placeholder="Nome do preset"
+            aria-label="Nome do preset"
+          />
+          <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim()}>
+            <Save size={13} />
+          </button>
+          <button
+            type="button"
+            className="icon-button subtle"
+            onClick={() => {
+              setNaming(false);
+              setName('');
+            }}
+            aria-label="Cancelar"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      <div className="preset-list">
+        {presets.map((preset) => (
+          <div className="preset-item" key={preset.id}>
+            <button
+              type="button"
+              className="preset-apply"
+              onClick={() => applyPreset(preset.id)}
+              title={preset.targets.map(targetKey).join('\n')}
+            >
+              <Bookmark size={12} />
+              <span className="preset-text">
+                <strong>{preset.name}</strong>
+                <small>{describePreset(preset)}</small>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="icon-button subtle danger"
+              onClick={() => deletePreset(preset.id)}
+              title={`Remover preset ${preset.name}`}
+              aria-label={`Remover preset ${preset.name}`}
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        ))}
+        {presets.length === 0 && !naming && (
+          <p className="sidebar-hint">
+            Salve combinações de alvos que você usa com frequência.
+          </p>
+        )}
+      </div>
+    </>
   );
 }

@@ -183,3 +183,53 @@ travaria a interface.
 A tabela passa a renderizar **100 linhas por grupo**, com ações "Mostrar mais" e
 "Mostrar todos" no rodapé de cada grupo. O agrupamento e os contadores continuam
 refletindo o total real — nenhum pod é descartado, apenas a renderização é adiada.
+
+## Auditoria read-only (Fase 6)
+
+Auditoria realizada ao fim do MVP, cobrindo os requisitos 6.1, 6.2 e 6.3.
+
+### 6.1 — Somente leitura: **conforme**
+
+Métodos da API Kubernetes efetivamente usados no backend:
+
+| Método | Onde | Tipo |
+| --- | --- | --- |
+| `listNamespacedPod` | `podsService.ts` | leitura |
+| `readNamespacedPod` | `podDetailsService.ts` | leitura |
+| `listNamespacedEvent` | `podDetailsService.ts` | leitura |
+| `metrics.getPodMetrics` | `podDetailsService.ts` | leitura |
+| `log.log` | `logsService.ts` | leitura (stream) |
+
+- Nenhuma chamada a `create*`, `delete*`, `patch*`, `replace*`, `update*` ou `evict*`.
+- Do `@kubernetes/client-node` são importados apenas `CoreV1Api`, `KubeConfig`, `Log`
+  e `Metrics`. As classes `Exec`, `Attach`, `PortForward` e `Cp` nunca são importadas,
+  então não há caminho de código para exec, attach ou port-forward.
+- As duas ocorrências de `.exec(` no código são `RegExp.exec` sobre strings, não exec em pod.
+- Verificação dinâmica: `DELETE`, `PUT`, `PATCH` e `POST` nas rotas de leitura retornam
+  **404** (a rota não existe). `POST /api/pods` existe, mas é uma consulta — recebe a
+  lista de alvos no corpo e apenas lê.
+
+### 6.2 — Segredos: **conforme**
+
+- Único `console.log` do backend imprime host e porta, nada mais.
+- As 5 respostas da API foram varridas por `BEGIN CERTIFICATE`, `BEGIN PRIVATE`, `caData`,
+  `certificate-authority`, `client-key`, `certData`, `keyData`, `bearer`, `authorization`,
+  `password` e `audit-id`: **zero ocorrências**.
+- `caData` é lido apenas para compor a cadeia de CA em memória; nunca é retornado.
+- `safeErrorMessage` impede o vazamento do dump da `ApiException`, que embute o corpo
+  cru e todos os headers de resposta. Coberto por teste que falha se um token em
+  header aparecer na mensagem.
+- `localStorage` é usado somente para presets, que guardam apenas nomes de cluster e
+  namespace.
+
+Observação: o describe pode conter a palavra "secret" quando um event do cluster
+menciona o **nome** de um Secret (ex.: `SecretRotationComplete`). É o mesmo texto que
+`kubectl describe` exibe — nome de recurso, não conteúdo de segredo.
+
+### 6.3 — Localhost: **conforme**
+
+- `config.ts` fixa `host: '127.0.0.1'`.
+- Confirmado no socket em execução: `LISTEN 127.0.0.1:4000` — **não** em `0.0.0.0`,
+  portanto não acessível pela rede.
+- Sem autenticação própria, por decisão de escopo: a app confia no kubeconfig do
+  usuário e roda apenas na máquina dele.
