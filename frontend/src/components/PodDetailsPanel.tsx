@@ -83,7 +83,12 @@ export function PodDetailsPanel({ pod, onClose }: { pod: PodRef; onClose: () => 
         </TabButton>
       </div>
 
-      <div className="details-content" role="tabpanel">
+      {/*
+        The logs tab manages its own scrolling: the output area must fill the
+        remaining height and scroll internally. Letting this container scroll
+        instead would make the log list grow past the viewport.
+      */}
+      <div className={`details-content ${tab === 'logs' ? 'is-logs' : ''}`} role="tabpanel">
         {tab === 'describe' && (
           <DescribeTab loading={loading} describe={describe} error={describeError} />
         )}

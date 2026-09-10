@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Play, Search, Trash2, X } from 'lucide-react';
 import { podLogsUrl } from '../api';
+import { highlightSegments } from '../textHighlight';
 import { ErrorState } from './Feedback';
 import type { PodRef } from '../types';
 
@@ -34,7 +35,6 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
-  const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // One socket per (pod, container). Re-subscribing resets the buffer.
@@ -121,8 +121,12 @@ export function LogViewer({ pod }: { pod: PodRef }) {
     return lines.filter((line) => line.toLowerCase().includes(needle));
   }, [filter, lines]);
 
+  // Scroll the log container itself rather than calling scrollIntoView, which
+  // would also scroll ancestor containers and could shift the whole layout.
   useEffect(() => {
-    if (autoScroll && !paused) bottomRef.current?.scrollIntoView({ block: 'end' });
+    if (!autoScroll || paused) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [visibleLines, autoScroll, paused]);
 
   /** Turns auto-scroll off when the user scrolls up to read history. */
@@ -207,13 +211,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
                 : 'Nenhuma linha recebida ainda.'}
           </p>
         ) : (
-          visibleLines.map((line, i) => (
-            <div className="log-line" key={i}>
-              {line || '\u00a0'}
-            </div>
-          ))
+          visibleLines.map((line, i) => <LogLine key={i} line={line} query={filter} />)
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="log-footer">
@@ -227,13 +226,34 @@ export function LogViewer({ pod }: { pod: PodRef }) {
             className="text-button"
             onClick={() => {
               setAutoScroll(true);
-              bottomRef.current?.scrollIntoView({ block: 'end' });
+              const el = scrollRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
             }}
           >
             Ir para o fim
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** A single log line, with the active filter term highlighted. */
+function LogLine({ line, query }: { line: string; query: string }) {
+  const segments = highlightSegments(line, query);
+
+  return (
+    <div className="log-line">
+      {line === '' && '\u00a0'}
+      {segments.map((segment, i) =>
+        segment.match ? (
+          <mark className="log-mark" key={i}>
+            {segment.text}
+          </mark>
+        ) : (
+          <span key={i}>{segment.text}</span>
+        ),
+      )}
     </div>
   );
 }

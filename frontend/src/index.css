@@ -76,7 +76,13 @@ button {
 /* ---------- Shell ---------- */
 
 .app-shell {
-  min-height: 100vh;
+  /*
+   * Locked to the viewport so the panels below own their own scrolling. Without
+   * a fixed height the log output would keep growing and push the page instead
+   * of scrolling in place.
+   */
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--canvas);
@@ -1129,6 +1135,11 @@ button {
   overflow-y: auto;
 }
 
+/* Logs scroll inside .log-output, so this container must not scroll itself. */
+.details-content.is-logs {
+  overflow: hidden;
+}
+
 .describe-body,
 .metrics-body {
   padding: 16px 18px 26px;
@@ -1557,6 +1568,8 @@ button {
 }
 
 .log-output {
+  /* Fills the leftover height and scrolls internally, so the panel never grows
+     past the viewport regardless of how many lines arrive. */
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -1564,6 +1577,14 @@ button {
   background: #1f2734;
   color: #e6ebf2;
   font: 10px/1.55 var(--mono);
+  overscroll-behavior: contain;
+}
+
+.log-mark {
+  padding: 0 1px;
+  color: #1f2734;
+  background: #ffd48a;
+  border-radius: 2px;
 }
 
 .log-output:focus-visible {
@@ -1602,6 +1623,13 @@ button {
 }
 
 @media (max-width: 1000px) {
+  /* Stacked layout needs the page itself to scroll again. */
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .app-body.has-details {
     grid-template-columns: 1fr;
   }
@@ -1610,6 +1638,10 @@ button {
     min-height: 560px;
     border-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .log-output {
+    max-height: 60vh;
   }
 }
 

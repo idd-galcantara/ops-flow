@@ -47,12 +47,15 @@ export function TargetSelector() {
 
   const canAdd = selectedClusters.length > 0 && namespace.trim().length > 0;
 
-  /** Adds one target per selected cluster, all sharing the typed namespace. */
+  /**
+   * Adds one target per selected cluster, all sharing the typed namespace, then
+   * resets the form so the next addition starts from a clean slate.
+   */
   const addSelection = () => {
     if (!canAdd) return;
     const ns = namespace.trim();
     selectedClusters.forEach((cluster) => addTarget({ cluster, namespace: ns }));
-    // Keep the cluster selection so another namespace can be added quickly.
+    setSelectedClusters([]);
     setNamespace('');
   };
 
