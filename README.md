@@ -91,6 +91,14 @@ Esse comando inicia:
 
 Abra o frontend no navegador. O Vite encaminha `/api` e o WebSocket de logs para o backend local.
 
+Para abrir a versao desktop local, depois de instalar as dependencias:
+
+```bash
+npm run dev:desktop
+```
+
+Para gerar os artefatos de distribuicao, consulte [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
+
 ### 3. Fazer a primeira consulta
 
 1. Selecione um ou mais contextos.

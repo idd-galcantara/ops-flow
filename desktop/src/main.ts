@@ -63,7 +63,7 @@ async function availablePort(): Promise<number> {
 }
 
 function projectRoot(): string {
-  return app.isPackaged ? app.getAppPath() : path.resolve(app.getAppPath(), '..');
+  return app.isPackaged ? process.resourcesPath : path.resolve(app.getAppPath(), '..');
 }
 
 async function closeBackend(): Promise<void> {

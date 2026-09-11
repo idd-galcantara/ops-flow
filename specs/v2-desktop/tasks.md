@@ -57,14 +57,16 @@ durante o desenvolvimento.
 
 ## Step 5 — Build e distribuição multiplataforma
 
-- [ ] Configurar build de produção do frontend, backend e Electron em uma sequência reproduzível.
-- [ ] Configurar `electron-builder` para gerar instalador Windows `.exe`.
-- [ ] Configurar artefato Linux `.AppImage` e avaliar geração de `.deb`.
-- [ ] Incluir o runtime e os arquivos compilados necessários no pacote, sem incluir o kubeconfig
+- [x] Configurar build de produção do frontend, backend e Electron em uma sequência reproduzível.
+- [x] Configurar `electron-builder` para gerar instalador Windows `.exe`.
+- [x] Configurar artefato Linux `.AppImage` e avaliar geração de `.deb`.
+- [x] Incluir o runtime e os arquivos compilados necessários no pacote, sem incluir o kubeconfig
   do desenvolvedor.
-- [ ] Criar nome, ícone, versão e atalhos do aplicativo para cada plataforma.
-- [ ] Documentar o processo de geração dos artefatos e os requisitos de assinatura quando
+- [x] Criar nome, ícone, versão e atalhos do aplicativo para cada plataforma.
+- [x] Documentar o processo de geração dos artefatos e os requisitos de assinatura quando
   aplicável.
+- _Validação local: AppImage e `.deb` gerados e executável testado em Linux; o `.exe` requer
+  Windows ou Wine/CI Windows para concluir o instalador NSIS._
 - _Copilot agent: @ops-flow-backend_
 - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.3_
 

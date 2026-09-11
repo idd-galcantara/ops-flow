@@ -1,7 +1,13 @@
 {
   "name": "ops-flow",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Local, read-only Kubernetes workload viewer.",
+  "homepage": "https://github.com/ops-flow/ops-flow",
+  "author": {
+    "name": "ops-flow maintainers",
+    "email": "ops-flow@users.noreply.github.com"
+  },
   "type": "module",
   "workspaces": [
     "backend",
@@ -13,7 +19,13 @@
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:desktop": "npm run build && npm run dev --workspace=desktop",
+    "build:desktop": "npm run build",
+    "package:linux": "npm run build && node scripts/prepare-desktop-runtime.mjs && electron-builder --config electron-builder.yml --linux AppImage deb",
+    "package:win": "npm run build && node scripts/prepare-desktop-runtime.mjs && electron-builder --config electron-builder.yml --win nsis",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=desktop",
     "typecheck": "npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend && npm run typecheck --workspace=desktop"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.0.12"
   }
 }
