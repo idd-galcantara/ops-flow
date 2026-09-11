@@ -40,7 +40,6 @@
 
 body {
   margin: 0;
-  min-width: 320px;
 }
 
 button,
@@ -195,6 +194,7 @@ button {
   padding: 22px 15px 16px;
   background: var(--panel);
   border-right: 1px solid var(--line);
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
