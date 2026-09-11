@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clampWidth, readStoredWidth } from './useResizablePanel';
+import { clampWidth, readStoredWidth, resizeWidth } from './useResizablePanel';
 
 test('clampWidth keeps a width inside the allowed range', () => {
   assert.equal(clampWidth(500, 320, 900), 500);
@@ -29,4 +29,11 @@ test('readStoredWidth clamps a stored width that is out of range', () => {
   // A width persisted on a much wider monitor must not break a smaller screen.
   assert.equal(readStoredWidth('5000', 420, 320, 900), 900);
   assert.equal(readStoredWidth('50', 420, 320, 900), 320);
+});
+
+test('resizeWidth follows the edge direction and clamps the result', () => {
+  assert.equal(resizeWidth(292, 40, 240, 520, 'left'), 332);
+  assert.equal(resizeWidth(420, 40, 320, 900, 'right'), 380);
+  assert.equal(resizeWidth(240, -40, 240, 520, 'left'), 240);
+  assert.equal(resizeWidth(520, -40, 240, 520, 'right'), 520);
 });

@@ -7,6 +7,17 @@ import { targetKey } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
 import { NamespaceInput } from './NamespaceInput';
 
+interface TargetSelectorProps {
+  sidebarWidth: number;
+  sidebarMin: number;
+  sidebarMax: number;
+  resizing: boolean;
+  onResizeStart: (event: React.MouseEvent | React.TouchEvent) => void;
+  onResizeNudge: (delta: number) => void;
+}
+
+const KEYBOARD_STEP = 24;
+
 /**
  * Builds the list of (cluster, namespace) targets to query.
  *
@@ -14,7 +25,14 @@ import { NamespaceInput } from './NamespaceInput';
  * clusters — and also multiple namespaces on the same cluster, since each
  * target is an independent pair.
  */
-export function TargetSelector() {
+export function TargetSelector({
+  sidebarWidth,
+  sidebarMin,
+  sidebarMax,
+  resizing,
+  onResizeStart,
+  onResizeNudge,
+}: TargetSelectorProps) {
   const contexts = useOpsFlowStore((s) => s.contexts);
   const contextsLoading = useOpsFlowStore((s) => s.contextsLoading);
   const contextsError = useOpsFlowStore((s) => s.contextsError);
@@ -69,6 +87,28 @@ export function TargetSelector() {
 
   return (
     <aside className="sidebar">
+      <div
+        className={`sidebar-resize-handle ${resizing ? 'is-resizing' : ''}`}
+        onMouseDown={onResizeStart}
+        onTouchStart={onResizeStart}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            onResizeNudge(-KEYBOARD_STEP);
+          }
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            onResizeNudge(KEYBOARD_STEP);
+          }
+        }}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize targets panel"
+        aria-valuemin={sidebarMin}
+        aria-valuemax={sidebarMax}
+        aria-valuenow={Math.round(sidebarWidth)}
+        tabIndex={0}
+      />
       <div className="sidebar-heading">
         <div>
           <span className="eyebrow">Targets</span>

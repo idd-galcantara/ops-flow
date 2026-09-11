@@ -5,6 +5,17 @@ export function clampWidth(width: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, width));
 }
 
+/** Applies a pointer delta according to the panel edge being resized. */
+export function resizeWidth(
+  startWidth: number,
+  delta: number,
+  min: number,
+  max: number,
+  direction: 'left' | 'right',
+): number {
+  return clampWidth(startWidth + (direction === 'left' ? delta : -delta), min, max);
+}
+
 /** Reads a persisted width, falling back when absent or out of range. */
 export function readStoredWidth(
   raw: string | null,
@@ -22,16 +33,21 @@ interface ResizableOptions {
   defaultWidth: number;
   min: number;
   max: number;
+  direction?: 'left' | 'right';
 }
 
 /**
- * Drag-to-resize for a right-hand panel, with the width persisted locally.
+ * Drag-to-resize for a panel, with the width persisted locally.
  *
- * The panel sits on the right, so dragging left must widen it — hence the
- * inverted delta. Width is committed to storage on release rather than on every
- * mouse move.
+ * Width is committed to storage on release rather than on every mouse move.
  */
-export function useResizablePanel({ storageKey, defaultWidth, min, max }: ResizableOptions) {
+export function useResizablePanel({
+  storageKey,
+  defaultWidth,
+  min,
+  max,
+  direction = 'right',
+}: ResizableOptions) {
   const [width, setWidth] = useState(() => {
     try {
       return readStoredWidth(localStorage.getItem(storageKey), defaultWidth, min, max);
@@ -51,8 +67,7 @@ export function useResizablePanel({ storageKey, defaultWidth, min, max }: Resiza
       setResizing(true);
 
       const move = (clientX: number) => {
-        // Dragging left (negative delta) makes a right-hand panel wider.
-        setWidth(clampWidth(startWidth - (clientX - startX), min, max));
+        setWidth(resizeWidth(startWidth, clientX - startX, min, max, direction));
       };
 
       const onMouseMove = (e: MouseEvent) => move(e.clientX);
@@ -76,7 +91,7 @@ export function useResizablePanel({ storageKey, defaultWidth, min, max }: Resiza
       window.addEventListener('touchmove', onTouchMove);
       window.addEventListener('touchend', stop);
     },
-    [max, min, storageKey],
+    [direction, max, min, storageKey],
   );
 
   /** Keyboard resizing, so the handle is usable without a pointer. */

@@ -180,7 +180,7 @@ button {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width, 292px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
 }
@@ -188,6 +188,7 @@ button {
 /* ---------- Sidebar / target selector ---------- */
 
 .sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -1052,8 +1053,8 @@ button {
 /* ---------- Details panel ---------- */
 
 .app-body.has-details {
-  /* --details-width is set by the resize handle; the fallback covers first paint. */
-  grid-template-columns: 292px minmax(0, 1fr) var(--details-width, 420px);
+  /* Widths are set by their resize handles; fallbacks cover first paint. */
+  grid-template-columns: var(--sidebar-width, 292px) minmax(0, 1fr) var(--details-width, 420px);
 }
 
 .details-panel {
@@ -1067,6 +1068,7 @@ button {
 }
 
 /* Drag handle straddling the panel's left edge. */
+.sidebar-resize-handle,
 .details-resize-handle {
   position: absolute;
   top: 0;
@@ -1081,6 +1083,14 @@ button {
   touch-action: none;
 }
 
+.sidebar-resize-handle {
+  left: auto;
+  right: -3px;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.is-resizing,
+.sidebar-resize-handle:focus-visible,
 .details-resize-handle:hover,
 .details-resize-handle.is-resizing,
 .details-resize-handle:focus-visible {
@@ -1678,6 +1688,10 @@ button {
 
   /* Stacked panels are full width, so horizontal resizing makes no sense. */
   .details-resize-handle {
+    display: none;
+  }
+
+  .sidebar-resize-handle {
     display: none;
   }
 

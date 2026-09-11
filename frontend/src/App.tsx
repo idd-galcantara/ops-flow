@@ -16,10 +16,21 @@ type HealthState = 'loading' | 'ok' | 'error';
 const DETAILS_MIN = 320;
 const DETAILS_MAX = 900;
 const DETAILS_DEFAULT = 420;
+const SIDEBAR_MIN = 240;
+const SIDEBAR_MAX = 520;
+const SIDEBAR_DEFAULT = 292;
 
 export default function App() {
   const [health, setHealth] = useState<HealthState>('loading');
   const [selected, setSelected] = useState<PodRef | null>(null);
+
+  const sidebar = useResizablePanel({
+    storageKey: 'ops-flow.sidebarWidth.v1',
+    defaultWidth: SIDEBAR_DEFAULT,
+    min: SIDEBAR_MIN,
+    max: SIDEBAR_MAX,
+    direction: 'left',
+  });
 
   const details = useResizablePanel({
     storageKey: 'ops-flow.detailsWidth.v1',
@@ -112,9 +123,19 @@ export default function App() {
          * grid-template-columns: inline styles outrank media queries, which would
          * keep the three-column layout on narrow screens where it must collapse.
          */
-        style={{ ['--details-width' as string]: `${details.width}px` }}
+        style={{
+          ['--sidebar-width' as string]: `${sidebar.width}px`,
+          ['--details-width' as string]: `${details.width}px`,
+        }}
       >
-        <TargetSelector />
+        <TargetSelector
+          sidebarWidth={sidebar.width}
+          sidebarMin={SIDEBAR_MIN}
+          sidebarMax={SIDEBAR_MAX}
+          resizing={sidebar.resizing}
+          onResizeStart={sidebar.startResize}
+          onResizeNudge={sidebar.nudge}
+        />
 
         <section className="main-panel">
           <div className="panel-header">
