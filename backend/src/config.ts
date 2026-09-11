@@ -4,4 +4,6 @@ export const config = {
   port: Number(process.env.OPS_FLOW_PORT ?? 4000),
   /** Bind to localhost only — ops-flow is a local, read-only tool. */
   host: '127.0.0.1',
+  /** Optional production frontend directory served by the local backend. */
+  frontendDist: process.env.OPS_FLOW_FRONTEND_DIST || undefined,
 } as const;

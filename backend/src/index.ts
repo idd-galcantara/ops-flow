@@ -3,7 +3,7 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { attachLogsWebSocket } from './logsWebSocket.js';
 
-const app = createApp();
+const app = createApp({ frontendDist: config.frontendDist });
 const server = createServer(app);
 
 // Log streaming shares the HTTP server via the WebSocket upgrade path.

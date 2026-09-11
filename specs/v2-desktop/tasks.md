@@ -31,12 +31,12 @@ durante o desenvolvimento.
 
 ## Step 3 — Shell Electron e ciclo de vida
 
-- [ ] Adicionar o workspace ou pacote desktop com Electron, TypeScript e preload seguro.
-- [ ] Iniciar o backend como processo filho e aguardar `/api/health` antes de abrir a janela.
-- [ ] Carregar o build do frontend na janela Electron, mantendo o Vite para desenvolvimento.
-- [ ] Encerrar o backend, WebSocket e recursos associados quando a janela for fechada.
-- [ ] Impedir duas instâncias conflitantes ou apresentar uma mensagem clara ao usuário.
-- [ ] Manter o backend vinculado a `127.0.0.1`.
+- [x] Adicionar o workspace ou pacote desktop com Electron, TypeScript e preload seguro.
+- [x] Iniciar o backend como processo filho e aguardar `/api/health` antes de abrir a janela.
+- [x] Carregar o build do frontend na janela Electron, mantendo o Vite para desenvolvimento.
+- [x] Encerrar o backend, WebSocket e recursos associados quando a janela for fechada.
+- [x] Impedir duas instâncias conflitantes ou apresentar uma mensagem clara ao usuário.
+- [x] Manter o backend vinculado a `127.0.0.1`.
 - _Copilot agents: @ops-flow-backend, @ops-flow-frontend_
 - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 6.4_
 

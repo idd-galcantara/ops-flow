@@ -107,3 +107,28 @@ test('kubeconfig status route reports source safely and sanitizes unavailable co
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('serves the compiled frontend from the local backend origin', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'ops-flow-frontend-dist-'));
+  const server = createServer(createApp({ frontendDist: directory }));
+
+  writeFileSync(path.join(directory, 'index.html'), '<html><body>desktop shell</body></html>', 'utf8');
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/`);
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), '<html><body>desktop shell</body></html>');
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

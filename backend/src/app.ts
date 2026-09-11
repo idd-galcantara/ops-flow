@@ -1,4 +1,5 @@
 import express, { type Express, type Request, type Response } from 'express';
+import path from 'node:path';
 import { contextsRouter } from './routes/contexts.js';
 import { kubeconfigRouter } from './routes/kubeconfig.js';
 import { namespacesRouter } from './routes/namespaces.js';
@@ -11,7 +12,7 @@ import { podsRouter } from './routes/pods.js';
  * ops-flow is read-only: only GET routes live here. Cluster read endpoints
  * (pods, describe, metrics) and the log WebSocket are added in later phases.
  */
-export function createApp(): Express {
+export function createApp(options: { frontendDist?: string } = {}): Express {
   const app = express();
   app.use(express.json());
 
@@ -23,6 +24,17 @@ export function createApp(): Express {
   app.use('/api/kubeconfig', kubeconfigRouter);
   app.use('/api/namespaces', namespacesRouter);
   app.use('/api/pods', podsRouter);
+
+  if (options.frontendDist) {
+    app.use(express.static(options.frontendDist));
+    app.get('*', (req: Request, res: Response, next) => {
+      if (req.path.startsWith('/api/')) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(options.frontendDist!, 'index.html'));
+    });
+  }
 
   return app;
 }

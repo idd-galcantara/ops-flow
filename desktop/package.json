@@ -1,0 +1,18 @@
+{
+  "name": "@ops-flow/desktop",
+  "private": true,
+  "version": "0.0.0",
+  "type": "commonjs",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "electron .",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^38.0.0",
+    "typescript": "^5.7.2"
+  }
+}
