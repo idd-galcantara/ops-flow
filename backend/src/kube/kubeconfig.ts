@@ -24,7 +24,7 @@ export interface ContextInfo {
 }
 
 let kubeConfig: KubeConfig | null = null;
-let selectedKubeConfigPath: string | null = null;
+let selectedKubeConfigPath = process.env.OPS_FLOW_SELECTED_KUBECONFIG?.trim() || null;
 let kubeConfigSource: KubeConfigSource | null = null;
 
 /** Lazily loads (and caches) the active kubeconfig. */
@@ -192,8 +192,12 @@ export function reloadKubeConfig(selectedPath?: string | null): void {
     : selectedPath?.trim() || null;
   const nextSource = resolveKubeConfigLocation({
     selectedPath: nextSelectedPath,
+    ignoreEnvironment: selectedPath !== undefined && Boolean(nextSelectedPath),
   }).source;
-  const nextConfig = loadKubeConfig({ selectedPath: nextSelectedPath });
+  const nextConfig = loadKubeConfig({
+    selectedPath: nextSelectedPath,
+    ignoreEnvironment: selectedPath !== undefined && Boolean(nextSelectedPath),
+  });
 
   selectedKubeConfigPath = nextSelectedPath;
   kubeConfig = nextConfig;
@@ -207,7 +211,7 @@ export function reloadKubeConfig(selectedPath?: string | null): void {
 /** Test/utility hook to reset cached state. */
 export function resetKubeConfigCache(): void {
   kubeConfig = null;
-  selectedKubeConfigPath = null;
+  selectedKubeConfigPath = process.env.OPS_FLOW_SELECTED_KUBECONFIG?.trim() || null;
   kubeConfigSource = null;
   scopedConfigCache.clear();
   clientCache.clear();

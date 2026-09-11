@@ -6,6 +6,8 @@ export interface BackendProcessOptions {
   projectRoot: string;
   frontendDist: string;
   port: number;
+  internalToken: string;
+  selectedKubeconfigPath?: string;
 }
 
 export function backendEntry(projectRoot: string): string {
@@ -24,6 +26,10 @@ export function startBackend(options: BackendProcessOptions): ChildProcess {
       ELECTRON_RUN_AS_NODE: '1',
       OPS_FLOW_PORT: String(options.port),
       OPS_FLOW_FRONTEND_DIST: options.frontendDist,
+      OPS_FLOW_INTERNAL_TOKEN: options.internalToken,
+      ...(options.selectedKubeconfigPath
+        ? { OPS_FLOW_SELECTED_KUBECONFIG: options.selectedKubeconfigPath }
+        : {}),
     },
     stdio: 'ignore',
     windowsHide: true,

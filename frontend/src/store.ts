@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { fetchContexts, fetchNamespaces, fetchPods } from './api';
+import { fetchContexts, fetchKubeConfigStatus, fetchNamespaces, fetchPods } from './api';
 import { createPreset, loadPresets, savePresets, type Preset } from './presets';
 import {
   targetKey,
   type ContextInfo,
   type GroupingMode,
+  type KubeConfigStatus,
   type NamespaceInfo,
   type NormalizedPod,
   type Target,
@@ -14,11 +15,18 @@ import {
 /** Auto-refresh intervals offered in the UI, in seconds. 0 means off. */
 export const REFRESH_INTERVALS = [0, 10, 30, 60] as const;
 
+let namespacesRequestId = 0;
+let podsRequestId = 0;
+
 interface OpsFlowState {
   /** Contexts available in the kubeconfig. */
   contexts: ContextInfo[];
   contextsError?: string;
   contextsLoading: boolean;
+  kubeconfigStatus: KubeConfigStatus | null;
+  kubeconfigStatusLoading: boolean;
+  kubeconfigStatusError?: string;
+  configurationRevision: number;
 
   /** The (cluster, namespace) pairs currently selected. */
   targets: Target[];
@@ -52,6 +60,8 @@ interface OpsFlowState {
   presets: Preset[];
 
   loadContexts: () => Promise<void>;
+  loadKubeconfigStatus: () => Promise<void>;
+  selectKubeconfig: () => Promise<void>;
   loadNamespaces: (clusters: string[]) => Promise<void>;
   addTarget: (target: Target) => void;
   removeTarget: (target: Target) => void;
@@ -68,6 +78,9 @@ interface OpsFlowState {
 export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   contexts: [],
   contextsLoading: false,
+  kubeconfigStatus: null,
+  kubeconfigStatusLoading: false,
+  configurationRevision: 0,
   targets: [],
   pods: [],
   targetErrors: [],
@@ -95,6 +108,69 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     }
   },
 
+  loadKubeconfigStatus: async () => {
+    set({ kubeconfigStatusLoading: true, kubeconfigStatusError: undefined });
+    try {
+      const kubeconfigStatus = await fetchKubeConfigStatus();
+      set({ kubeconfigStatus, kubeconfigStatusLoading: false });
+    } catch (err) {
+      set({
+        kubeconfigStatusLoading: false,
+        kubeconfigStatusError:
+          err instanceof Error ? err.message : 'Failed to read kubeconfig status.',
+      });
+    }
+  },
+
+  selectKubeconfig: async () => {
+    const desktop = window.opsFlowDesktop;
+    if (!desktop) {
+      set({ kubeconfigStatusError: 'Kubeconfig selection is available in the desktop app.' });
+      return;
+    }
+
+    set({ kubeconfigStatusLoading: true, kubeconfigStatusError: undefined });
+    try {
+      const result = await desktop.selectKubeconfig();
+      if (result.cancelled) {
+        set({ kubeconfigStatusLoading: false });
+        return;
+      }
+      if (result.error && !result.status) {
+        set({ kubeconfigStatusLoading: false, kubeconfigStatusError: result.error });
+        return;
+      }
+
+      namespacesRequestId += 1;
+      podsRequestId += 1;
+      set((state) => ({
+        kubeconfigStatus: result.status ?? state.kubeconfigStatus,
+        kubeconfigStatusLoading: false,
+        kubeconfigStatusError: result.error,
+        contextsError: undefined,
+        targets: [],
+        namespaces: [],
+        namespacesFor: [],
+        namespacesError: undefined,
+        namespacesLoading: false,
+        pods: [],
+        targetErrors: [],
+        podsLoading: false,
+        refreshing: false,
+        hasQueried: false,
+        lastUpdatedAt: undefined,
+        configurationRevision: state.configurationRevision + 1,
+      }));
+      await get().loadContexts();
+    } catch (err) {
+      set({
+        kubeconfigStatusLoading: false,
+        kubeconfigStatusError:
+          err instanceof Error ? err.message : 'Failed to select kubeconfig.',
+      });
+    }
+  },
+
   /**
    * Loads the namespaces that exist in the given clusters, for autocomplete.
    * Skips the request when the same cluster set is already loaded, since these
@@ -103,9 +179,16 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   loadNamespaces: async (clusters) => {
     const key = [...clusters].sort();
     const current = get();
+    const requestId = ++namespacesRequestId;
+    const revision = current.configurationRevision;
 
     if (key.length === 0) {
-      set({ namespaces: [], namespacesFor: [], namespacesError: undefined });
+      set({
+        namespaces: [],
+        namespacesFor: [],
+        namespacesLoading: false,
+        namespacesError: undefined,
+      });
       return;
     }
 
@@ -117,6 +200,13 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     set({ namespacesLoading: true, namespacesError: undefined });
     try {
       const { namespaces, errors } = await fetchNamespaces(key);
+      const latest = get();
+      if (
+        requestId !== namespacesRequestId ||
+        revision !== latest.configurationRevision
+      ) {
+        return;
+      }
       set({
         namespaces,
         namespacesFor: key,
@@ -130,6 +220,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
             : undefined,
       });
     } catch (err) {
+      if (requestId !== namespacesRequestId || revision !== get().configurationRevision) return;
       set({
         namespacesLoading: false,
         namespacesError: err instanceof Error ? err.message : 'Failed to load namespaces.',
@@ -151,15 +242,19 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     set({ targets: get().targets.filter((t) => targetKey(t) !== targetKey(target)) });
   },
 
-  clearTargets: () =>
+  clearTargets: () => {
+    podsRequestId += 1;
     set({
       targets: [],
       pods: [],
       targetErrors: [],
+      podsLoading: false,
+      refreshing: false,
       hasQueried: false,
       podsError: undefined,
       lastUpdatedAt: undefined,
-    }),
+    });
+  },
 
   /**
    * Fetches pods for the selected targets.
@@ -168,10 +263,21 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
    */
   loadPods: async ({ silent = false } = {}) => {
     const { targets } = get();
+    const requestId = ++podsRequestId;
+    const revision = get().configurationRevision;
+    const targetSignature = targets.map(targetKey).join('|');
     if (targets.length === 0) return;
     set(silent ? { refreshing: true, podsError: undefined } : { podsLoading: true, podsError: undefined });
     try {
       const { pods, errors } = await fetchPods(targets);
+      const latest = get();
+      if (
+        requestId !== podsRequestId ||
+        revision !== latest.configurationRevision ||
+        targetSignature !== latest.targets.map(targetKey).join('|')
+      ) {
+        return;
+      }
       set({
         pods,
         targetErrors: errors,
@@ -181,6 +287,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         lastUpdatedAt: Date.now(),
       });
     } catch (err) {
+      if (requestId !== podsRequestId || revision !== get().configurationRevision) return;
       set({
         podsLoading: false,
         refreshing: false,

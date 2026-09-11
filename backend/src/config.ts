@@ -6,4 +6,8 @@ export const config = {
   host: '127.0.0.1',
   /** Optional production frontend directory served by the local backend. */
   frontendDist: process.env.OPS_FLOW_FRONTEND_DIST || undefined,
+  /** Ephemeral token used only by the Electron main process for local reloads. */
+  get internalToken(): string | undefined {
+    return process.env.OPS_FLOW_INTERNAL_TOKEN || undefined;
+  },
 } as const;

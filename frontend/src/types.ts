@@ -7,6 +7,14 @@ export interface ContextInfo {
   namespace?: string;
 }
 
+export type KubeConfigSource = 'environment' | 'selected' | 'default';
+
+export interface KubeConfigStatus {
+  available: boolean;
+  source: KubeConfigSource;
+  contextCount?: number;
+}
+
 /** A query target: one (cluster, namespace) pair. */
 export interface Target {
   cluster: string;

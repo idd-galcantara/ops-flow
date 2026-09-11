@@ -6,6 +6,7 @@ import { useOpsFlowStore } from '../store';
 import { targetKey } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
 import { NamespaceInput } from './NamespaceInput';
+import { KubeconfigSetup } from './KubeconfigSetup';
 
 interface TargetSelectorProps {
   sidebarWidth: number;
@@ -37,6 +38,8 @@ export function TargetSelector({
   const contextsLoading = useOpsFlowStore((s) => s.contextsLoading);
   const contextsError = useOpsFlowStore((s) => s.contextsError);
   const loadContexts = useOpsFlowStore((s) => s.loadContexts);
+  const loadKubeconfigStatus = useOpsFlowStore((s) => s.loadKubeconfigStatus);
+  const configurationRevision = useOpsFlowStore((s) => s.configurationRevision);
   const targets = useOpsFlowStore((s) => s.targets);
   const addTarget = useOpsFlowStore((s) => s.addTarget);
   const removeTarget = useOpsFlowStore((s) => s.removeTarget);
@@ -55,6 +58,17 @@ export function TargetSelector({
   useEffect(() => {
     void loadContexts();
   }, [loadContexts]);
+
+  useEffect(() => {
+    void loadKubeconfigStatus();
+  }, [loadKubeconfigStatus]);
+
+  useEffect(() => {
+    setSelectedClusters([]);
+    setSelectedNamespaces([]);
+    setNamespace('');
+    setContextFilter('');
+  }, [configurationRevision]);
 
   const visibleContexts = useMemo(() => {
     const needle = contextFilter.trim().toLowerCase();
@@ -151,6 +165,8 @@ export function TargetSelector({
           <RefreshCw size={15} />
         </button>
       </div>
+
+      <KubeconfigSetup />
 
       <label className="sidebar-search">
         <Search size={14} />

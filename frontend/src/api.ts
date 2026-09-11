@@ -1,11 +1,19 @@
 import type {
   ContextInfo,
+  KubeConfigStatus,
   NamespacesResponse,
   PodDescribe,
   PodMetricsResult,
   PodsResponse,
   Target,
 } from './types';
+
+/** Reads safe metadata about the active kubeconfig. */
+export async function fetchKubeConfigStatus(): Promise<KubeConfigStatus> {
+  const res = await fetch('/api/kubeconfig/status');
+  if (!res.ok) throw await errorFrom(res);
+  return (await res.json()) as KubeConfigStatus;
+}
 
 /** Extracts a readable message from a non-OK response. */
 async function errorFrom(res: Response): Promise<Error> {

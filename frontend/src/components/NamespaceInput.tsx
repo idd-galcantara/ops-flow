@@ -37,6 +37,7 @@ export function NamespaceInput({
   const namespacesLoading = useOpsFlowStore((s) => s.namespacesLoading);
   const namespacesError = useOpsFlowStore((s) => s.namespacesError);
   const loadNamespaces = useOpsFlowStore((s) => s.loadNamespaces);
+  const configurationRevision = useOpsFlowStore((s) => s.configurationRevision);
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -53,7 +54,7 @@ export function NamespaceInput({
   useEffect(() => {
     void loadNamespaces(selectedClusters);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by clusterKey on purpose
-  }, [clusterKey, loadNamespaces]);
+  }, [clusterKey, configurationRevision, loadNamespaces]);
 
   const suggestions = useMemo(
     () =>

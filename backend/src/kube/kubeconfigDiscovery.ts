@@ -13,6 +13,7 @@ export interface KubeConfigDiscoveryOptions {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   selectedPath?: string | null;
+  ignoreEnvironment?: boolean;
 }
 
 function environmentPaths(value: string, platform: NodeJS.Platform): string[] {
@@ -41,7 +42,7 @@ export function resolveKubeConfigLocation(
   const platform = options.platform ?? process.platform;
   const configuredPaths = env.KUBECONFIG?.trim();
 
-  if (configuredPaths) {
+  if (configuredPaths && !options.ignoreEnvironment) {
     return {
       source: 'environment',
       paths: environmentPaths(configuredPaths, platform),

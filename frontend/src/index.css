@@ -206,6 +206,75 @@ button {
   padding: 0 6px;
 }
 
+.kubeconfig-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 6px 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--warn);
+  border-radius: 5px;
+  background: var(--warn-soft);
+}
+
+.kubeconfig-panel.is-ready {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.kubeconfig-panel.is-error {
+  border-left-color: var(--error);
+  background: var(--error-soft);
+}
+
+.kubeconfig-panel.is-loading {
+  align-items: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.kubeconfig-panel-icon {
+  flex: 0 0 auto;
+  color: var(--warn-ink);
+}
+
+.kubeconfig-panel.is-ready .kubeconfig-panel-icon {
+  color: var(--ok-ink);
+}
+
+.kubeconfig-panel.is-error .kubeconfig-panel-icon {
+  color: var(--error-ink);
+}
+
+.kubeconfig-panel-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.kubeconfig-panel-content strong,
+.kubeconfig-panel-content span,
+.kubeconfig-panel-content small {
+  display: block;
+}
+
+.kubeconfig-panel-content strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.kubeconfig-panel-content span,
+.kubeconfig-panel-content small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.kubeconfig-panel-content small {
+  color: var(--error-ink);
+}
+
 .eyebrow {
   display: block;
   color: #a2aab6;

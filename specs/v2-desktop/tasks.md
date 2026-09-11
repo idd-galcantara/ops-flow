@@ -42,16 +42,16 @@ durante o desenvolvimento.
 
 ## Step 4 — Seleção manual e preferências
 
-- [ ] Criar o estado de configuração inicial na interface.
+- [x] Criar o estado de configuração inicial na interface.
   - Carregando.
   - Kubeconfig encontrado.
   - Kubeconfig ausente.
   - Arquivo inválido ou inacessível.
-- [ ] Adicionar uma ação **Selecionar kubeconfig** para abrir o diálogo nativo por meio do
+- [x] Adicionar uma ação **Selecionar kubeconfig** para abrir o diálogo nativo por meio do
   preload.
-- [ ] Recarregar contexts e namespaces após uma seleção válida sem recarregar a aplicação inteira.
-- [ ] Persistir apenas o caminho escolhido e preferências mínimas do aplicativo.
-- [ ] Exibir mensagens úteis sem mostrar tokens, certificados ou conteúdo do arquivo.
+- [x] Recarregar contexts e namespaces após uma seleção válida sem recarregar a aplicação inteira.
+- [x] Persistir apenas o caminho escolhido e preferências mínimas do aplicativo.
+- [x] Exibir mensagens úteis sem mostrar tokens, certificados ou conteúdo do arquivo.
 - _Copilot agent: @ops-flow-frontend_
 - _Requirements: 2.2, 2.3, 4.1, 4.2, 4.3, 4.4, 4.5_
 
