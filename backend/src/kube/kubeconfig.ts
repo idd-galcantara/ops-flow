@@ -32,8 +32,12 @@ function getKubeConfig(): KubeConfig {
   if (!kubeConfig) {
     const location = resolveKubeConfigLocation({
       selectedPath: selectedKubeConfigPath,
+      ignoreEnvironment: Boolean(selectedKubeConfigPath),
     });
-    kubeConfig = loadKubeConfig({ selectedPath: selectedKubeConfigPath });
+    kubeConfig = loadKubeConfig({
+      selectedPath: selectedKubeConfigPath,
+      ignoreEnvironment: Boolean(selectedKubeConfigPath),
+    });
     kubeConfigSource = location.source;
   }
   return kubeConfig;
@@ -49,6 +53,7 @@ export interface KubeConfigStatus {
 export function getKubeConfigStatus(): KubeConfigStatus {
   const source = kubeConfigSource ?? resolveKubeConfigLocation({
     selectedPath: selectedKubeConfigPath,
+    ignoreEnvironment: Boolean(selectedKubeConfigPath),
   }).source;
 
   try {

@@ -77,6 +77,18 @@ KUBECONFIG=/caminho/para/config ./ops-flow-0.1.0-linux-x86_64.AppImage
 
 Tambem e possivel usar **Selecionar kubeconfig** dentro do aplicativo.
 
+Ao abrir o AppImage pelo terminal, ele pode herdar `KUBECONFIG` definido nesse terminal. Ao
+abrir a versao instalada pelo menu de aplicativos, essa variavel pode nao existir e o programa
+pode mostrar menos contexts usando `~/.kube/config`. Compare a origem exibida no painel:
+
+- `KUBECONFIG`: arquivo encontrado no ambiente do processo;
+- `Selected file`: arquivo escolhido manualmente;
+- `Default location`: `~/.kube/config`.
+
+Se os contexts ou namespaces forem diferentes, use o icone de pasta no painel de kubeconfig e
+selecione o mesmo arquivo usado no terminal. Essa escolha fica persistida para as proximas
+execucoes.
+
 ## Autenticacao `exec`
 
 Se o kubeconfig usa autenticacao `exec`, o executavel indicado nele precisa estar instalado no computador e disponivel no `PATH`. O ops-flow nao instala nem substitui esse executavel.

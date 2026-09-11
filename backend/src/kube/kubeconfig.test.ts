@@ -151,6 +151,31 @@ test('reloadKubeConfig preserves the previous config on failure and clears clien
   }
 });
 
+test('persisted selected config takes precedence over KUBECONFIG on startup', () => {
+  const environment = temporaryConfig(kubeConfigYaml('environment-context', 'environment-cluster'));
+  const selected = temporaryConfig(kubeConfigYaml('selected-context', 'selected-cluster'));
+  const previousEnvironment = process.env.KUBECONFIG;
+  const previousSelected = process.env.OPS_FLOW_SELECTED_KUBECONFIG;
+  process.env.KUBECONFIG = environment.file;
+  process.env.OPS_FLOW_SELECTED_KUBECONFIG = selected.file;
+
+  try {
+    resetKubeConfigCache();
+    assert.deepEqual(listContexts(), [
+      { name: 'selected-context', cluster: 'selected-cluster', namespace: undefined },
+    ]);
+    assert.equal(getKubeConfigStatus().source, 'selected');
+  } finally {
+    if (previousEnvironment === undefined) delete process.env.KUBECONFIG;
+    else process.env.KUBECONFIG = previousEnvironment;
+    if (previousSelected === undefined) delete process.env.OPS_FLOW_SELECTED_KUBECONFIG;
+    else process.env.OPS_FLOW_SELECTED_KUBECONFIG = previousSelected;
+    resetKubeConfigCache();
+    rmSync(environment.directory, { recursive: true, force: true });
+    rmSync(selected.directory, { recursive: true, force: true });
+  }
+});
+
 test('getKubeConfigStatus reports safe metadata for the selected config', () => {
   const fixture = temporaryConfig(kubeConfigYaml('status-context', 'status-cluster'));
   const previousEnvironment = process.env.KUBECONFIG;
