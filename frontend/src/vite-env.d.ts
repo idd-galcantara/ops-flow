@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { KubeConfigStatus } from './types';
+import type { Preset } from './presets';
 
 interface DesktopSelectionResult {
 	cancelled: boolean;
@@ -14,6 +15,8 @@ declare global {
 			isDesktop: boolean;
 			platform: string;
 			selectKubeconfig: () => Promise<DesktopSelectionResult>;
+			loadPresets: () => Promise<Preset[]>;
+			savePresets: (presets: Preset[]) => Promise<void>;
 		};
 	}
 }

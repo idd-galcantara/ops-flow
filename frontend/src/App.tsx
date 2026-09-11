@@ -63,6 +63,11 @@ export default function App() {
   const refreshSeconds = useOpsFlowStore((s) => s.refreshSeconds);
   const setRefreshSeconds = useOpsFlowStore((s) => s.setRefreshSeconds);
   const lastUpdatedAt = useOpsFlowStore((s) => s.lastUpdatedAt);
+  const hydratePresets = useOpsFlowStore((s) => s.hydratePresets);
+
+  useEffect(() => {
+    void hydratePresets();
+  }, [hydratePresets]);
 
   // Auto-refresh: silent so the table keeps its content between ticks. Only runs
   // while there are targets, and is torn down on interval change or unmount.

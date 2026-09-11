@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { fetchContexts, fetchKubeConfigStatus, fetchNamespaces, fetchPods } from './api';
-import { createPreset, loadPresets, savePresets, type Preset } from './presets';
+import {
+  createPreset,
+  loadPersistentPresets,
+  loadPresets,
+  savePresets,
+  type Preset,
+} from './presets';
 import {
   targetKey,
   type ContextInfo,
@@ -70,6 +76,7 @@ interface OpsFlowState {
   setGrouping: (grouping: GroupingMode) => void;
   setFilter: (filter: string) => void;
   setRefreshSeconds: (seconds: number) => void;
+  hydratePresets: () => Promise<void>;
   savePreset: (name: string) => void;
   applyPreset: (id: string) => void;
   deletePreset: (id: string) => void;
@@ -299,6 +306,11 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   setGrouping: (grouping) => set({ grouping }),
   setFilter: (filter) => set({ filter }),
   setRefreshSeconds: (refreshSeconds) => set({ refreshSeconds }),
+
+  hydratePresets: async () => {
+    const presets = await loadPersistentPresets();
+    set({ presets });
+  },
 
   savePreset: (name) => {
     const trimmed = name.trim();

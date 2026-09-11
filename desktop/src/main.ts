@@ -17,6 +17,12 @@ interface SelectionResult {
   error?: string;
 }
 
+interface StoredPreset {
+  id: string;
+  name: string;
+  targets: Array<{ cluster: string; namespace: string }>;
+}
+
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ReturnType<typeof startBackend> | null = null;
 let shuttingDown = false;
@@ -25,6 +31,40 @@ let internalToken = '';
 
 function preferencesFile(): string {
   return path.join(app.getPath('userData'), 'preferences.json');
+}
+
+function presetsFile(): string {
+  return path.join(app.getPath('userData'), 'presets.json');
+}
+
+function isStoredPreset(value: unknown): value is StoredPreset {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { id?: unknown; name?: unknown; targets?: unknown };
+  return typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    Array.isArray(candidate.targets) &&
+    candidate.targets.every((target) => {
+      if (!target || typeof target !== 'object') return false;
+      const item = target as { cluster?: unknown; namespace?: unknown };
+      return typeof item.cluster === 'string' && typeof item.namespace === 'string';
+    });
+}
+
+async function readPresets(): Promise<StoredPreset[]> {
+  try {
+    const contents = await readFile(presetsFile(), 'utf8');
+    const parsed: unknown = JSON.parse(contents);
+    return Array.isArray(parsed) ? parsed.filter(isStoredPreset) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function savePresets(value: unknown): Promise<void> {
+  if (!Array.isArray(value) || !value.every(isStoredPreset)) {
+    throw new Error('Invalid presets.');
+  }
+  await writeFile(presetsFile(), `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
 async function readSelectedKubeconfigPath(): Promise<string | undefined> {
@@ -183,6 +223,8 @@ if (!hasLock) {
   process.once('SIGINT', () => void shutdownApplication());
   process.once('SIGTERM', () => void shutdownApplication());
   ipcMain.handle('select-kubeconfig', selectKubeconfig);
+  ipcMain.handle('load-presets', readPresets);
+  ipcMain.handle('save-presets', (_event, value: unknown) => savePresets(value));
 
   app.whenReady().then(async () => {
     try {

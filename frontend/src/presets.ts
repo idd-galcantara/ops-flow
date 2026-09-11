@@ -9,10 +9,7 @@ export interface Preset {
 
 const STORAGE_KEY = 'ops-flow.presets.v1';
 
-/**
- * Presets live in localStorage: ops-flow is a local tool with no backend state,
- * and losing them would only cost a few clicks to rebuild.
- */
+/** Loads the web fallback. Desktop hydration uses the Electron data directory. */
 export function loadPresets(): Preset[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -30,8 +27,24 @@ export function savePresets(presets: Preset[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
   } catch {
-    // Storage full or blocked; presets simply won't persist this session.
+    // Storage full or blocked; the desktop store can still persist independently.
   }
+
+  if (typeof window !== 'undefined' && window.opsFlowDesktop) {
+    void window.opsFlowDesktop.savePresets(presets).catch(() => undefined);
+  }
+}
+
+/** Loads the stable desktop store, falling back to localStorage in web mode. */
+export async function loadPersistentPresets(): Promise<Preset[]> {
+  if (typeof window !== 'undefined' && window.opsFlowDesktop) {
+    try {
+      return await window.opsFlowDesktop.loadPresets();
+    } catch {
+      // A missing or unreadable desktop store should not break the UI.
+    }
+  }
+  return loadPresets();
 }
 
 /** Validates untrusted data coming back from storage. */

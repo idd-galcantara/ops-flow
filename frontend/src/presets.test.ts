@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createPreset, describePreset, loadPresets, savePresets } from './presets';
+import {
+  createPreset,
+  describePreset,
+  loadPersistentPresets,
+  loadPresets,
+  savePresets,
+} from './presets';
 
 /** Minimal localStorage stub so the module can be exercised under node:test. */
 function installStorage(initial: Record<string, string> = {}): void {
@@ -71,6 +77,24 @@ test('loadPresets discards entries with the wrong shape', () => {
 test('loadPresets returns empty when the stored value is not an array', () => {
   installStorage({ [STORAGE_KEY]: JSON.stringify({ nope: true }) });
   assert.deepEqual(loadPresets(), []);
+});
+
+test('loadPersistentPresets uses the desktop store when available', async () => {
+  const preset = createPreset('desktop', [{ cluster: 'c1', namespace: 'n1' }]);
+  const previousWindow = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = {
+    opsFlowDesktop: {
+      loadPresets: async () => [preset],
+      savePresets: async () => undefined,
+    },
+  };
+
+  try {
+    assert.deepEqual(await loadPersistentPresets(), [preset]);
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as { window?: unknown }).window;
+    else (globalThis as { window?: unknown }).window = previousWindow;
+  }
 });
 
 test('describePreset summarizes clusters and namespaces', () => {
