@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader } from 'lucide-react';
-import { describeNamespaceReach, suggestNamespaces } from '../namespaceSuggestions';
+import {
+  describeNamespaceReach,
+  hasExactNamespaceMatch,
+  suggestNamespaces,
+} from '../namespaceSuggestions';
 import { useOpsFlowStore } from '../store';
 
 interface NamespaceInputProps {
   value: string;
   onChange: (value: string) => void;
-  /** Called when the user confirms the current value (Enter with no suggestion active). */
+  /** Called when the user confirms a namespace from the loaded list. */
   onSubmit: () => void;
   selectedClusters: string[];
 }
@@ -26,6 +30,7 @@ export function NamespaceInput({
   selectedClusters,
 }: NamespaceInputProps) {
   const namespaces = useOpsFlowStore((s) => s.namespaces);
+  const namespacesFor = useOpsFlowStore((s) => s.namespacesFor);
   const namespacesLoading = useOpsFlowStore((s) => s.namespacesLoading);
   const namespacesError = useOpsFlowStore((s) => s.namespacesError);
   const loadNamespaces = useOpsFlowStore((s) => s.loadNamespaces);
@@ -35,6 +40,11 @@ export function NamespaceInput({
   const blurTimer = useRef<number | undefined>(undefined);
 
   const clusterKey = selectedClusters.join('|');
+  const loadedClusterKey = namespacesFor.join('|');
+  const namespacesReady =
+    selectedClusters.length > 0 &&
+    !namespacesLoading &&
+    [...selectedClusters].sort().join('|') === loadedClusterKey;
 
   // Fetch whenever the cluster selection changes; the store skips repeat work.
   useEffect(() => {
@@ -43,8 +53,9 @@ export function NamespaceInput({
   }, [clusterKey, loadNamespaces]);
 
   const suggestions = useMemo(
-    () => suggestNamespaces(namespaces, value, selectedClusters.length),
-    [namespaces, value, selectedClusters.length],
+    () =>
+      suggestNamespaces(namespacesReady ? namespaces : [], value, selectedClusters.length),
+    [namespaces, namespacesReady, value, selectedClusters.length],
   );
 
   // Keep the highlighted row valid as the list shrinks while typing.
@@ -79,10 +90,10 @@ export function NamespaceInput({
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      // Enter picks the highlighted suggestion, or accepts what was typed.
+      // Enter picks the highlighted suggestion, or confirms an exact known value.
       if (open && activeIndex >= 0 && suggestions[activeIndex]) {
         choose(suggestions[activeIndex].name);
-      } else {
+      } else if (hasExactMatch) {
         setOpen(false);
         onSubmit();
       }
@@ -90,7 +101,7 @@ export function NamespaceInput({
   };
 
   const showPanel = open && selectedClusters.length > 0;
-  const hasExactMatch = namespaces.some((ns) => ns.name === value.trim());
+  const hasExactMatch = namespacesReady && hasExactNamespaceMatch(namespaces, value);
 
   return (
     <div className="namespace-input">
@@ -165,7 +176,7 @@ export function NamespaceInput({
             <p className="namespace-note">
               {namespaces.length === 0
                 ? 'No namespaces loaded for the selected contexts.'
-                : 'No namespace matches. You can still use the value you typed.'}
+                : 'No namespace matches. Choose a namespace from the suggestions.'}
             </p>
           )}
 

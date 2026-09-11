@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeNamespaceReach, suggestNamespaces } from './namespaceSuggestions';
+import {
+  describeNamespaceReach,
+  hasExactNamespaceMatch,
+  suggestNamespaces,
+} from './namespaceSuggestions';
 import type { NamespaceInfo } from './types';
 
 const TWO_CLUSTERS = ['kubernetes-qa-tb', 'kubernetes-qa-gt'];
@@ -65,6 +69,13 @@ test('suggestNamespaces sorts alphabetically when rank ties', () => {
 test('suggestNamespaces marks nothing as inAllClusters when no cluster is selected', () => {
   const result = suggestNamespaces([ns('x', [])], '', 0);
   assert.equal(result[0].inAllClusters, false);
+});
+
+test('hasExactNamespaceMatch only accepts a known namespace', () => {
+  const all = [ns('bank-overdraft')];
+  assert.equal(hasExactNamespaceMatch(all, ' bank-overdraft '), true);
+  assert.equal(hasExactNamespaceMatch(all, 'bank'), false);
+  assert.equal(hasExactNamespaceMatch(all, 'unknown'), false);
 });
 
 test('describeNamespaceReach reports coverage only for multi-cluster selections', () => {

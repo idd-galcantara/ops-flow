@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bookmark, Layers, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-react';
+import { hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { describePreset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey } from '../types';
@@ -24,6 +25,9 @@ export function TargetSelector() {
   const clearTargets = useOpsFlowStore((s) => s.clearTargets);
   const loadPods = useOpsFlowStore((s) => s.loadPods);
   const podsLoading = useOpsFlowStore((s) => s.podsLoading);
+  const namespaces = useOpsFlowStore((s) => s.namespaces);
+  const namespacesFor = useOpsFlowStore((s) => s.namespacesFor);
+  const namespacesLoading = useOpsFlowStore((s) => s.namespacesLoading);
 
   const [namespace, setNamespace] = useState('');
   const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
@@ -45,7 +49,11 @@ export function TargetSelector() {
     );
   };
 
-  const canAdd = selectedClusters.length > 0 && namespace.trim().length > 0;
+  const canAdd =
+    selectedClusters.length > 0 &&
+    !namespacesLoading &&
+    [...selectedClusters].sort().join('|') === namespacesFor.join('|') &&
+    hasExactNamespaceMatch(namespaces, namespace);
 
   /**
    * Adds one target per selected cluster, all sharing the typed namespace, then
@@ -145,7 +153,7 @@ export function TargetSelector() {
           title={
             canAdd
               ? 'Add one target per selected cluster'
-              : 'Select at least one context and type a namespace'
+              : 'Select a namespace from the suggestions'
           }
         >
           <Plus size={15} /> Add

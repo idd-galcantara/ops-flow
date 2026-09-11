@@ -8,6 +8,12 @@ export interface NamespaceSuggestion extends NamespaceInfo {
   inAllClusters: boolean;
 }
 
+/** Returns whether the trimmed value names a namespace from the loaded list. */
+export function hasExactNamespaceMatch(namespaces: NamespaceInfo[], value: string): boolean {
+  const name = value.trim();
+  return name.length > 0 && namespaces.some((namespace) => namespace.name === name);
+}
+
 /**
  * Filters and ranks namespace suggestions for the typed query.
  *
