@@ -1,6 +1,10 @@
 import { CoreV1Api, KubeConfig, Log, Metrics } from '@kubernetes/client-node';
 import { buildFullCaChain } from './caChain.js';
-import { loadKubeConfig } from './kubeconfigDiscovery.js';
+import {
+  loadKubeConfig,
+  resolveKubeConfigLocation,
+  type KubeConfigSource,
+} from './kubeconfigDiscovery.js';
 
 /**
  * Loads the user's kubeconfig once and exposes read-only helpers over it.
@@ -21,13 +25,42 @@ export interface ContextInfo {
 
 let kubeConfig: KubeConfig | null = null;
 let selectedKubeConfigPath: string | null = null;
+let kubeConfigSource: KubeConfigSource | null = null;
 
 /** Lazily loads (and caches) the active kubeconfig. */
 function getKubeConfig(): KubeConfig {
   if (!kubeConfig) {
+    const location = resolveKubeConfigLocation({
+      selectedPath: selectedKubeConfigPath,
+    });
     kubeConfig = loadKubeConfig({ selectedPath: selectedKubeConfigPath });
+    kubeConfigSource = location.source;
   }
   return kubeConfig;
+}
+
+export interface KubeConfigStatus {
+  available: boolean;
+  source: KubeConfigSource;
+  contextCount?: number;
+}
+
+/** Returns safe metadata about the active kubeconfig without exposing its path. */
+export function getKubeConfigStatus(): KubeConfigStatus {
+  const source = kubeConfigSource ?? resolveKubeConfigLocation({
+    selectedPath: selectedKubeConfigPath,
+  }).source;
+
+  try {
+    const kc = getKubeConfig();
+    return {
+      available: true,
+      source: kubeConfigSource ?? source,
+      contextCount: kc.getContexts().length,
+    };
+  } catch {
+    return { available: false, source };
+  }
 }
 
 /**
@@ -157,10 +190,14 @@ export function reloadKubeConfig(selectedPath?: string | null): void {
   const nextSelectedPath = selectedPath === undefined
     ? selectedKubeConfigPath
     : selectedPath?.trim() || null;
+  const nextSource = resolveKubeConfigLocation({
+    selectedPath: nextSelectedPath,
+  }).source;
   const nextConfig = loadKubeConfig({ selectedPath: nextSelectedPath });
 
   selectedKubeConfigPath = nextSelectedPath;
   kubeConfig = nextConfig;
+  kubeConfigSource = nextSource;
   scopedConfigCache.clear();
   clientCache.clear();
   metricsCache.clear();
@@ -171,6 +208,7 @@ export function reloadKubeConfig(selectedPath?: string | null): void {
 export function resetKubeConfigCache(): void {
   kubeConfig = null;
   selectedKubeConfigPath = null;
+  kubeConfigSource = null;
   scopedConfigCache.clear();
   clientCache.clear();
   metricsCache.clear();

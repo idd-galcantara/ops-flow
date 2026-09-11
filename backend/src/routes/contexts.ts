@@ -12,8 +12,7 @@ contextsRouter.get('/', (_req: Request, res: Response) => {
   try {
     const contexts = listContexts();
     res.json({ contexts });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error listing contexts.';
-    res.status(500).json({ error: message });
+  } catch {
+    res.status(500).json({ error: 'Could not read the kubeconfig.' });
   }
 });

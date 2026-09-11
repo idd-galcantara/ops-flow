@@ -9,6 +9,7 @@ import {
 } from './kubeconfigDiscovery.js';
 import {
   coreClientForContext,
+  getKubeConfigStatus,
   listContexts,
   reloadKubeConfig,
   resetKubeConfigCache,
@@ -147,5 +148,30 @@ test('reloadKubeConfig preserves the previous config on failure and clears clien
     resetKubeConfigCache();
     rmSync(first.directory, { recursive: true, force: true });
     rmSync(second.directory, { recursive: true, force: true });
+  }
+});
+
+test('getKubeConfigStatus reports safe metadata for the selected config', () => {
+  const fixture = temporaryConfig(kubeConfigYaml('status-context', 'status-cluster'));
+  const previousEnvironment = process.env.KUBECONFIG;
+  delete process.env.KUBECONFIG;
+
+  try {
+    resetKubeConfigCache();
+    reloadKubeConfig(fixture.file);
+
+    const status = getKubeConfigStatus();
+    assert.deepEqual(status, {
+      available: true,
+      source: 'selected',
+      contextCount: 1,
+    });
+    assert.equal(JSON.stringify(status).includes(fixture.file), false);
+    assert.equal(JSON.stringify(status).includes('token-that-must-not-appear'), false);
+  } finally {
+    if (previousEnvironment === undefined) delete process.env.KUBECONFIG;
+    else process.env.KUBECONFIG = previousEnvironment;
+    resetKubeConfigCache();
+    rmSync(fixture.directory, { recursive: true, force: true });
   }
 });

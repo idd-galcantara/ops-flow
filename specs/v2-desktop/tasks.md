@@ -19,12 +19,12 @@ durante o desenvolvimento.
 
 ## Step 2 — Status e contrato de configuração
 
-- [ ] Criar `GET /api/kubeconfig/status` com resposta sem segredos.
-- [ ] Definir a operação interna de selecionar/recarregar kubeconfig sem expor o conteúdo ao
+- [x] Criar `GET /api/kubeconfig/status` com resposta sem segredos.
+- [x] Definir a operação interna de selecionar/recarregar kubeconfig sem expor o conteúdo ao
   renderer.
-- [ ] Preservar `GET /api/contexts` e retornar erro sanitizado quando a configuração estiver
+- [x] Preservar `GET /api/contexts` e retornar erro sanitizado quando a configuração estiver
   indisponível.
-- [ ] Adicionar testes de status, recarga, erro e não exposição de caminhos ou credenciais
+- [x] Adicionar testes de status, recarga, erro e não exposição de caminhos ou credenciais
   sensíveis.
 - _Copilot agent: @ops-flow-backend_
 - _Requirements: 2.1, 2.3, 2.5, 6.1, 6.5_
