@@ -454,6 +454,87 @@ button {
   box-shadow: 0 0 0 2px rgba(223, 112, 69, 0.1);
 }
 
+.namespace-multi-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 34px;
+  padding: 3px 6px;
+  background: #fff;
+  border: 1px solid #e1e5ea;
+  border-radius: 4px;
+}
+
+.namespace-multi-control:focus-within {
+  border-color: #d99a80;
+  box-shadow: 0 0 0 2px rgba(223, 112, 69, 0.1);
+}
+
+.namespace-multi-control input {
+  flex: 1 1 110px;
+  width: auto;
+  min-width: 90px;
+  padding: 5px 3px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.namespace-multi-control input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.namespace-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.namespace-selected-chip {
+  min-width: 0;
+  max-width: min(100%, 220px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 7px;
+  color: #a65336;
+  background: #fff4ef;
+  border: 1px solid #f1d7cc;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.namespace-selected-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.namespace-selected-remove {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: #a65336;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.namespace-selected-remove:hover,
+.namespace-selected-remove:focus-visible {
+  color: var(--ink);
+  background: rgba(223, 112, 69, 0.16);
+  outline: none;
+}
+
 .add-target-button {
   width: 100%;
 }

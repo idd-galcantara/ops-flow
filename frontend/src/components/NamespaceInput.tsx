@@ -118,48 +118,49 @@ export function NamespaceInput({
             <b className="namespace-count">{namespaces.length} available</b>
           )}
         </span>
-        <input
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => {
-            // Delay so a click on a suggestion lands before the panel closes.
-            blurTimer.current = window.setTimeout(() => setOpen(false), 140);
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            selectedClusters.length === 0 ? 'select a context first' : 'e.g. bank-overdraft'
-          }
-          aria-label="Namespace"
-          role="combobox"
-          aria-expanded={showPanel}
-          aria-autocomplete="list"
-          aria-controls="namespace-suggestions"
-        />
-      </label>
-
-      {selectedNamespaces.length > 0 && (
-        <div className="namespace-selected-list" aria-label="Selected namespaces">
-          {selectedNamespaces.map((name) => (
-            <span className="namespace-selected-chip" key={name}>
-              <span>{name}</span>
-              <button
-                type="button"
-                className="namespace-selected-remove"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onRemoveNamespace(name)}
-                aria-label={`Remove namespace ${name}`}
-                title={`Remove namespace ${name}`}
-              >
-                <X size={11} />
-              </button>
-            </span>
-          ))}
+        <div className="namespace-multi-control">
+          {selectedNamespaces.length > 0 && (
+            <div className="namespace-selected-list" aria-label="Selected namespaces">
+              {selectedNamespaces.map((name) => (
+                <span className="namespace-selected-chip" key={name}>
+                  <span>{name}</span>
+                  <button
+                    type="button"
+                    className="namespace-selected-remove"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => onRemoveNamespace(name)}
+                    aria-label={`Remove namespace ${name}`}
+                    title={`Remove namespace ${name}`}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            value={value}
+            onChange={(e) => {
+              onChange(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => {
+              // Delay so a click on a suggestion lands before the panel closes.
+              blurTimer.current = window.setTimeout(() => setOpen(false), 140);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              selectedClusters.length === 0 ? 'select a context first' : 'e.g. bank-overdraft'
+            }
+            aria-label="Namespace"
+            role="combobox"
+            aria-expanded={showPanel}
+            aria-autocomplete="list"
+            aria-controls="namespace-suggestions"
+          />
         </div>
-      )}
+      </label>
 
       {value.trim() && hasExactMatch && (
         <span className="namespace-valid" title="This namespace exists in the selected clusters">
