@@ -1024,6 +1024,53 @@ button {
   justify-content: center;
   gap: 12px;
   padding: 12px !important;
+.namespace-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: -2px 0 8px;
+}
+
+.namespace-selected-chip {
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 5px 4px 7px;
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+  border: 1px solid #f3d5c8;
+  border-radius: 4px;
+  font: 9px var(--mono);
+}
+
+.namespace-selected-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.namespace-selected-remove {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--accent-hover);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+}
+
+.namespace-selected-remove:hover,
+.namespace-selected-remove:focus-visible {
+  color: var(--ink);
+  background: rgba(223, 112, 69, 0.16);
+  outline: none;
+}
   background: #fafbfc;
 }
 

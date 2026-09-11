@@ -48,6 +48,7 @@ export function TargetSelector({
   const namespacesLoading = useOpsFlowStore((s) => s.namespacesLoading);
 
   const [namespace, setNamespace] = useState('');
+  const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
   const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
   const [contextFilter, setContextFilter] = useState('');
 
@@ -62,26 +63,52 @@ export function TargetSelector({
   }, [contextFilter, contexts]);
 
   const toggleCluster = (name: string) => {
+    setSelectedNamespaces([]);
+    setNamespace('');
     setSelectedClusters((current) =>
       current.includes(name) ? current.filter((c) => c !== name) : [...current, name],
     );
   };
 
-  const canAdd =
+  const namespacesReady =
     selectedClusters.length > 0 &&
     !namespacesLoading &&
-    [...selectedClusters].sort().join('|') === namespacesFor.join('|') &&
-    hasExactNamespaceMatch(namespaces, namespace);
+    [...selectedClusters].sort().join('|') === namespacesFor.join('|');
+  const hasExactMatch =
+    namespacesReady && hasExactNamespaceMatch(namespaces, namespace);
+  const namespacesToAdd = [
+    ...selectedNamespaces,
+    ...(hasExactMatch && namespace.trim() && !selectedNamespaces.includes(namespace.trim())
+      ? [namespace.trim()]
+      : []),
+  ];
+  const canAdd =
+    selectedClusters.length > 0 &&
+    namespacesReady &&
+    namespacesToAdd.length > 0;
+
+  const selectNamespace = (name: string) => {
+    const next = name.trim();
+    if (!hasExactNamespaceMatch(namespaces, next)) return;
+    setSelectedNamespaces((current) => (current.includes(next) ? current : [...current, next]));
+    setNamespace('');
+  };
+
+  const removeNamespace = (name: string) => {
+    setSelectedNamespaces((current) => current.filter((item) => item !== name));
+  };
 
   /**
-   * Adds one target per selected cluster, all sharing the typed namespace, then
-   * resets the form so the next addition starts from a clean slate.
+   * Adds one target for every selected cluster and namespace, then resets the
+   * form so the next addition starts from a clean slate.
    */
   const addSelection = () => {
     if (!canAdd) return;
-    const ns = namespace.trim();
-    selectedClusters.forEach((cluster) => addTarget({ cluster, namespace: ns }));
+    selectedClusters.forEach((cluster) => {
+      namespacesToAdd.forEach((ns) => addTarget({ cluster, namespace: ns }));
+    });
     setSelectedClusters([]);
+    setSelectedNamespaces([]);
     setNamespace('');
   };
 
@@ -182,8 +209,10 @@ export function TargetSelector({
         <NamespaceInput
           value={namespace}
           onChange={setNamespace}
-          onSubmit={addSelection}
           selectedClusters={selectedClusters}
+          selectedNamespaces={selectedNamespaces}
+          onSelectNamespace={selectNamespace}
+          onRemoveNamespace={removeNamespace}
         />
         <button
           type="button"
@@ -192,8 +221,8 @@ export function TargetSelector({
           disabled={!canAdd}
           title={
             canAdd
-              ? 'Add one target per selected cluster'
-              : 'Select a namespace from the suggestions'
+              ? 'Add one target per selected cluster and namespace'
+              : 'Select at least one namespace from the suggestions'
           }
         >
           <Plus size={15} /> Add

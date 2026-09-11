@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader } from 'lucide-react';
+import { Check, Loader, X } from 'lucide-react';
 import {
   describeNamespaceReach,
   hasExactNamespaceMatch,
@@ -10,9 +10,10 @@ import { useOpsFlowStore } from '../store';
 interface NamespaceInputProps {
   value: string;
   onChange: (value: string) => void;
-  /** Called when the user confirms a namespace from the loaded list. */
-  onSubmit: () => void;
   selectedClusters: string[];
+  selectedNamespaces: string[];
+  onSelectNamespace: (name: string) => void;
+  onRemoveNamespace: (name: string) => void;
 }
 
 /**
@@ -26,8 +27,10 @@ interface NamespaceInputProps {
 export function NamespaceInput({
   value,
   onChange,
-  onSubmit,
   selectedClusters,
+  selectedNamespaces,
+  onSelectNamespace,
+  onRemoveNamespace,
 }: NamespaceInputProps) {
   const namespaces = useOpsFlowStore((s) => s.namespaces);
   const namespacesFor = useOpsFlowStore((s) => s.namespacesFor);
@@ -54,8 +57,10 @@ export function NamespaceInput({
 
   const suggestions = useMemo(
     () =>
-      suggestNamespaces(namespacesReady ? namespaces : [], value, selectedClusters.length),
-    [namespaces, namespacesReady, value, selectedClusters.length],
+      suggestNamespaces(namespacesReady ? namespaces : [], value, selectedClusters.length).filter(
+        (suggestion) => !selectedNamespaces.includes(suggestion.name),
+      ),
+    [namespaces, namespacesReady, selectedClusters.length, selectedNamespaces, value],
   );
 
   // Keep the highlighted row valid as the list shrinks while typing.
@@ -66,8 +71,9 @@ export function NamespaceInput({
   useEffect(() => () => window.clearTimeout(blurTimer.current), []);
 
   const choose = (name: string) => {
-    onChange(name);
-    setOpen(false);
+    onSelectNamespace(name);
+    onChange('');
+    setOpen(true);
     setActiveIndex(-1);
   };
 
@@ -94,8 +100,7 @@ export function NamespaceInput({
       if (open && activeIndex >= 0 && suggestions[activeIndex]) {
         choose(suggestions[activeIndex].name);
       } else if (hasExactMatch) {
-        setOpen(false);
-        onSubmit();
+        choose(value.trim());
       }
     }
   };
@@ -135,6 +140,26 @@ export function NamespaceInput({
           aria-controls="namespace-suggestions"
         />
       </label>
+
+      {selectedNamespaces.length > 0 && (
+        <div className="namespace-selected-list" aria-label="Selected namespaces">
+          {selectedNamespaces.map((name) => (
+            <span className="namespace-selected-chip" key={name}>
+              <span>{name}</span>
+              <button
+                type="button"
+                className="namespace-selected-remove"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onRemoveNamespace(name)}
+                aria-label={`Remove namespace ${name}`}
+                title={`Remove namespace ${name}`}
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {value.trim() && hasExactMatch && (
         <span className="namespace-valid" title="This namespace exists in the selected clusters">
