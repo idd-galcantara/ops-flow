@@ -181,6 +181,8 @@ button {
   min-height: 0;
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
 }
 
 /* ---------- Sidebar / target selector ---------- */
@@ -510,6 +512,7 @@ button {
 
 .main-panel {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--canvas);
@@ -667,7 +670,8 @@ button {
 .panel-content {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 18px 25px 32px;
 }
 
@@ -761,11 +765,13 @@ button {
 /* ---------- Pod table ---------- */
 
 .pod-table-wrap {
+  min-width: 0;
   display: grid;
   gap: 18px;
 }
 
 .pod-group {
+  min-width: 0;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -951,9 +957,20 @@ button {
 
 /* ---------- Responsive ---------- */
 
+@media (min-width: 1001px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 @media (max-width: 1000px) {
   .app-body {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    overflow: visible;
   }
 
   .sidebar {
@@ -1157,6 +1174,7 @@ button {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Logs scroll inside .log-output, so this container must not scroll itself. */
