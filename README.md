@@ -99,6 +99,11 @@ npm run dev:desktop
 
 Para gerar os artefatos de distribuicao, consulte [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
 
+Para instalar ou executar uma release pronta:
+
+- [Guia de release Linux](README-release-linux.md)
+- [Guia de release Windows](README-release-windows.md)
+
 ### 3. Fazer a primeira consulta
 
 1. Selecione um ou mais contextos.

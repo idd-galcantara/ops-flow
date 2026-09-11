@@ -4,6 +4,11 @@ O empacotamento usa `electron-builder` e sempre executa o build dos tres workspa
 gerar um instalador. O backend compilado, o frontend compilado e apenas as dependencias de
 producao do backend sao copiados para recursos explicitos do aplicativo.
 
+Para instalar e executar artefatos ja gerados, consulte:
+
+- [Release Linux](../README-release-linux.md)
+- [Release Windows](../README-release-windows.md)
+
 ## Linux
 
 ```bash
