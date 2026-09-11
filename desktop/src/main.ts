@@ -85,7 +85,9 @@ async function shutdownApplication(): Promise<void> {
 
 async function createMainWindow(): Promise<void> {
   const root = projectRoot();
-  const frontendDist = path.join(root, 'frontend', 'dist');
+  const frontendDist = app.isPackaged
+    ? path.join(root, 'frontend')
+    : path.join(root, 'frontend', 'dist');
   const port = await availablePort();
   const selectedKubeconfigPath = await readSelectedKubeconfigPath();
   backendPort = port;
