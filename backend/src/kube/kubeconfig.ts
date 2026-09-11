@@ -1,5 +1,6 @@
 import { CoreV1Api, KubeConfig, Log, Metrics } from '@kubernetes/client-node';
 import { buildFullCaChain } from './caChain.js';
+import { loadKubeConfig } from './kubeconfigDiscovery.js';
 
 /**
  * Loads the user's kubeconfig once and exposes read-only helpers over it.
@@ -19,13 +20,12 @@ export interface ContextInfo {
 }
 
 let kubeConfig: KubeConfig | null = null;
+let selectedKubeConfigPath: string | null = null;
 
-/** Lazily loads (and caches) the default kubeconfig. */
+/** Lazily loads (and caches) the active kubeconfig. */
 function getKubeConfig(): KubeConfig {
   if (!kubeConfig) {
-    const kc = new KubeConfig();
-    kc.loadFromDefault();
-    kubeConfig = kc;
+    kubeConfig = loadKubeConfig({ selectedPath: selectedKubeConfigPath });
   }
   return kubeConfig;
 }
@@ -74,7 +74,12 @@ export function scopedConfigForContext(context: string): KubeConfig {
   }
 
   const scoped = new KubeConfig();
-  scoped.loadFromDefault();
+  scoped.loadFromOptions({
+    clusters: kc.clusters.map((cluster) => ({ ...cluster })),
+    users: kc.users.map((user) => ({ ...user })),
+    contexts: kc.contexts.map((ctx) => ({ ...ctx })),
+    currentContext: context,
+  });
   scoped.setCurrentContext(context);
   completeCaChain(scoped, context);
   scopedConfigCache.set(context, scoped);
@@ -122,7 +127,7 @@ export function logForContext(context: string): Log {
  * from `caData`, so without this the TLS handshake fails with
  * UNABLE_TO_GET_ISSUER_CERT. TLS verification remains fully enabled.
  */
-function completeCaChain(scoped: KubeConfig, context: string): void {
+export function completeCaChain(scoped: KubeConfig, context: string): void {
   const cluster = scoped.getCurrentCluster();
   if (!cluster?.caData) return;
 
@@ -144,9 +149,28 @@ function completeCaChain(scoped: KubeConfig, context: string): void {
   });
 }
 
+/**
+ * Loads a new configuration before replacing the active one. A failed load
+ * leaves the previous configuration and all of its clients untouched.
+ */
+export function reloadKubeConfig(selectedPath?: string | null): void {
+  const nextSelectedPath = selectedPath === undefined
+    ? selectedKubeConfigPath
+    : selectedPath?.trim() || null;
+  const nextConfig = loadKubeConfig({ selectedPath: nextSelectedPath });
+
+  selectedKubeConfigPath = nextSelectedPath;
+  kubeConfig = nextConfig;
+  scopedConfigCache.clear();
+  clientCache.clear();
+  metricsCache.clear();
+  logCache.clear();
+}
+
 /** Test/utility hook to reset cached state. */
 export function resetKubeConfigCache(): void {
   kubeConfig = null;
+  selectedKubeConfigPath = null;
   scopedConfigCache.clear();
   clientCache.clear();
   metricsCache.clear();

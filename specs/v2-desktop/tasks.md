@@ -6,13 +6,13 @@ durante o desenvolvimento.
 
 ## Step 1 — Resolver e loader de kubeconfig
 
-- [ ] Extrair a descoberta do kubeconfig para um módulo backend dedicado.
-  - Respeitar `KUBECONFIG` quando definida.
-  - Usar o caminho padrão do Linux e do Windows quando a variável não existir.
-  - Aceitar um caminho selecionado explicitamente pelo aplicativo.
-- [ ] Manter o carregamento lazy, o cache por context e a aplicação da cadeia de CA da V1.
-- [ ] Implementar recarga segura da configuração e limpeza dos caches de clients.
-- [ ] Adicionar testes unitários para prioridade de fontes, arquivo ausente, arquivo inválido e
+- [x] Extrair a descoberta do kubeconfig para um módulo backend dedicado.
+  - [x] Respeitar `KUBECONFIG` quando definida.
+  - [x] Usar o caminho padrão do Linux e do Windows quando a variável não existir.
+  - [x] Aceitar um caminho selecionado explicitamente pelo aplicativo.
+- [x] Manter o carregamento lazy, o cache por context e a aplicação da cadeia de CA da V1.
+- [x] Implementar recarga segura da configuração e limpeza dos caches de clients.
+- [x] Adicionar testes unitários para prioridade de fontes, arquivo ausente, arquivo inválido e
   troca de configuração.
 - _Copilot agent: @ops-flow-backend_
 - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.2, 2.4_
