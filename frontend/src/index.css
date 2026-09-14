@@ -203,6 +203,7 @@ button {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-bottom: 12px;
 }
 
 .sidebar-heading {
@@ -697,7 +698,7 @@ button {
   flex: 0 0 auto;
   padding: 12px 6px 0;
   background: var(--panel);
-  box-shadow: 0 -8px 14px rgba(251, 251, 252, 0.96);
+  border-top: 1px solid var(--line);
   position: relative;
   z-index: 1;
 }
