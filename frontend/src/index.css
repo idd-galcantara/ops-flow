@@ -2025,6 +2025,10 @@ button {
   white-space: nowrap;
 }
 
+.preset-active-name {
+  flex: 1;
+}
+
 .preset-active strong {
   color: var(--ink);
 }
@@ -2034,6 +2038,33 @@ button {
   flex: 0 0 auto;
   color: var(--accent-hover);
   font-style: normal;
+}
+
+.preset-update-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 3px 5px;
+  color: var(--warn-ink);
+  background: #fff;
+  border: 1px solid #e5c98e;
+  border-radius: 3px;
+  font: 8px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.preset-update-button:hover:not(:disabled),
+.preset-update-button:focus-visible {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.preset-update-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .preset-active.is-dirty,

@@ -385,6 +385,12 @@ function PresetSection() {
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const contextNames = useMemo(() => contexts.map((context) => context.name), [contexts]);
   const activePreset = presets.find((preset) => preset.id === activePresetId);
+  const canUpdateActivePreset = Boolean(activePreset && activePresetDirty && targets.length > 0);
+
+  const updateActivePreset = () => {
+    if (!activePreset || !canUpdateActivePreset) return;
+    updatePreset(activePreset.id, activePreset.name, activePreset.description ?? '', targets);
+  };
 
   const openLibrary = (saveCurrent = false) => {
     setStartNaming(saveCurrent);
@@ -404,16 +410,29 @@ function PresetSection() {
           </button>
           {targets.length > 0 && (
             <button type="button" className="text-button" onClick={() => openLibrary(true)}>
-              Save current
+              Save as new
             </button>
           )}
         </div>
         {activePreset && (
           <div className={`preset-active ${activePresetDirty ? 'is-dirty' : ''}`} aria-live="polite">
-            <span>
+            <span className="preset-active-name">
               Active: <strong>{activePreset.name}</strong>
             </span>
-            {activePresetDirty && <em>edited</em>}
+            {activePresetDirty && (
+              <>
+                <em>edited</em>
+                <button
+                  type="button"
+                  className="preset-update-button"
+                  onClick={updateActivePreset}
+                  disabled={!canUpdateActivePreset}
+                  title={`Update preset ${activePreset.name} with the current targets`}
+                >
+                  <Save size={11} /> Update
+                </button>
+              </>
+            )}
           </div>
         )}
       </section>
@@ -563,7 +582,7 @@ function PresetLibrary({
           ) : <span />}
           {targets.length > 0 && !naming && (
             <button type="button" className="secondary-button" onClick={() => setNaming(true)}>
-              <Save size={13} /> Save current
+              <Save size={13} /> Save as new
             </button>
           )}
         </div>
@@ -588,7 +607,7 @@ function PresetLibrary({
               aria-label="Preset name"
             />
             <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim()}>
-              <Save size={13} /> Save
+              <Save size={13} /> Create preset
             </button>
             <button type="button" className="secondary-button" onClick={() => setNaming(false)}>Cancel</button>
           </div>
