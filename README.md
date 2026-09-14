@@ -51,6 +51,40 @@ flowchart LR
 - **Monorepo:** npm workspaces com os pacotes `backend` e `frontend`.
 - **Interface:** Manrope para texto, DM Mono para dados tecnicos e paleta clara com acento terracota.
 
+## Downloads
+
+A release mais recente e a **v0.2.0**. Os instaladores e pacotes estao disponiveis na pagina de
+[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.2.0).
+
+### Linux
+
+- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-linux-x86_64.AppImage)
+- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-linux-amd64.deb)
+
+Instrucoes de instalacao e execucao: [guia de release Linux](README-release-linux.md).
+
+### Windows
+
+- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-win-x64.exe)
+- [Arquivo blockmap](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-win-x64.exe.blockmap)
+
+Instrucoes de instalacao: [guia de release Windows](README-release-windows.md).
+
+## Fluxo local
+
+O ops-flow tambem pode ser executado localmente sem instalar um pacote desktop. Nesse fluxo, o
+frontend roda no Vite, o backend roda em `127.0.0.1` e o kubeconfig continua sendo lido na
+maquina do usuario. Isso e util para desenvolvimento, validacao de mudancas e uso temporario.
+
+```bash
+npm install
+npm run dev
+```
+
+Depois, abra <http://localhost:5173>. O frontend encaminha as requisicoes `/api` e o WebSocket
+de logs para o backend local em `http://127.0.0.1:4000`. Para abrir a versao desktop a partir do
+codigo-fonte, use `npm run dev:desktop`.
+
 ## Requisitos
 
 - **Node.js v25.2.1**, versao usada e validada neste ambiente, com npm.
@@ -99,10 +133,8 @@ npm run dev:desktop
 
 Para gerar os artefatos de distribuicao, consulte [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
 
-Para instalar ou executar uma release pronta:
-
-- [Guia de release Linux](README-release-linux.md)
-- [Guia de release Windows](README-release-windows.md)
+Para instalar ou executar uma release pronta, consulte a secao [Downloads](#downloads) e os
+guias de release por sistema operacional.
 
 ### 3. Fazer a primeira consulta
 

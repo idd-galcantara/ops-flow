@@ -27,8 +27,8 @@ Em outras distribuicoes, instale o pacote equivalente a `libfuse2` ou `libfuse2t
 A partir da pasta que contem o arquivo:
 
 ```bash
-chmod +x ops-flow-0.1.0-linux-x86_64.AppImage
-./ops-flow-0.1.0-linux-x86_64.AppImage
+chmod +x ops-flow-0.2.0-linux-x86_64.AppImage
+./ops-flow-0.2.0-linux-x86_64.AppImage
 ```
 
 Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessaria.
@@ -36,7 +36,7 @@ Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessa
 Se o sistema bloquear a execucao por permissao, confirme que o arquivo tem permissao de execucao:
 
 ```bash
-ls -l ops-flow-0.1.0-linux-x86_64.AppImage
+ls -l ops-flow-0.2.0-linux-x86_64.AppImage
 ```
 
 ## Instalar o pacote Debian
@@ -44,7 +44,7 @@ ls -l ops-flow-0.1.0-linux-x86_64.AppImage
 Em Ubuntu, Debian e distribuicoes compativeis:
 
 ```bash
-sudo apt install ./ops-flow-0.1.0-linux-amd64.deb
+sudo apt install ./ops-flow-0.2.0-linux-amd64.deb
 ```
 
 O `./` e importante: ele informa ao `apt` que o arquivo esta na pasta atual.
@@ -72,7 +72,7 @@ O aplicativo nao inclui kubeconfigs, tokens, certificados ou chaves no instalado
 Para iniciar usando outro arquivo:
 
 ```bash
-KUBECONFIG=/caminho/para/config ./ops-flow-0.1.0-linux-x86_64.AppImage
+KUBECONFIG=/caminho/para/config ./ops-flow-0.2.0-linux-x86_64.AppImage
 ```
 
 Tambem e possivel usar **Selecionar kubeconfig** dentro do aplicativo.
