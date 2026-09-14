@@ -64,6 +64,10 @@ interface OpsFlowState {
 
   /** Saved target combinations. */
   presets: Preset[];
+  /** Preset applied to the current target selection, if any. */
+  activePresetId: string | null;
+  /** True when current targets differ from the active preset. */
+  activePresetDirty: boolean;
 
   loadContexts: () => Promise<void>;
   loadKubeconfigStatus: () => Promise<void>;
@@ -102,6 +106,8 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   namespacesLoading: false,
   namespacesFor: [],
   presets: loadPresets(),
+  activePresetId: null,
+  activePresetDirty: false,
 
   loadContexts: async () => {
     set({ contextsLoading: true, contextsError: undefined });
@@ -162,6 +168,8 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         namespacesError: undefined,
         namespacesLoading: false,
         pods: [],
+        activePresetId: null,
+        activePresetDirty: false,
         targetErrors: [],
         podsLoading: false,
         refreshing: false,
@@ -243,17 +251,25 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     const next = { cluster, namespace };
     const exists = get().targets.some((t) => targetKey(t) === targetKey(next));
     if (exists) return;
-    set({ targets: [...get().targets, next] });
+    set((state) => ({
+      targets: [...state.targets, next],
+      activePresetDirty: state.activePresetId !== null || state.activePresetDirty,
+    }));
   },
 
   removeTarget: (target) => {
-    set({ targets: get().targets.filter((t) => targetKey(t) !== targetKey(target)) });
+    set((state) => ({
+      targets: state.targets.filter((t) => targetKey(t) !== targetKey(target)),
+      activePresetDirty: state.activePresetId !== null || state.activePresetDirty,
+    }));
   },
 
   clearTargets: () => {
     podsRequestId += 1;
     set({
       targets: [],
+      activePresetId: null,
+      activePresetDirty: false,
       pods: [],
       targetErrors: [],
       podsLoading: false,
@@ -317,9 +333,10 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     const trimmed = name.trim();
     const { targets, presets } = get();
     if (!trimmed || targets.length === 0) return;
-    const next = [...presets, createPreset(trimmed, targets, description)];
+    const created = createPreset(trimmed, targets, description);
+    const next = [...presets, created];
     savePresets(next);
-    set({ presets: next });
+    set({ presets: next, activePresetId: created.id, activePresetDirty: false });
   },
 
   updatePreset: (id, name, description, targets) => {
@@ -343,7 +360,20 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         : preset,
     );
     savePresets(next);
-    set({ presets: next });
+    set((state) => ({
+      presets: next,
+      ...(state.activePresetId === id
+        ? {
+            targets: nextTargets,
+            activePresetDirty: false,
+            pods: [],
+            targetErrors: [],
+            hasQueried: false,
+            podsError: undefined,
+            lastUpdatedAt: undefined,
+          }
+        : {}),
+    }));
   },
 
   applyPreset: (id) => {
@@ -351,6 +381,8 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     if (!preset) return;
     set({
       targets: preset.targets.map((t) => ({ ...t })),
+      activePresetId: id,
+      activePresetDirty: false,
       pods: [],
       targetErrors: [],
       hasQueried: false,
@@ -362,6 +394,11 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   deletePreset: (id) => {
     const next = get().presets.filter((p) => p.id !== id);
     savePresets(next);
-    set({ presets: next });
+    set((state) => ({
+      presets: next,
+      ...(state.activePresetId === id
+        ? { activePresetId: null, activePresetDirty: false }
+        : {}),
+    }));
   },
 }));

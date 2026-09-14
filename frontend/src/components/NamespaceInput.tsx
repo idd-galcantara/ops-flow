@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader, X } from 'lucide-react';
+import { AlertTriangle, Check, Loader, X } from 'lucide-react';
 import {
   describeNamespaceReach,
   hasExactNamespaceMatch,
@@ -108,6 +108,12 @@ export function NamespaceInput({
 
   const showPanel = open && selectedClusters.length > 0;
   const hasExactMatch = namespacesReady && hasExactNamespaceMatch(namespaces, value);
+  const exactNamespace = hasExactMatch
+    ? namespaces.find((item) => item.name === value.trim())
+    : undefined;
+  const exactCoverage = exactNamespace?.clusters.length ?? 0;
+  const exactCoverageIsPartial =
+    hasExactMatch && selectedClusters.length > 1 && exactCoverage < selectedClusters.length;
 
   return (
     <div className="namespace-input">
@@ -164,8 +170,23 @@ export function NamespaceInput({
       </label>
 
       {value.trim() && hasExactMatch && (
-        <span className="namespace-valid" title="This namespace exists in the selected clusters">
-          <Check size={11} /> exists
+        <span
+          className={`namespace-valid ${exactCoverageIsPartial ? 'is-partial' : ''}`}
+          title={
+            exactCoverageIsPartial
+              ? `This namespace exists in ${exactCoverage} of ${selectedClusters.length} selected clusters`
+              : 'This namespace exists in all selected clusters'
+          }
+        >
+          {exactCoverageIsPartial ? (
+            <>
+              <AlertTriangle size={11} /> {exactCoverage} of {selectedClusters.length} clusters
+            </>
+          ) : (
+            <>
+              <Check size={11} /> exists in all selected clusters
+            </>
+          )}
         </span>
       )}
 

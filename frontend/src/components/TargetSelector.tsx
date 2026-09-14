@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   Bookmark,
   Check,
-  ChevronDown,
-  ChevronRight,
   Layers,
   Pencil,
   Plus,
@@ -15,7 +14,7 @@ import {
 } from 'lucide-react';
 import { hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { suggestNamespaces } from '../namespaceSuggestions';
-import { describePreset } from '../presets';
+import { describePreset, type Preset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey, type NamespaceInfo } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
@@ -32,7 +31,6 @@ interface TargetSelectorProps {
 }
 
 const KEYBOARD_STEP = 24;
-const PRESET_COLLAPSE_THRESHOLD = 6;
 
 /**
  * Builds the list of (cluster, namespace) targets to query.
@@ -111,10 +109,25 @@ export function TargetSelector({
       ? [namespace.trim()]
       : []),
   ];
+  const namespaceInfoByName = useMemo(
+    () => new Map(namespaces.map((item) => [item.name, item])),
+    [namespaces],
+  );
+  const isNamespaceAvailable = (cluster: string, name: string) =>
+    namespaceInfoByName.get(name)?.clusters.includes(cluster) ?? false;
+  const unavailableClusters = selectedClusters.filter((cluster) =>
+    namespacesToAdd.some((name) => !isNamespaceAvailable(cluster, name)),
+  );
+  const availableTargetCount = selectedClusters.reduce(
+    (count, cluster) =>
+      count + namespacesToAdd.filter((name) => isNamespaceAvailable(cluster, name)).length,
+    0,
+  );
+  const unavailableTargetCount = selectedClusters.length * namespacesToAdd.length - availableTargetCount;
   const canAdd =
     selectedClusters.length > 0 &&
     namespacesReady &&
-    namespacesToAdd.length > 0;
+    availableTargetCount > 0;
 
   const selectNamespace = (name: string) => {
     const next = name.trim();
@@ -134,7 +147,10 @@ export function TargetSelector({
   const addSelection = () => {
     if (!canAdd) return;
     selectedClusters.forEach((cluster) => {
-      namespacesToAdd.forEach((ns) => addTarget({ cluster, namespace: ns }));
+      namespacesToAdd.forEach((ns) => {
+        if (!isNamespaceAvailable(cluster, ns)) return;
+        addTarget({ cluster, namespace: ns });
+      });
     });
     setSelectedClusters([]);
     setSelectedNamespaces([]);
@@ -165,6 +181,7 @@ export function TargetSelector({
         aria-valuenow={Math.round(sidebarWidth)}
         tabIndex={0}
       />
+      <div className="sidebar-content">
       <div className="sidebar-heading">
         <div>
           <span className="eyebrow">Targets</span>
@@ -216,18 +233,33 @@ export function TargetSelector({
       <div className="context-list" role="group" aria-label="Available contexts">
         {visibleContexts.map((ctx) => {
           const active = selectedClusters.includes(ctx.name);
+          const namespaceUnavailable =
+            active && namespacesReady && unavailableClusters.includes(ctx.name);
           return (
             <button
               type="button"
               key={ctx.name}
-              className={`context-item ${active ? 'is-active' : ''}`}
+              className={`context-item ${active ? 'is-active' : ''} ${
+                namespaceUnavailable ? 'is-unavailable' : ''
+              }`}
               onClick={() => toggleCluster(ctx.name)}
               aria-pressed={active}
+              aria-label={`${ctx.name}${namespaceUnavailable ? ' (namespace unavailable)' : ''}`}
+              title={
+                namespaceUnavailable
+                  ? 'The selected namespace is not available in this cluster'
+                  : undefined
+              }
             >
               <span className="context-check" aria-hidden="true">
                 {active ? <Layers size={12} /> : null}
               </span>
               <span className="context-name">{ctx.name}</span>
+              {namespaceUnavailable && (
+                <span className="context-warning" aria-hidden="true">
+                  <AlertTriangle size={12} />
+                </span>
+              )}
             </button>
           );
         })}
@@ -252,12 +284,23 @@ export function TargetSelector({
           disabled={!canAdd}
           title={
             canAdd
-              ? 'Add one target per selected cluster and namespace'
+              ? 'Add available cluster and namespace targets; unavailable pairs are skipped'
               : 'Select at least one namespace from the suggestions'
           }
         >
           <Plus size={15} /> Add
         </button>
+        {namespacesToAdd.length > 0 && namespacesReady && (
+          <p
+            className={`namespace-coverage-summary ${
+              unavailableTargetCount > 0 ? 'is-partial' : ''
+            }`}
+          >
+            {unavailableTargetCount > 0
+              ? `${availableTargetCount} target(s) available · ${unavailableClusters.length} cluster(s) skipped because the namespace is unavailable`
+              : 'Namespace available in all selected clusters'}
+          </p>
+        )}
       </div>
 
       <div className="sidebar-section-label">
@@ -297,6 +340,7 @@ export function TargetSelector({
       </div>
 
       <PresetSection />
+      </div>
 
       <div className="sidebar-footer">
         <button
@@ -333,188 +377,70 @@ function PresetSection() {
   const presets = useOpsFlowStore((s) => s.presets);
   const targets = useOpsFlowStore((s) => s.targets);
   const contexts = useOpsFlowStore((s) => s.contexts);
-  const savePreset = useOpsFlowStore((s) => s.savePreset);
   const updatePreset = useOpsFlowStore((s) => s.updatePreset);
-  const applyPreset = useOpsFlowStore((s) => s.applyPreset);
-  const deletePreset = useOpsFlowStore((s) => s.deletePreset);
-
-  const [naming, setNaming] = useState(false);
-  const [name, setName] = useState('');
-  const [expanded, setExpanded] = useState(() => presets.length <= PRESET_COLLAPSE_THRESHOLD);
-  const [presetQuery, setPresetQuery] = useState('');
+  const activePresetId = useOpsFlowStore((s) => s.activePresetId);
+  const activePresetDirty = useOpsFlowStore((s) => s.activePresetDirty);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [startNaming, setStartNaming] = useState(false);
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const contextNames = useMemo(() => contexts.map((context) => context.name), [contexts]);
+  const activePreset = presets.find((preset) => preset.id === activePresetId);
 
-  const visiblePresets = useMemo(() => {
-    const needle = presetQuery.trim().toLowerCase();
-    if (!needle) return presets;
-
-    return presets.filter((preset) => {
-      const searchableText = [
-        preset.name,
-        describePreset(preset),
-        ...preset.targets.flatMap((target) => [target.cluster, target.namespace]),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return searchableText.includes(needle);
-    });
-  }, [presetQuery, presets]);
-
-  const confirmSave = () => {
-    if (!name.trim()) return;
-    savePreset(name);
-    setName('');
-    setNaming(false);
-  };
-
-  const cancelSave = () => {
-    setNaming(false);
-    setName('');
+  const openLibrary = (saveCurrent = false) => {
+    setStartNaming(saveCurrent);
+    setLibraryOpen(true);
   };
 
   return (
-    <section className="preset-section" aria-label="Presets">
-      <div className="sidebar-section-label preset-section-header">
-        <button
-          type="button"
-          className="preset-toggle"
-          aria-expanded={expanded}
-          aria-controls="preset-panel"
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-          <span>
-            Presets <b>{presets.length}</b>
-          </span>
-        </button>
-        {targets.length > 0 && !naming && (
-          <button
-            type="button"
-            className="text-button"
-            onClick={() => {
-              setNaming(true);
-              setExpanded(true);
-            }}
-          >
-            Save current
+    <>
+      <section className="preset-section preset-launcher" aria-label="Presets">
+        <div className="preset-launcher-row">
+          <button type="button" className="preset-launcher-button" onClick={() => openLibrary()}>
+            <Bookmark size={13} />
+            <span>
+              Presets <b>{presets.length}</b>
+            </span>
+            <Search size={12} className="preset-launcher-search-icon" />
           </button>
-        )}
-      </div>
-
-      {expanded && (
-        <div id="preset-panel" className="preset-panel">
-          {naming && (
-            <div className="preset-form">
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    confirmSave();
-                  }
-                  if (e.key === 'Escape') {
-                      cancelSave();
-                  }
-                }}
-                placeholder="Preset name"
-                aria-label="Preset name"
-              />
-              <button
-                type="button"
-                className="primary-button"
-                onClick={confirmSave}
-                disabled={!name.trim()}
-                aria-label="Save preset"
-                title="Save preset"
-              >
-                <Save size={13} />
-              </button>
-              <button
-                type="button"
-                className="icon-button subtle"
-                onClick={() => {
-                  cancelSave();
-                }}
-                aria-label="Cancel"
-              >
-                <X size={13} />
-              </button>
-            </div>
+          {targets.length > 0 && (
+            <button type="button" className="text-button" onClick={() => openLibrary(true)}>
+              Save current
+            </button>
           )}
-
-          {presets.length > 0 && (
-            <div className="preset-search">
-              <Search size={13} />
-              <label className="visually-hidden" htmlFor="preset-search-input">
-                Search presets
-              </label>
-              <input
-                id="preset-search-input"
-                value={presetQuery}
-                onChange={(e) => setPresetQuery(e.target.value)}
-                placeholder="Search presets..."
-              />
-              {presetQuery && (
-                <button
-                  type="button"
-                  className="preset-search-clear"
-                  onClick={() => setPresetQuery('')}
-                  aria-label="Clear preset search"
-                  title="Clear preset search"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="preset-list" role="group" aria-label="Saved presets">
-            {visiblePresets.map((preset) => (
-              <div className="preset-item" key={preset.id}>
-                <button
-                  type="button"
-                  className="preset-apply"
-                  onClick={() => applyPreset(preset.id)}
-                  title={preset.targets.map(targetKey).join('\n')}
-                >
-                  <Bookmark size={12} />
-                  <span className="preset-text">
-                    <strong>{preset.name}</strong>
-                    <small>{describePreset(preset)}</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="icon-button subtle"
-                  onClick={() => setEditingPresetId(preset.id)}
-                  title={`View and edit ${preset.name}`}
-                  aria-label={`View and edit preset ${preset.name}`}
-                >
-                  <Pencil size={12} />
-                </button>
-                <button
-                  type="button"
-                  className="icon-button subtle danger"
-                  onClick={() => deletePreset(preset.id)}
-                  title={`Remove preset ${preset.name}`}
-                  aria-label={`Remove preset ${preset.name}`}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))}
-            {presets.length === 0 && !naming && (
-              <p className="sidebar-hint">Save target combinations you use often.</p>
-            )}
-            {presets.length > 0 && visiblePresets.length === 0 && (
-              <p className="sidebar-hint preset-empty">No preset matches the search.</p>
-            )}
-          </div>
         </div>
+        {activePreset && (
+          <div className={`preset-active ${activePresetDirty ? 'is-dirty' : ''}`} aria-live="polite">
+            <span>
+              Active: <strong>{activePreset.name}</strong>
+            </span>
+            {activePresetDirty && <em>edited</em>}
+          </div>
+        )}
+      </section>
+
+      {libraryOpen && (
+        <PresetLibrary
+          presets={presets}
+          targets={targets}
+          activePresetId={activePresetId}
+          activePresetDirty={activePresetDirty}
+          startNaming={startNaming}
+          onClose={() => {
+            setLibraryOpen(false);
+            setStartNaming(false);
+          }}
+          onApply={(id) => {
+            useOpsFlowStore.getState().applyPreset(id);
+            setLibraryOpen(false);
+          }}
+          onEdit={(id) => {
+            setLibraryOpen(false);
+            setEditingPresetId(id);
+          }}
+          onDelete={(id) => useOpsFlowStore.getState().deletePreset(id)}
+        />
       )}
+
       {editingPresetId && (
         <PresetEditor
           preset={presets.find((preset) => preset.id === editingPresetId) ?? null}
@@ -526,7 +452,176 @@ function PresetSection() {
           }}
         />
       )}
-    </section>
+    </>
+  );
+}
+
+interface PresetLibraryProps {
+  presets: Preset[];
+  targets: { cluster: string; namespace: string }[];
+  activePresetId: string | null;
+  activePresetDirty: boolean;
+  startNaming: boolean;
+  onClose: () => void;
+  onApply: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function PresetLibrary({
+  presets,
+  targets,
+  activePresetId,
+  activePresetDirty,
+  startNaming,
+  onClose,
+  onApply,
+  onEdit,
+  onDelete,
+}: PresetLibraryProps) {
+  const savePreset = useOpsFlowStore((s) => s.savePreset);
+  const [query, setQuery] = useState('');
+  const [naming, setNaming] = useState(startNaming);
+  const [name, setName] = useState('');
+
+  const visiblePresets = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return presets;
+    return presets.filter((preset) =>
+      [
+        preset.name,
+        preset.description ?? '',
+        describePreset(preset),
+        ...preset.targets.flatMap((target) => [target.cluster, target.namespace]),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [presets, query]);
+
+  const confirmSave = () => {
+    if (!name.trim() || targets.length === 0) return;
+    savePreset(name);
+    setName('');
+    setNaming(false);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="preset-library-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="preset-library" role="dialog" aria-modal="true" aria-labelledby="preset-library-title">
+        <div className="preset-library-header">
+          <div>
+            <span className="eyebrow">Saved target combinations</span>
+            <h2 id="preset-library-title">Presets <b>{presets.length}</b></h2>
+          </div>
+          <button type="button" className="icon-button subtle" onClick={onClose} aria-label="Close presets">
+            <X size={15} />
+          </button>
+        </div>
+
+        {activePresetId && (
+          <div className={`preset-library-status ${activePresetDirty ? 'is-dirty' : ''}`}>
+            <Bookmark size={13} />
+            <span>
+              Active preset: <strong>{presets.find((preset) => preset.id === activePresetId)?.name ?? 'unknown'}</strong>
+            </span>
+            {activePresetDirty && <em>edited</em>}
+          </div>
+        )}
+
+        <div className="preset-library-toolbar">
+          {presets.length > 0 ? (
+            <label className="preset-search preset-library-search">
+              <Search size={13} />
+              <span className="visually-hidden">Search presets</span>
+              <input
+                autoFocus={!naming}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by name, cluster or namespace..."
+              />
+              {query && (
+                <button type="button" className="preset-search-clear" onClick={() => setQuery('')} aria-label="Clear preset search">
+                  <X size={12} />
+                </button>
+              )}
+            </label>
+          ) : <span />}
+          {targets.length > 0 && !naming && (
+            <button type="button" className="secondary-button" onClick={() => setNaming(true)}>
+              <Save size={13} /> Save current
+            </button>
+          )}
+        </div>
+
+        {naming && (
+          <div className="preset-library-save-form">
+            <input
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  confirmSave();
+                }
+                if (event.key === 'Escape') {
+                  setNaming(false);
+                  setName('');
+                }
+              }}
+              placeholder="Preset name"
+              aria-label="Preset name"
+            />
+            <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim()}>
+              <Save size={13} /> Save
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setNaming(false)}>Cancel</button>
+          </div>
+        )}
+
+        <div className="preset-library-list" role="group" aria-label="Saved presets">
+          {visiblePresets.map((preset) => {
+            const active = preset.id === activePresetId;
+            return (
+              <div className={`preset-library-item ${active ? 'is-active' : ''}`} key={preset.id}>
+                <button type="button" className="preset-library-apply" onClick={() => onApply(preset.id)}>
+                  <Bookmark size={14} />
+                  <span className="preset-text">
+                    <strong>{preset.name}</strong>
+                    <small>{describePreset(preset)}</small>
+                    {preset.description && <em>{preset.description}</em>}
+                  </span>
+                </button>
+                {active && <span className="preset-library-active-label">{activePresetDirty ? 'Edited' : 'Active'}</span>}
+                <button type="button" className="icon-button subtle" onClick={() => onEdit(preset.id)} aria-label={`Edit preset ${preset.name}`} title={`Edit ${preset.name}`}>
+                  <Pencil size={13} />
+                </button>
+                <button type="button" className="icon-button subtle danger" onClick={() => onDelete(preset.id)} aria-label={`Remove preset ${preset.name}`} title={`Remove ${preset.name}`}>
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            );
+          })}
+          {presets.length === 0 && <p className="sidebar-hint">Save target combinations you use often.</p>}
+          {presets.length > 0 && visiblePresets.length === 0 && <p className="sidebar-hint">No preset matches the search.</p>}
+        </div>
+      </section>
+    </div>
   );
 }
 
