@@ -77,7 +77,8 @@ interface OpsFlowState {
   setFilter: (filter: string) => void;
   setRefreshSeconds: (seconds: number) => void;
   hydratePresets: () => Promise<void>;
-  savePreset: (name: string) => void;
+  savePreset: (name: string, description?: string) => void;
+  updatePreset: (id: string, name: string, description: string, targets: Target[]) => void;
   applyPreset: (id: string) => void;
   deletePreset: (id: string) => void;
 }
@@ -312,11 +313,35 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     set({ presets });
   },
 
-  savePreset: (name) => {
+  savePreset: (name, description = '') => {
     const trimmed = name.trim();
     const { targets, presets } = get();
     if (!trimmed || targets.length === 0) return;
-    const next = [...presets, createPreset(trimmed, targets)];
+    const next = [...presets, createPreset(trimmed, targets, description)];
+    savePresets(next);
+    set({ presets: next });
+  },
+
+  updatePreset: (id, name, description, targets) => {
+    const trimmedName = name.trim();
+    const normalizedTargets = targets
+      .map((target) => ({ cluster: target.cluster.trim(), namespace: target.namespace.trim() }))
+      .filter((target) => target.cluster && target.namespace);
+    const nextTargets = [...new Map(normalizedTargets.map((target) => [targetKey(target), target])).values()];
+    if (!trimmedName || nextTargets.length === 0) return;
+
+    const current = get().presets.find((preset) => preset.id === id);
+    if (!current) return;
+    const next = get().presets.map((preset) =>
+      preset.id === id
+        ? {
+            ...preset,
+            name: trimmedName,
+            ...(description.trim() ? { description: description.trim() } : { description: undefined }),
+            targets: nextTargets,
+          }
+        : preset,
+    );
     savePresets(next);
     set({ presets: next });
   },

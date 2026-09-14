@@ -4,6 +4,7 @@ import type { Target } from './types';
 export interface Preset {
   id: string;
   name: string;
+  description?: string;
   targets: Target[];
 }
 
@@ -50,8 +51,14 @@ export async function loadPersistentPresets(): Promise<Preset[]> {
 /** Validates untrusted data coming back from storage. */
 function isPreset(value: unknown): value is Preset {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as { id?: unknown; name?: unknown; targets?: unknown };
+  const candidate = value as {
+    id?: unknown;
+    name?: unknown;
+    description?: unknown;
+    targets?: unknown;
+  };
   if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string') return false;
+  if (candidate.description !== undefined && typeof candidate.description !== 'string') return false;
   if (!Array.isArray(candidate.targets)) return false;
   return candidate.targets.every(
     (t) =>
@@ -63,10 +70,11 @@ function isPreset(value: unknown): value is Preset {
 }
 
 /** Builds a preset with a stable, collision-resistant id. */
-export function createPreset(name: string, targets: Target[]): Preset {
+export function createPreset(name: string, targets: Target[], description = ''): Preset {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: name.trim(),
+    ...(description.trim() ? { description: description.trim() } : {}),
     targets: targets.map((t) => ({ cluster: t.cluster, namespace: t.namespace })),
   };
 }

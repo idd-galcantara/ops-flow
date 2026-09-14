@@ -24,8 +24,9 @@ const STORAGE_KEY = 'ops-flow.presets.v1';
 test('createPreset trims the name and copies the targets', () => {
   const preset = createPreset('  QA overdraft  ', [
     { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
-  ]);
+  ], '  Shared QA investigation  ');
   assert.equal(preset.name, 'QA overdraft');
+  assert.equal(preset.description, 'Shared QA investigation');
   assert.equal(preset.targets.length, 1);
   assert.ok(preset.id.length > 0);
 });
