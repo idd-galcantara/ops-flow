@@ -1,7 +1,7 @@
 {
   "name": "ops-flow",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Local, read-only Kubernetes workload viewer.",
   "homepage": "https://github.com/ops-flow/ops-flow",
   "author": {

@@ -50,35 +50,35 @@ flowchart LR
 - **Backend:** Node.js, TypeScript, Express, `@kubernetes/client-node` e `ws`.
 - **Testes:** test runner nativo do Node via `tsx --test`.
 - **Monorepo:** npm workspaces com os pacotes `backend`, `frontend` e `desktop`.
-- **Interface:** Manrope para texto, DM Mono para dados tecnicos e paleta clara com acento terracota.
+- **Interface:** Manrope para texto, DM Mono para dados tecnicos e temas claro/escuro com acento terracota.
 
 ## Downloads
 
-A release mais recente e a **v0.4.0**. Os instaladores e pacotes estao disponiveis na pagina de
-[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.4.0).
+A release mais recente e a **v0.5.0**. Os instaladores e pacotes estao disponiveis na pagina de
+[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.5.0).
 
 ### Linux
 
-- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-linux-x86_64.AppImage)
-- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-linux-amd64.deb)
+- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-linux-x86_64.AppImage)
+- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-linux-amd64.deb)
 
 Instrucoes de instalacao e execucao: [guia de release Linux](docs/README-release-linux.md).
 
 ### Windows
 
-- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-win-x64.exe)
+- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-win-x64.exe)
 
 Instrucoes de instalacao: [guia de release Windows](docs/README-release-windows.md).
 
 ### macOS
 
 O empacotamento macOS gera instaladores `.dmg` e `.zip` para Macs Intel (`x64`) e Apple Silicon
-(`arm64`). A release `v0.4.0` inclui os quatro artefatos macOS:
+arm64`). A release `v0.5.0` inclui os quatro artefatos macOS:
 
-- [DMG Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-arm64.dmg)
-- [DMG Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-x64.dmg)
-- [ZIP Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-arm64.zip)
-- [ZIP Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-x64.zip)
+- [DMG Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-mac-arm64.dmg)
+- [DMG Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-mac-x64.dmg)
+- [ZIP Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-mac-arm64.zip)
+- [ZIP Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.0/ops-flow-0.5.0-mac-x64.zip)
 
 Instrucoes de instalacao: [guia de release macOS](docs/README-release-mac.md).
 Instrucoes de empacotamento: [guia de distribuicao](docs/DISTRIBUTION.md).

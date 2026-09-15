@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, Workflow } from 'lucide-react';
+import { Layers, Moon, Search, Sun, Workflow } from 'lucide-react';
 import { EmptyState, ErrorState } from './components/Feedback';
 import { PodDetailsPanel } from './components/PodDetailsPanel';
 import { PodTable, podRowKey } from './components/PodTable';
@@ -19,10 +19,30 @@ const DETAILS_DEFAULT = 420;
 const SIDEBAR_MIN = 240;
 const SIDEBAR_MAX = 520;
 const SIDEBAR_DEFAULT = 292;
+const THEME_STORAGE_KEY = 'ops-flow.theme.v1';
+
+type Theme = 'light' | 'dark';
+
+function readStoredTheme(): Theme {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
 
 export default function App() {
   const [health, setHealth] = useState<HealthState>('loading');
   const [selected, setSelected] = useState<PodRef | null>(null);
+  const [theme, setTheme] = useState<Theme>(readStoredTheme);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Storage can be unavailable in restricted browser profiles.
+    }
+  }, [theme]);
 
   const sidebar = useResizablePanel({
     storageKey: 'ops-flow.sidebarWidth.v1',
@@ -100,7 +120,7 @@ export default function App() {
   const namespaceCount = useMemo(() => new Set(pods.map((p) => p.namespace)).size, [pods]);
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={theme}>
       <header className="topbar">
         <div className="brand-lockup">
           <div className="brand-mark">
@@ -111,13 +131,30 @@ export default function App() {
             <span>Kubernetes unified view</span>
           </div>
         </div>
-        <div
-          className={`topbar-status ${
-            health === 'ok' ? 'status-ok' : health === 'error' ? 'status-error' : 'status-loading'
-          }`}
-        >
-          <span className="status-dot" />
-          {health === 'ok' ? 'Read-only' : health === 'error' ? 'Backend offline' : 'Connecting...'}
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className={`theme-toggle ${theme === 'dark' ? 'is-dark' : ''}`}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={theme === 'dark'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className="theme-toggle-icon" aria-hidden="true">
+              {theme === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
+            </span>
+            <span className="theme-toggle-track" aria-hidden="true">
+              <span className="theme-toggle-thumb" />
+            </span>
+          </button>
+          <div
+            className={`topbar-status ${
+              health === 'ok' ? 'status-ok' : health === 'error' ? 'status-error' : 'status-loading'
+            }`}
+          >
+            <span className="status-dot" />
+            {health === 'ok' ? 'Read-only' : health === 'error' ? 'Backend offline' : 'Connecting...'}
+          </div>
         </div>
       </header>
 
