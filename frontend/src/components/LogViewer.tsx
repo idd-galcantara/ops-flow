@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Play, Search, Trash2, X } from 'lucide-react';
 import { podLogsUrl } from '../api';
 import { highlightSegments } from '../textHighlight';
@@ -35,6 +35,8 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const autoScrollRef = useRef(autoScroll);
+  autoScrollRef.current = autoScroll;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // One socket per (pod, container). Re-subscribing resets the buffer.
@@ -123,10 +125,20 @@ export function LogViewer({ pod }: { pod: PodRef }) {
 
   // Scroll the log container itself rather than calling scrollIntoView, which
   // would also scroll ancestor containers and could shift the whole layout.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!autoScroll || paused) return;
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+
+    el.scrollTop = el.scrollHeight;
+    const frame = window.requestAnimationFrame(() => {
+      const current = scrollRef.current;
+      if (current && autoScrollRef.current && !pausedRef.current) {
+        current.scrollTop = current.scrollHeight;
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [visibleLines, autoScroll, paused]);
 
   /** Turns auto-scroll off when the user scrolls up to read history. */

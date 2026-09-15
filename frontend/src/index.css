@@ -2763,6 +2763,7 @@ button {
 .app-shell[data-theme='dark'] .pod-group,
 .app-shell[data-theme='dark'] .target-chip,
 .app-shell[data-theme='dark'] .container-card,
+.app-shell[data-theme='dark'] .metric-card,
 .app-shell[data-theme='dark'] .event-list li,
 .app-shell[data-theme='dark'] .preset-library,
 .app-shell[data-theme='dark'] .preset-editor {
@@ -2824,6 +2825,69 @@ button {
 .app-shell[data-theme='dark'] .pod-row:hover td,
 .app-shell[data-theme='dark'] .preset-library-apply:hover {
   background: var(--hover);
+}
+
+.app-shell[data-theme='dark'] .details-tabs button {
+  color: var(--text-soft);
+}
+
+.app-shell[data-theme='dark'] .details-tabs button:hover,
+.app-shell[data-theme='dark'] .details-tabs button.active {
+  color: var(--ink);
+}
+
+.app-shell[data-theme='dark'] .inspector-field > span {
+  color: var(--text-soft);
+}
+
+.app-shell[data-theme='dark'] .pod-table th {
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.app-shell[data-theme='dark'] .pod-table td {
+  color: var(--ink);
+}
+
+.app-shell[data-theme='dark'] .pod-table .mono-cell {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.app-shell[data-theme='dark'] .pod-table .pod-name-cell {
+  color: #f3f6fa;
+}
+
+.app-shell[data-theme='dark'] .metric-card strong {
+  color: var(--ink);
+}
+
+.app-shell[data-theme='dark'] .metric-label,
+.app-shell[data-theme='dark'] .metric-limit,
+.app-shell[data-theme='dark'] .metric-percent {
+  color: var(--text-soft);
+}
+
+.app-shell[data-theme='dark'] .metric-bar {
+  background: var(--surface-muted);
+}
+
+.app-shell[data-theme='dark'] .sidecar-tag {
+  color: #c2d8ee;
+  background: #33465d;
+  font-weight: 600;
+}
+
+.app-shell[data-theme='dark'] .namespace-option {
+  color: var(--ink);
+}
+
+.app-shell[data-theme='dark'] .namespace-option-reach {
+  color: var(--text-soft);
+}
+
+.app-shell[data-theme='dark'] .namespace-selected-chip {
+  border-color: #654237;
 }
 
 .app-shell[data-theme='dark'] .pod-table th,
