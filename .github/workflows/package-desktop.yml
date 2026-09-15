@@ -213,7 +213,7 @@ jobs:
 
           - Os instaladores podem nao possuir assinatura de codigo ou notarizacao.
           - O AppImage pode exigir o pacote FUSE da distribuicao Linux.
-          - O kubeconfig e os executaveis de autenticacao `exec` devem existir na maquina do usuario.
+          - O kubeconfig e os executaveis de autenticacao \`exec\` devem existir na maquina do usuario.
 
           ## Arquivos
 
