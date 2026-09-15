@@ -1,14 +1,14 @@
-# ops-flow - Definicao tecnica do MVP Electron
+# ops-flow - Definição técnica do MVP Electron
 
-> Documento de referencia da arquitetura e do comportamento de comunicacao do
+> Documento de referência da arquitetura e do comportamento de comunicação do
 > ops-flow v0.2.0.
 
 ## 1. Objetivo e escopo
 
-O ops-flow e um aplicativo local, desktop e estritamente read-only para
-inspecao de pods Kubernetes em varios contextos e namespaces.
+O ops-flow é um aplicativo local, desktop e estritamente read-only para
+inspeção de pods Kubernetes em vários contextos e namespaces.
 
-A unidade de consulta do produto e o par:
+A unidade de consulta do produto é o par:
 
 ```text
 (contexto do kubeconfig, namespace)
@@ -17,32 +17,32 @@ A unidade de consulta do produto e o par:
 O sistema permite:
 
 - descobrir contextos do kubeconfig;
-- descobrir namespaces disponiveis nos contextos selecionados;
-- consultar pods em paralelo em varios alvos;
-- agregar os resultados em uma tabela unica;
-- abrir detalhes, eventos e metricas de um pod;
+- descobrir namespaces disponíveis nos contextos selecionados;
+- consultar pods em paralelo em vários alvos;
+- agregar os resultados em uma tabela única;
+- abrir detalhes, eventos e métricas de um pod;
 - acompanhar logs de um container por WebSocket;
 - atualizar a lista de pods manualmente ou por polling configuravel;
 - persistir presets e o caminho do kubeconfig localmente.
 
-O sistema nao permite alterar o Kubernetes. Nao existem operacoes de create,
+O sistema não permite alterar o Kubernetes. Não existem operações de create,
 update, patch, replace, delete, restart, scale, exec, attach ou port-forward.
 
 ## 2. Resumo executivo
 
-No modo desktop, existem tres camadas em processos distintos:
+No modo desktop, existem três camadas em processos distintos:
 
-1. **Electron Main**: gerencia a janela, o ciclo de vida, o dialogo nativo de
-   selecao de arquivo, o IPC e o processo filho do backend.
+1. **Electron Main**: gerencia a janela, o ciclo de vida, o diálogo nativo de
+  seleção de arquivo, o IPC e o processo filho do backend.
 2. **Backend Node.js**: abre um servidor HTTP/WebSocket somente em localhost,
-   serve o frontend compilado e e o unico componente que acessa o Kubernetes.
+  serve o frontend compilado e é o único componente que acessa o Kubernetes.
 3. **Renderer React**: executa dentro da `BrowserWindow`, apresenta a interface
-   e chama o backend por `fetch` e WebSocket. Nao tem acesso direto a Node.js ou
-   ao filesystem.
+  e chama o backend por `fetch` e WebSocket. Não tem acesso direto a Node.js ou
+  ao filesystem.
 
 ```mermaid
 flowchart TB
-  User[Usuario]
+  User[Usuário]
   Main[Electron Main\ndesktop/src/main.ts]
   Preload[Preload seguro\ncontextBridge + IPC]
   Renderer[Renderer\nReact + Vite]
@@ -64,11 +64,11 @@ flowchart TB
   Backend -->|CoreV1Api, Metrics, Log| Kubernetes
 ```
 
-### 2.1 Regra fundamental de comunicacao
+### 2.1 Regra fundamental de comunicação
 
-O Electron **nao consulta o Kubernetes diretamente**.
+O Electron **não consulta o Kubernetes diretamente**.
 
-O caminho sempre e:
+O caminho sempre é:
 
 ```text
 Renderer React
@@ -78,7 +78,7 @@ Renderer React
   -> API do cluster Kubernetes
 ```
 
-As excecoes sao as funcoes de desktop que realmente precisam do processo Main:
+As exceções são as funções de desktop que realmente precisam do processo Main:
 
 ```text
 Renderer
@@ -87,7 +87,7 @@ Renderer
   -> Main
 ```
 
-Essas funcoes sao a selecao nativa do kubeconfig e a persistencia de presets.
+Essas funções são a seleção nativa do kubeconfig e a persistência de presets.
 
 ## 3. Componentes e responsabilidades
 
@@ -98,33 +98,33 @@ Entrada compilada: [desktop/src/main.ts](desktop/src/main.ts)
 Responsabilidades:
 
 - impedir duas instancias simultaneas com `requestSingleInstanceLock()`;
-- escolher uma porta TCP local disponivel;
-- ler o caminho de kubeconfig salvo nas preferencias;
-- gerar um token interno aleatorio para a rota de selecao de kubeconfig;
+- escolher uma porta TCP local disponível;
+- ler o caminho de kubeconfig salvo nas preferências;
+- gerar um token interno aleatório para a rota de seleção de kubeconfig;
 - iniciar e parar o backend como processo filho;
 - aguardar o health check do backend antes de criar a janela;
 - criar a `BrowserWindow` com isolamento de contexto e sandbox;
 - carregar o frontend pela URL local do backend;
 - responder aos handlers IPC;
-- abrir o dialogo nativo de selecao de kubeconfig;
-- salvar `preferences.json` e `presets.json` no diretorio `userData`;
+- abrir o diálogo nativo de seleção de kubeconfig;
+- salvar `preferences.json` e `presets.json` no diretório `userData`;
 - encerrar o backend quando a janela ou o processo desktop for encerrado.
 
-Configuracao de seguranca da janela:
+Configuração de segurança da janela:
 
 | Opcao | Valor | Efeito |
 | --- | --- | --- |
-| `contextIsolation` | `true` | Isola o codigo da pagina do contexto privilegiado |
-| `nodeIntegration` | `false` | O renderer nao pode importar Node diretamente |
+| `contextIsolation` | `true` | Isola o código da página do contexto privilegiado |
+| `nodeIntegration` | `false` | O renderer não pode importar Node diretamente |
 | `sandbox` | `true` | Restringe capacidades do renderer |
-| `preload` | `desktop/dist/preload.js` | Expoe somente a ponte declarada |
-| abertura de janela | negada | Links nao criam novas janelas Electron |
+| `preload` | `desktop/dist/preload.js` | Expõe somente a ponte declarada |
+| abertura de janela | negada | Links não criam novas janelas Electron |
 
 ### 3.2 Preload
 
 Entrada: [desktop/src/preload.ts](desktop/src/preload.ts)
 
-O preload expoe apenas `window.opsFlowDesktop`:
+O preload expõe apenas `window.opsFlowDesktop`:
 
 ```typescript
 {
@@ -136,7 +136,7 @@ O preload expoe apenas `window.opsFlowDesktop`:
 }
 ```
 
-Nao existe API generica de IPC, acesso a filesystem, execucao de comando ou
+Não existe API genérica de IPC, acesso a filesystem, execução de comando ou
 acesso a credenciais no renderer.
 
 ### 3.3 Backend
@@ -144,8 +144,8 @@ acesso a credenciais no renderer.
 Entradas:
 
 - [backend/src/index.ts](backend/src/index.ts): servidor HTTP e WebSocket;
-- [backend/src/app.ts](backend/src/app.ts): Express, rotas e frontend estatico;
-- [backend/src/config.ts](backend/src/config.ts): host, porta e variaveis locais;
+- [backend/src/app.ts](backend/src/app.ts): Express, rotas e frontend estático;
+- [backend/src/config.ts](backend/src/config.ts): host, porta e variáveis locais;
 - [backend/src/logsWebSocket.ts](backend/src/logsWebSocket.ts): upgrade e ciclo
   de vida do stream de logs.
 
@@ -154,9 +154,9 @@ O backend:
 - escuta somente em `127.0.0.1`;
 - usa a porta `OPS_FLOW_PORT`, ou `4000` fora do desktop;
 - usa o mesmo servidor HTTP para o WebSocket;
-- serve `frontend/dist` quando `OPS_FLOW_FRONTEND_DIST` esta definido;
-- nao possui banco de dados;
-- nao guarda credenciais em respostas ou logs;
+- serve `frontend/dist` quando `OPS_FLOW_FRONTEND_DIST` está definido;
+- não possui banco de dados;
+- não guarda credenciais em respostas ou logs;
 - chama somente APIs de leitura do Kubernetes.
 
 ### 3.4 Renderer
@@ -171,58 +171,58 @@ Entradas principais:
 - [frontend/src/components/TargetSelector.tsx](frontend/src/components/TargetSelector.tsx):
   contextos, namespaces, alvos e presets;
 - [frontend/src/components/PodDetailsPanel.tsx](frontend/src/components/PodDetailsPanel.tsx):
-  describe, metricas e logs;
+  describe, métricas e logs;
 - [frontend/src/components/LogViewer.tsx](frontend/src/components/LogViewer.tsx):
   consumo do stream de logs.
 
-O renderer conhece somente os contratos normalizados. Ele nao recebe o objeto
+O renderer conhece somente os contratos normalizados. Ele não recebe o objeto
 bruto do kubeconfig nem conhece token, certificado ou chave.
 
 ## 4. Ciclo de vida do desktop
 
-### 4.1 Inicializacao passo a passo
+### 4.1 Inicialização passo a passo
 
-1. O Electron adquire o lock de instancia unica.
+1. O Electron adquire o lock de instância única.
 2. `app.whenReady()` chama `createMainWindow()`.
-3. O Main resolve o diretorio raiz:
-   - desenvolvimento: diretorio do repositorio;
+3. O Main resolve o diretório raiz:
+  - desenvolvimento: diretório do repositório;
    - empacotado: `process.resourcesPath`.
-4. O Main define o diretorio do frontend compilado.
+4. O Main define o diretório do frontend compilado.
 5. `availablePort()` reserva temporariamente uma porta em `127.0.0.1:0`,
-   descobre o numero e libera a sonda.
-6. O Main gera `internalToken` com 32 bytes aleatorios em hexadecimal.
+   descobre o número e libera a sonda.
+6. O Main gera `internalToken` com 32 bytes aleatórios em hexadecimal.
 7. `startBackend()` inicia `backend/dist/index.js` usando `process.execPath`.
 8. O Main injeta no processo filho:
 
    ```text
    ELECTRON_RUN_AS_NODE=1
    OPS_FLOW_PORT=<porta escolhida>
-   OPS_FLOW_FRONTEND_DIST=<diretorio frontend>
-   OPS_FLOW_INTERNAL_TOKEN=<token efemero>
+  OPS_FLOW_FRONTEND_DIST=<diretório frontend>
+  OPS_FLOW_INTERNAL_TOKEN=<token efêmero>
    OPS_FLOW_SELECTED_KUBECONFIG=<caminho salvo, quando houver>
    ```
 
-9. `waitForBackend()` faz `GET /api/health` a cada 100 ms, por no maximo
+9. `waitForBackend()` faz `GET /api/health` a cada 100 ms, por no máximo
    10 segundos.
 10. Quando o health check responde HTTP 2xx, o Main cria a `BrowserWindow`.
 11. A janela carrega `http://127.0.0.1:<porta>`.
 12. O Express entrega `frontend/index.html` e os assets compilados.
 13. O React monta e inicia seus efeitos de carregamento.
 
-Se o backend nao responder em 10 segundos, a janela nao e criada; o Main fecha
+Se o backend não responder em 10 segundos, a janela não é criada; o Main fecha
 o processo filho, mostra um erro nativo e encerra o Electron.
 
 ### 4.2 Encerramento
 
 Ao fechar a janela:
 
-1. o evento `close` e interceptado;
+1. o evento `close` é interceptado;
 2. `shutdownApplication()` evita reentrada;
 3. o Main envia `kill()` ao processo backend;
-4. aguarda o evento de saida do filho;
-5. destroi a janela e encerra o Electron.
+4. aguarda o evento de saída do filho;
+5. destrói a janela e encerra o Electron.
 
-`SIGINT` e `SIGTERM` seguem o mesmo fluxo. O WebSocket de logs tambem e
+`SIGINT` e `SIGTERM` seguem o mesmo fluxo. O WebSocket de logs também é
 interrompido quando o processo backend termina.
 
 ### 4.3 Desenvolvimento web versus Electron
@@ -230,34 +230,33 @@ interrompido quando o processo backend termina.
 | Aspecto | Desenvolvimento web | Desktop empacotado ou `dev:desktop` |
 | --- | --- | --- |
 | Frontend | Vite em `http://localhost:5173` | Servido pelo Express local |
-| Backend | Processo iniciado em separado, normalmente `:4000` | Filho do Electron em porta dinamica |
+| Backend | Processo iniciado em separado, normalmente `:4000` | Filho do Electron em porta dinâmica |
 | Origem do renderer | Vite | `http://127.0.0.1:<porta>` |
 | `/api` | Proxy Vite para `127.0.0.1:4000` | Mesma origem do backend |
 | WebSocket | Proxy Vite com `ws: true` | Mesmo servidor HTTP do backend |
 | Preload | Ausente no navegador | Injeta `window.opsFlowDesktop` |
 | Presets | `localStorage` | `presets.json`, com fallback localStorage |
-| Frontend estatico | Nao servido pelo backend | Express serve `frontend/dist` |
+| Frontend estático | Não servido pelo backend | Express serve `frontend/dist` |
 
-Configuracao do proxy de desenvolvimento: [frontend/vite.config.ts](frontend/vite.config.ts).
+Configuração do proxy de desenvolvimento: [frontend/vite.config.ts](frontend/vite.config.ts).
 
-## 5. Canais de comunicacao
+## 5. Canais de comunicação
 
-Existem cinco tipos de comunicacao no MVP:
+Existem cinco tipos de comunicação no MVP:
 
-1. Main Electron -> processo backend: `spawn` e variaveis de ambiente.
+1. Main Electron -> processo backend: `spawn` e variáveis de ambiente.
 2. Renderer -> backend: HTTP REST local.
 3. Renderer <-> backend: WebSocket local para logs.
 4. Renderer <-> Main: IPC restrito via preload.
-5. Backend -> Kubernetes: HTTPS usando o kubeconfig e as credenciais do usuario.
+5. Backend -> Kubernetes: HTTPS usando o kubeconfig e as credenciais do usuário.
 
-Tambem ha dois acessos auxiliares:
+Também há dois acessos auxiliares:
 
-- Main -> backend: health check e selecao interna de kubeconfig;
+- Main -> backend: health check e seleção interna de kubeconfig;
 - frontend -> Google Fonts: os links de fonte presentes no `index.html` podem
   acessar `fonts.googleapis.com` e `fonts.gstatic.com`.
 
-Nao foi encontrada telemetria, analytics ou chamada para um servico de negocio
-externo.
+Não há telemetria, analytics ou chamada para um serviço de negócio externo.
 
 ## 6. API HTTP exposta pelo backend
 
@@ -273,23 +272,23 @@ Base no backend standalone:
 http://127.0.0.1:${OPS_FLOW_PORT:-4000}
 ```
 
-O servidor fica acessivel para qualquer processo local que consiga acessar esse
-loopback. Nao existe autenticacao de usuario ou multiusuario.
+O servidor fica acessível para qualquer processo local que consiga acessar esse
+loopback. Não existe autenticação de usuário ou multiusuário.
 
 ### 6.1 Tabela de endpoints
 
-| Metodo | Rota | Chamador | Quando | Frequencia |
+| Método | Rota | Chamador | Quando | Frequência |
 | --- | --- | --- | --- | --- |
-| `GET` | `/api/health` | Main e App | inicializacao do backend e verificacao visual | Main: polling de 100 ms ate pronto; App: uma vez por montagem |
-| `GET` | `/api/kubeconfig/status` | store | montar o seletor de alvos | uma vez por montagem logica |
-| `GET` | `/api/contexts` | store | carregar, recarregar ou apos selecionar arquivo | montagem, botao Reload, retry ou apos selecao |
-| `POST` | `/api/kubeconfig/select` | Main | confirmar arquivo no dialogo nativo | somente ao selecionar arquivo |
+| `GET` | `/api/health` | Main e App | inicialização do backend e verificação visual | Main: polling de 100 ms até pronto; App: uma vez por montagem |
+| `GET` | `/api/kubeconfig/status` | store | montar o seletor de alvos | uma vez por montagem lógica |
+| `GET` | `/api/contexts` | store | carregar, recarregar ou após selecionar arquivo | montagem, botão Reload, retry ou após seleção |
+| `POST` | `/api/kubeconfig/select` | Main | confirmar arquivo no diálogo nativo | somente ao selecionar arquivo |
 | `POST` | `/api/namespaces` | store | mudar o conjunto de contextos selecionados | uma vez por conjunto novo de contextos |
-| `POST` | `/api/pods` | store | Fetch pods, retry ou refresh automatico | manual ou a cada 10, 30 ou 60 s |
+| `POST` | `/api/pods` | store | Fetch pods, retry ou refresh automático | manual ou a cada 10, 30 ou 60 s |
 | `GET` | `/api/pods/:cluster/:namespace/:pod/describe` | painel de detalhes | abrir outro pod | uma vez por pod aberto |
 | `GET` | `/api/pods/:cluster/:namespace/:pod/metrics` | painel de detalhes | abrir outro pod | uma vez por pod aberto |
 
-Os segmentos `cluster`, `namespace` e `pod` sao codificados com
+Os segmentos `cluster`, `namespace` e `pod` são codificados com
 `encodeURIComponent` no frontend.
 
 ### 6.2 `GET /api/health`
@@ -304,12 +303,12 @@ Resposta normal:
 }
 ```
 
-Essa rota nao consulta Kubernetes. Ela apenas confirma que o processo backend
-esta ouvindo.
+Essa rota não consulta Kubernetes. Ela apenas confirma que o processo backend
+está ouvindo.
 
 ### 6.3 `GET /api/kubeconfig/status`
 
-Resposta possivel:
+Resposta possível:
 
 ```json
 {
@@ -322,9 +321,9 @@ Resposta possivel:
 `source` pode ser:
 
 - `environment`: `KUBECONFIG` foi usado;
-- `selected`: o arquivo foi selecionado pelo usuario ou veio de
+- `selected`: o arquivo foi selecionado pelo usuário ou veio de
   `OPS_FLOW_SELECTED_KUBECONFIG`;
-- `default`: caminho padrao, normalmente `~/.kube/config`.
+- `default`: caminho padrão, normalmente `~/.kube/config`.
 
 Em erro, o endpoint omite `contextCount` e retorna somente metadados seguros:
 
@@ -335,11 +334,11 @@ Em erro, o endpoint omite `contextCount` e retorna somente metadados seguros:
 }
 ```
 
-O caminho real do arquivo nunca e retornado.
+O caminho real do arquivo nunca é retornado.
 
 ### 6.4 `GET /api/contexts`
 
-Consulta `KubeConfig.getContexts()` e retorna somente nomes e metadados publicos:
+Consulta `KubeConfig.getContexts()` e retorna somente nomes e metadados públicos:
 
 ```json
 {
@@ -353,8 +352,8 @@ Consulta `KubeConfig.getContexts()` e retorna somente nomes e metadados publicos
 }
 ```
 
-Token, certificado, chave, URL privada e demais campos de autenticacao do
-kubeconfig nao entram na resposta.
+Token, certificado, chave, URL privada e demais campos de autenticação do
+kubeconfig não entram na resposta.
 
 ### 6.5 `POST /api/namespaces`
 
@@ -380,7 +379,7 @@ Resposta:
 }
 ```
 
-Embora seja `POST`, a operacao e somente de leitura. O uso de `POST` existe
+Embora seja `POST`, a operação é somente de leitura. O uso de `POST` existe
 para transportar uma lista de contextos no corpo.
 
 Internamente:
@@ -435,7 +434,7 @@ Internamente:
 5. preserva o contexto e namespace de origem em cada item;
 6. retorna pods bem-sucedidos e erros por alvo.
 
-Uma falha de cluster nao cancela os demais alvos.
+Uma falha de cluster não cancela os demais alvos.
 
 ### 6.7 `GET .../describe`
 
@@ -449,17 +448,17 @@ Para um pod, o backend faz:
 
 1. `readNamespacedPod({ name, namespace })`;
 2. `listNamespacedEvent({ namespace, fieldSelector: "involvedObject.name=<pod>" })`;
-3. normalizacao de status, node, IP, QoS, service account, data de criacao,
+3. normalização de status, node, IP, QoS, service account, data de criação,
    labels, annotations, conditions e containers;
-4. ordenacao dos eventos do mais novo para o mais antigo.
+4. ordenação dos eventos do mais novo para o mais antigo.
 
-Se a leitura de eventos falhar por falta de permissao, o describe principal
+Se a leitura de eventos falhar por falta de permissão, o describe principal
 continua e a resposta inclui `eventsError`.
 
 Status HTTP tratado pela rota:
 
-- `400`: parametros ausentes;
-- `403`: permissao negada no cluster;
+- `400`: parâmetros ausentes;
+- `403`: permissão negada no cluster;
 - `404`: pod inexistente;
 - `502`: outro erro upstream do Kubernetes.
 
@@ -485,8 +484,8 @@ retorna uso por container:
 }
 ```
 
-Ausencia do `metrics-server`, recurso ainda nao disponivel ou erro conhecido da
-API de metricas nao vira falha HTTP. Vira:
+Ausência do `metrics-server`, recurso ainda não disponível ou erro conhecido da
+API de métricas não vira falha HTTP. Vira:
 
 ```json
 {
@@ -495,17 +494,17 @@ API de metricas nao vira falha HTTP. Vira:
 }
 ```
 
-Assim, describe e logs continuam usaveis sem metrics-server.
+Assim, describe e logs continuam utilizáveis sem metrics-server.
 
 ### 6.9 Servir o frontend
 
-Quando `OPS_FLOW_FRONTEND_DIST` esta definido, o backend:
+Quando `OPS_FLOW_FRONTEND_DIST` está definido, o backend:
 
-- serve os assets estaticos;
-- responde `index.html` para rotas que nao comecam com `/api/`;
-- nao trata uma rota `/api/*` desconhecida como pagina SPA.
+- serve os assets estáticos;
+- responde `index.html` para rotas que não começam com `/api/`;
+- não trata uma rota `/api/*` desconhecida como página SPA.
 
-Esse e o caminho usado pelo desktop empacotado.
+Esse é o caminho usado pelo desktop empacotado.
 
 ## 7. WebSocket de logs
 
@@ -519,21 +518,21 @@ WS /api/pods/:cluster/:namespace/:pod/logs?container=app&follow=true&tailLines=5
 
 O frontend usa:
 
-- `ws://` quando a pagina usa HTTP;
-- `wss://` quando a pagina usa HTTPS.
+- `ws://` quando a página usa HTTP;
+- `wss://` quando a página usa HTTPS.
 
-No desktop atual a pagina usa HTTP local, portanto a URL efetiva e `ws://`.
+No desktop atual a página usa HTTP local, portanto a URL efetiva é `ws://`.
 
-Parametros:
+Parâmetros:
 
-| Parametro | Obrigatorio | Padrao | Limite |
+| Parâmetro | Obrigatório | Padrão | Limite |
 | --- | --- | --- | --- |
 | `container` | sim | nenhum | nome do container |
-| `follow` | nao | `true` | `false` encerra apos o backlog |
-| `tailLines` | nao | `500` | maximo `5000` |
+| `follow` | não | `true` | `false` encerra após o backlog |
+| `tailLines` | não | `500` | máximo `5000` |
 
 O backend aceita upgrade somente no caminho exato. Outro upgrade recebe `404` e
-o socket e destruido.
+o socket é destruído.
 
 ### 7.2 Mensagens servidor -> renderer
 
@@ -563,42 +562,42 @@ Fim:
 
 ### 7.3 Ciclo de vida do stream
 
-1. Ao abrir o painel de detalhes, a aba inicial e `Describe`; o WebSocket so e
-   criado quando a aba `Logs` e montada.
+1. Ao abrir o painel de detalhes, a aba inicial é `Describe`; o WebSocket só é
+  criado quando a aba `Logs` é montada.
 2. O renderer abre um socket para o primeiro container do pod.
-3. Ao trocar de container, o socket anterior e fechado e um novo e criado.
+3. Ao trocar de container, o socket anterior é fechado e um novo é criado.
 4. Ao fechar ou trocar de pod, o efeito React fecha o socket.
-5. O backend recebe `close` ou `error`, aborta a requisicao de logs no cluster e
+5. O backend recebe `close` ou `error`, aborta a requisição de logs no cluster e
    libera o stream.
 6. Com `follow=true`, o socket permanece aberto enquanto o container produzir
    logs.
-7. Erro de leitura envia `error` e encerra a conexao.
-8. Com `follow=false`, `end` e enviado e a conexao e fechada.
+7. Erro de leitura envia `error` e encerra a conexão.
+8. Com `follow=false`, `end` é enviado e a conexão é fechada.
 
-Configuracoes do viewer:
+Configurações do viewer:
 
-- recebe inicialmente ate 500 linhas;
-- mantem no maximo 5.000 linhas no frontend;
-- pausar interrompe o append local, mas mantem o socket aberto;
-- linhas recebidas durante a pausa sao descartadas;
-- nao existe reconexao automatica;
-- filtro e auto-scroll sao operacoes locais, sem novas chamadas ao backend.
+- recebe inicialmente até 500 linhas;
+- mantém no máximo 5.000 linhas no frontend;
+- pausar interrompe o append local, mas mantém o socket aberto;
+- linhas recebidas durante a pausa são descartadas;
+- não existe reconexão automática;
+- filtro e auto-scroll são operações locais, sem novas chamadas ao backend.
 
 ## 8. Chamadas IPC do Electron
 
 ### 8.1 Handlers registrados no Main
 
-Em [desktop/src/main.ts](desktop/src/main.ts), existem exatamente tres handlers:
+Em [desktop/src/main.ts](desktop/src/main.ts), existem exatamente três handlers:
 
 | Canal | Renderer chama | Main faz | Momento |
 | --- | --- | --- | --- |
-| `select-kubeconfig` | `window.opsFlowDesktop.selectKubeconfig()` | abre dialogo, chama rota interna e salva preferencia | clique no botao de selecionar arquivo |
-| `load-presets` | `window.opsFlowDesktop.loadPresets()` | le e valida `presets.json` | hidratacao inicial do frontend |
+| `select-kubeconfig` | `window.opsFlowDesktop.selectKubeconfig()` | abre diálogo, chama rota interna e salva preferência | clique no botão de selecionar arquivo |
+| `load-presets` | `window.opsFlowDesktop.loadPresets()` | lê e valida `presets.json` | hidratação inicial do frontend |
 | `save-presets` | `window.opsFlowDesktop.savePresets(presets)` | valida e grava `presets.json` | criar, editar ou apagar preset |
 
-O renderer nao envia token para a rota de selecao. O token fica somente no Main.
+O renderer não envia token para a rota de seleção. O token fica somente no Main.
 
-### 8.2 Selecao de kubeconfig
+### 8.2 Seleção de kubeconfig
 
 Fluxo completo:
 
@@ -614,23 +613,23 @@ sequenceDiagram
   P->>M: ipcRenderer.invoke(select-kubeconfig)
   M->>M: dialog.showOpenDialog()
   M->>B: POST /api/kubeconfig/select + X-Ops-Flow-Token
-  B->>F: le o arquivo escolhido
+  B->>F: lê o arquivo escolhido
   B->>B: reloadKubeConfig(path)
   B-->>M: status seguro
   M->>M: grava preferences.json
   M-->>P: { cancelled, status, error? }
-  P-->>R: resultado da selecao
+  P-->>R: resultado da seleção
   R->>B: GET /api/contexts
 ```
 
 Detalhes de erro:
 
-- cancelamento no dialogo nao altera o estado;
+- cancelamento no diálogo não altera o estado;
 - token ausente ou incorreto recebe `404 Not found`;
-- arquivo invalido recebe `400` e nao substitui a configuracao anterior;
-- se o backend aceitar o arquivo, mas a preferencia nao puder ser gravada, o
-  resultado volta com `status` e `error` para indicar que a sessao funciona,
-  mas a escolha nao foi persistida.
+- arquivo inválido recebe `400` e não substitui a configuração anterior;
+- se o backend aceitar o arquivo, mas a preferência não puder ser gravada, o
+  resultado volta com `status` e `error` para indicar que a sessão funciona,
+  mas a escolha não foi persistida.
 
 ### 8.3 Presets
 
@@ -640,7 +639,7 @@ No desktop, `loadPersistentPresets()` usa IPC e o arquivo:
 <app.getPath('userData')>/presets.json
 ```
 
-O arquivo contem apenas:
+O arquivo contém apenas:
 
 ```json
 [
@@ -656,33 +655,33 @@ O arquivo contem apenas:
 ```
 
 Ao salvar, o frontend primeiro tenta `localStorage` e, se estiver no desktop,
-tambem dispara `save-presets` sem bloquear a interface. O carregamento inicial
+também dispara `save-presets` sem bloquear a interface. O carregamento inicial
 do desktop prefere `presets.json`; se falhar, cai para `localStorage`.
 
-Na web, sem preload, somente `localStorage` e usado com a chave
+Na web, sem preload, somente `localStorage` é usado com a chave
 `ops-flow.presets.v1`.
 
 ### 8.4 Arquivos locais do Main
 
-| Arquivo | Conteudo | Leitura | Escrita |
+| Arquivo | Conteúdo | Leitura | Escrita |
 | --- | --- | --- | --- |
-| `preferences.json` | caminho selecionado do kubeconfig | inicializacao | apos selecao bem-sucedida |
-| `presets.json` | ids, nomes, descricoes e pares cluster/namespace | hidratacao | cada alteracao de preset |
+| `preferences.json` | caminho selecionado do kubeconfig | inicialização | após seleção bem-sucedida |
+| `presets.json` | ids, nomes, descrições e pares cluster/namespace | hidratação | cada alteração de preset |
 
-O caminho de `userData` e definido pelo Electron, normalmente:
+O caminho de `userData` é definido pelo Electron, normalmente:
 
 - Linux: `~/.config/ops-flow/`;
 - Windows: `%APPDATA%/ops-flow/`;
 - macOS: `~/Library/Application Support/ops-flow/`.
 
-Credenciais, tokens, certificados e conteudo do kubeconfig nao sao persistidos
+Credenciais, tokens, certificados e conteúdo do kubeconfig não são persistidos
 por esses mecanismos.
 
-## 9. Fluxos de tela, gatilhos e frequencias
+## 9. Fluxos de tela, gatilhos e frequências
 
 ### 9.1 Entrada da tela
 
-Ao montar a interface, as acoes logicas sao:
+Ao montar a interface, as ações lógicas são:
 
 1. `hydratePresets()` carrega presets persistidos;
 2. `loadContexts()` faz `GET /api/contexts`;
@@ -693,33 +692,33 @@ Essas chamadas podem ocorrer em paralelo.
 
 Como [frontend/src/main.tsx](frontend/src/main.tsx) usa `StrictMode`, efeitos de
 montagem podem ser executados duas vezes pelo React em desenvolvimento. Isso
-pode duplicar chamadas iniciais observadas no DevTools; nao representa um
-polling de producao e nao altera a frequencia do auto-refresh.
+pode duplicar chamadas iniciais observadas no DevTools; não representa um
+polling de produção e não altera a frequência do auto-refresh.
 
-### 9.2 Selecao de contextos
+### 9.2 Seleção de contextos
 
 Ao selecionar ou remover um contexto:
 
-1. o estado local de namespaces selecionados e limpo;
-2. o campo de namespace e limpo;
+1. o estado local de namespaces selecionados é limpo;
+2. o campo de namespace é limpo;
 3. `NamespaceInput` detecta a nova chave de contextos;
 4. o store faz `POST /api/namespaces`;
 5. a resposta preenche o autocomplete.
 
 O store ordena a lista para comparar conjuntos e evita nova chamada quando o
-mesmo conjunto ja foi carregado sem erro.
+mesmo conjunto já foi carregado sem erro.
 
 ### 9.3 Adicao de alvos
 
-Depois que o usuario seleciona namespaces validos, o frontend cria um alvo para
-cada combinacao disponivel:
+Depois que o usuário seleciona namespaces válidos, o frontend cria um alvo para
+cada combinação disponível:
 
 ```text
 cada contexto selecionado x cada namespace selecionado
 ```
 
-Pares duplicados sao ignorados. Adicionar ou remover alvos nao consulta pods
-automaticamente. A consulta so ocorre no botao `Fetch pods` ou no timer de
+Pares duplicados são ignorados. Adicionar ou remover alvos não consulta pods
+automaticamente. A consulta só ocorre no botão `Fetch pods` ou no timer de
 auto-refresh.
 
 ### 9.4 Consulta manual de pods
@@ -728,24 +727,24 @@ Gatilhos:
 
 - clique em `Fetch pods`;
 - clique em `Refresh now`;
-- retry apos erro.
+- retry após erro.
 
 Efeito:
 
-1. envia um unico `POST /api/pods` contendo todos os alvos atuais;
+1. envia um único `POST /api/pods` contendo todos os alvos atuais;
 2. backend consulta todos os alvos em paralelo;
 3. frontend substitui a tabela pelo resultado agregado;
 4. erros individuais aparecem no banner de alvo;
-5. `lastUpdatedAt` recebe o horario local de conclusao.
+5. `lastUpdatedAt` recebe o horário local de conclusão.
 
-O frontend usa ids de requisicao, revisao de configuracao e assinatura dos
-alvos para ignorar respostas antigas que chegarem depois de uma nova selecao.
-As requisicoes HTTP antigas nao sao abortadas no browser, mas suas respostas
-nao conseguem sobrescrever o estado atual.
+O frontend usa ids de requisição, revisão de configuração e assinatura dos
+alvos para ignorar respostas antigas que chegarem depois de uma nova seleção.
+As requisições HTTP antigas não são abortadas no browser, mas suas respostas
+não conseguem sobrescrever o estado atual.
 
 ### 9.5 Auto-refresh de pods
 
-Opcoes disponiveis:
+Opções disponíveis:
 
 | Valor | Comportamento |
 | --- | --- |
@@ -754,13 +753,13 @@ Opcoes disponiveis:
 | `30s` | um `POST /api/pods` a cada 30 segundos |
 | `60s` | um `POST /api/pods` a cada 60 segundos |
 
-O timer existe somente quando ha pelo menos um alvo. A atualizacao automatica
-usa `silent: true`: preserva a tabela visivel e mostra apenas o estado de
-refresh. O timer e desmontado ao mudar o intervalo, remover todos os alvos ou
+O timer existe somente quando há pelo menos um alvo. A atualização automática
+usa `silent: true`: preserva a tabela visível e mostra apenas o estado de
+refresh. O timer é desmontado ao mudar o intervalo, remover todos os alvos ou
 desmontar o componente.
 
 O intervalo de 10 segundos em `ViewToolbar` para atualizar o texto relativo
-`"12s ago"` e somente local. Ele nao faz nenhuma chamada de rede.
+`"12s ago"` é somente local. Ele não faz nenhuma chamada de rede.
 
 ### 9.6 Abertura do painel de detalhes
 
@@ -775,7 +774,7 @@ Ao clicar em uma linha da tabela:
 5. mostra cada erro na sua aba, sem impedir a outra.
 
 Isso ocorre uma vez para cada pod aberto. Trocar de aba entre Describe e Metrics
-nao repete as chamadas. O filtro, agrupamento e redimensionamento sao locais.
+não repete as chamadas. O filtro, agrupamento e redimensionamento são locais.
 
 ### 9.7 Abertura da aba Logs
 
@@ -787,68 +786,68 @@ Ao montar a aba Logs:
 4. ao trocar o container, reinicia o socket e limpa o buffer;
 5. ao fechar o painel, fecha o socket.
 
-Pausar, limpar, filtrar e alterar auto-scroll nao geram novas chamadas.
+Pausar, limpar, filtrar e alterar auto-scroll não geram novas chamadas.
 
 ## 10. Backend e Kubernetes
 
-### 10.1 Resolucao do kubeconfig
+### 10.1 Resolução do kubeconfig
 
-O backend resolve a configuracao nesta ordem:
+O backend resolve a configuração nesta ordem:
 
-1. arquivo escolhido pelo usuario, quando existe um caminho selecionado;
-2. `KUBECONFIG`, que pode conter varios arquivos separados por `:` no Linux ou
+1. arquivo escolhido pelo usuário, quando existe um caminho selecionado;
+2. `KUBECONFIG`, que pode conter vários arquivos separados por `:` no Linux ou
    `;` no Windows;
-3. caminho padrao, normalmente `~/.kube/config`.
+3. caminho padrão, normalmente `~/.kube/config`.
 
-No desktop, o caminho salvo em `preferences.json` e passado como
-`OPS_FLOW_SELECTED_KUBECONFIG` na inicializacao seguinte.
+No desktop, o caminho salvo em `preferences.json` é passado como
+`OPS_FLOW_SELECTED_KUBECONFIG` na inicialização seguinte.
 
-O kubeconfig e carregado sob demanda e fica em memoria. `reloadKubeConfig()` so
-substitui a configuracao depois de conseguir carregar a nova; em caso de erro,
-a configuracao anterior continua ativa.
+O kubeconfig é carregado sob demanda e fica em memória. `reloadKubeConfig()` só
+substitui a configuração depois de conseguir carregar a nova; em caso de erro,
+a configuração anterior continua ativa.
 
 ### 10.2 Cache de clientes
 
-O modulo [backend/src/kube/kubeconfig.ts](backend/src/kube/kubeconfig.ts) mantem
-em memoria, por contexto:
+O módulo [backend/src/kube/kubeconfig.ts](backend/src/kube/kubeconfig.ts) mantém
+em memória, por contexto:
 
 - `KubeConfig` escopado;
 - `CoreV1Api`;
 - `Metrics`;
 - `Log`.
 
-Cada contexto recebe uma copia de `KubeConfig` com `currentContext` proprio.
+Cada contexto recebe uma cópia de `KubeConfig` com `currentContext` próprio.
 Isso evita que consultas concorrentes de contextos diferentes alterem um
 contexto global compartilhado.
 
-Ao selecionar outro kubeconfig, todos esses caches sao limpos.
+Ao selecionar outro kubeconfig, todos esses caches são limpos.
 
-### 10.3 Operacoes Kubernetes efetivamente usadas
+### 10.3 Operações Kubernetes efetivamente usadas
 
-| Servico | Chamada Kubernetes | Finalidade | Leitura |
+| Serviço | Chamada Kubernetes | Finalidade | Leitura |
 | --- | --- | --- | --- |
 | kubeconfig | `getContexts()` | listar contextos | sim |
 | namespaces | `listNamespace()` | autocomplete e cobertura | sim |
 | pods | `listNamespacedPod({ namespace })` | tabela principal | sim |
 | describe | `readNamespacedPod({ namespace, name })` | detalhes do pod | sim |
 | describe | `listNamespacedEvent(...)` | eventos do pod | sim |
-| metricas | `getPodMetrics(namespace)` | CPU e memoria | sim |
+| métricas | `getPodMetrics(namespace)` | CPU e memória | sim |
 | logs | `Log.log(namespace, pod, container, stream, options)` | stream de logs | sim |
 
-Nao sao importadas as classes `Exec`, `Attach`, `PortForward` ou `Cp`.
+Não são importadas as classes `Exec`, `Attach`, `PortForward` ou `Cp`.
 
 ### 10.4 Fan-out e falhas parciais
 
 Namespaces e pods usam `Promise.allSettled()`.
 
-Consequencias:
+Consequências:
 
-- um cluster indisponivel nao cancela os outros;
-- a resposta contem dados parciais quando possivel;
-- cada falha e associada ao cluster ou alvo que falhou;
-- erros do cliente Kubernetes sao sanitizados antes de chegar ao renderer.
+- um cluster indisponível não cancela os outros;
+- a resposta contém dados parciais quando possível;
+- cada falha é associada ao cluster ou alvo que falhou;
+- erros do cliente Kubernetes são sanitizados antes de chegar ao renderer.
 
-Nao ha retry, timeout ou circuit breaker explicito nas chamadas ao Kubernetes.
+Não há retry, timeout ou circuit breaker explícito nas chamadas ao Kubernetes.
 
 ### 10.5 TLS e cadeia de CA
 
@@ -858,32 +857,32 @@ kubeconfig com um bundle de CAs do sistema. Os caminhos conhecidos incluem:
 - `/etc/ssl/certs/ca-certificates.crt`;
 - `/etc/pki/tls/certs/ca-bundle.crt`.
 
-O bundle e somente lido em memoria e cacheado. A verificacao TLS continua
-ativada. O projeto nao usa `skipTLSVerify` nem
+O bundle é somente lido em memória e cacheado. A verificação TLS continua
+ativada. O projeto não usa `skipTLSVerify` nem
 `NODE_TLS_REJECT_UNAUTHORIZED`.
 
-### 10.6 Autenticacao do cluster
+### 10.6 Autenticação do cluster
 
-O backend delega a autenticacao ao kubeconfig do usuario. Isso inclui tokens,
-certificados, chaves e, quando configurado, um executavel de autenticacao `exec`
-que precisa existir no `PATH` da maquina.
+O backend delega a autenticação ao kubeconfig do usuário. Isso inclui tokens,
+certificados, chaves e, quando configurado, um executável de autenticação `exec`
+que precisa existir no `PATH` da máquina.
 
-Esses dados sao consumidos pelo cliente Kubernetes em runtime e nao sao
+Esses dados são consumidos pelo cliente Kubernetes em runtime e não são
 retornados pelo backend.
 
 ## 11. O que fica exposto
 
-### 11.1 Exposicao de rede
+### 11.1 Exposição de rede
 
-O backend escuta em `127.0.0.1`, nao em `0.0.0.0`. Portanto, a API nao e
+O backend escuta em `127.0.0.1`, não em `0.0.0.0`. Portanto, a API não é
 publicada diretamente na rede local.
 
 Ainda assim, qualquer processo local com acesso ao loopback pode tentar chamar
-as rotas publicas. O MVP nao possui autenticacao propria para consultas.
+as rotas públicas. O MVP não possui autenticação própria para consultas.
 
-A rota `POST /api/kubeconfig/select` e uma excecao: exige o header
-`X-Ops-Flow-Token` com o token efemero compartilhado entre Main e backend.
-Esse token nao e exposto ao renderer.
+A rota `POST /api/kubeconfig/select` é uma exceção: exige o header
+`X-Ops-Flow-Token` com o token efêmero compartilhado entre Main e backend.
+Esse token não é exposto ao renderer.
 
 ### 11.2 Dados retornados
 
@@ -893,30 +892,30 @@ Retornam ao renderer:
 - nomes de namespaces e contextos onde existem;
 - pods normalizados;
 - detalhes e eventos de um pod;
-- uso de CPU e memoria quando disponivel;
+- uso de CPU e memória quando disponível;
 - linhas de log do container selecionado;
 - mensagens sanitizadas de erro.
 
-Nao retornam:
+Não retornam:
 
 - tokens de acesso;
 - client certificates;
 - private keys;
 - `caData` ou bundle de CA;
-- headers de autenticacao;
+- headers de autenticação;
 - caminho do kubeconfig no endpoint de status;
-- conteudo de Secrets do Kubernetes.
+- conteúdo de Secrets do Kubernetes.
 
 ### 11.3 Politica read-only
 
-O `POST` de pods, namespaces e selecao de kubeconfig nao significa mutacao do
-cluster. Sao consultas com payload no corpo, recarga de configuracao local ou
-operacao de leitura.
+O `POST` de pods, namespaces e seleção de kubeconfig não significa mutação do
+cluster. São consultas com payload no corpo, recarga de configuração local ou
+operação de leitura.
 
-As unicas chamadas de API Kubernetes usadas no MVP estao listadas na secao
+As únicas chamadas de API Kubernetes usadas no MVP estão listadas na seção
 [10.3](#103-operacoes-kubernetes-efetivamente-usadas), todas de leitura.
 
-## 12. Build e distribuicao
+## 12. Build e distribuição
 
 O monorepo usa npm workspaces:
 
@@ -938,19 +937,19 @@ npm run build
 
 Empacotamento:
 
-1. executa o build dos tres workspaces;
+1. executa o build dos três workspaces;
 2. `prepare-desktop-runtime.mjs` copia `backend/package.json`;
-3. instala somente dependencias de producao do backend;
-4. rejeita caminhos sensiveis `.kube` e `kubeconfig` nos artefatos;
+3. instala somente dependências de produção do backend;
+4. rejeita caminhos sensíveis `.kube` e `kubeconfig` nos artefatos;
 5. `electron-builder` inclui:
-   - `desktop/dist/**` como codigo Electron;
+  - `desktop/dist/**` como código Electron;
    - `frontend/dist` em `resources/frontend`;
    - `backend/dist` em `resources/backend/dist`;
    - `backend/package.json`;
    - runtime de `backend/node_modules`.
 
-O backend fica fora do ASAR para resolver suas dependencias. O instalador nao
-inclui o kubeconfig do usuario.
+O backend fica fora do ASAR para resolver suas dependências. O instalador não
+inclui o kubeconfig do usuário.
 
 ## 13. Linha do tempo dos cenarios principais
 
@@ -969,11 +968,11 @@ Electron Main
 ### 13.2 Consultar pods
 
 ```text
-Usuario seleciona contextos
+Usuário seleciona contextos
   -> POST /api/namespaces
-  -> usuario seleciona namespaces
+  -> usuário seleciona namespaces
   -> frontend monta pares (contexto, namespace)
-  -> usuario clica Fetch pods
+  -> usuário clica Fetch pods
   -> POST /api/pods
   -> listNamespacedPod em paralelo
   -> normalizePod
@@ -998,7 +997,7 @@ Clique na linha
 ```text
 Clique no seletor
   -> IPC para Main
-  -> dialogo nativo
+  -> diálogo nativo
   -> POST /api/kubeconfig/select com token interno
   -> reload + limpa caches backend
   -> grava preferences.json
@@ -1006,50 +1005,50 @@ Clique no seletor
   -> GET /api/contexts
 ```
 
-## 14. Estados e protecao contra respostas antigas
+## 14. Estados e proteção contra respostas antigas
 
-O store mantem contadores de requisicao para namespaces e pods.
+O store mantém contadores de requisição para namespaces e pods.
 
 Ao trocar kubeconfig:
 
-- incrementa a revisao da configuracao;
-- invalida requisicoes de namespaces e pods em andamento;
+- incrementa a revisão da configuração;
+- invalida requisições de namespaces e pods em andamento;
 - limpa targets, namespaces, pods e erros;
 - recarrega contextos.
 
 Ao trocar os alvos durante uma consulta:
 
-- uma assinatura dos alvos e comparada na conclusao;
-- uma resposta de uma selecao anterior e ignorada.
+- uma assinatura dos alvos é comparada na conclusão;
+- uma resposta de uma seleção anterior é ignorada.
 
 Ao trocar o pod no painel:
 
 - o efeito usa uma flag `active`;
-- respostas de um pod anterior nao atualizam o painel atual.
+- respostas de um pod anterior não atualizam o painel atual.
 
 Ao trocar container ou desmontar o LogViewer:
 
-- o socket anterior e fechado;
+- o socket anterior é fechado;
 - o backend aborta o stream Kubernetes correspondente.
 
 ## 15. Limites conhecidos do comportamento atual
 
-- O backend nao implementa retry, timeout ou circuit breaker Kubernetes.
-- O viewer de logs nao reconecta sozinho.
-- Linhas recebidas enquanto o viewer esta pausado sao descartadas.
+- O backend não implementa retry, timeout ou circuit breaker Kubernetes.
+- O viewer de logs não reconecta sozinho.
+- Linhas recebidas enquanto o viewer está pausado são descartadas.
 - O buffer local de logs limita-se a 5.000 linhas.
-- Metricas dependem do `metrics-server` de cada cluster.
-- Presets dependem do diretorio de dados do Electron no desktop e do
+- Métricas dependem do `metrics-server` de cada cluster.
+- Presets dependem do diretório de dados do Electron no desktop e do
   `localStorage` no modo web.
-- O backend local nao tem autenticacao geral nem modelo multiusuario.
-- O intervalo configurado atualiza somente pods; describe, metricas e logs nao
+- O backend local não tem autenticação geral nem modelo multiusuário.
+- O intervalo configurado atualiza somente pods; describe, métricas e logs não
   entram no auto-refresh.
-- A lista de namespaces e cacheada no frontend por conjunto de contextos, mas
-  nao possui cache persistente nem TTL no backend.
-- A pagina inclui fontes do Google Fonts; em ambiente sem rede, o sistema usa o
+- A lista de namespaces é cacheada no frontend por conjunto de contextos, mas
+  não possui cache persistente nem TTL no backend.
+- A página inclui fontes do Google Fonts; em ambiente sem rede, o sistema usa o
   comportamento de carregamento/fallback do navegador.
 
-## 16. Referencias de implementacao
+## 16. Referências de implementação
 
 Arquivos que controlam diretamente este comportamento:
 
