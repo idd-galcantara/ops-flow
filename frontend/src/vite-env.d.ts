@@ -15,6 +15,8 @@ declare global {
 			isDesktop: boolean;
 			platform: string;
 			selectKubeconfig: () => Promise<DesktopSelectionResult>;
+			loadTheme: () => Promise<'light' | 'dark' | null>;
+			saveTheme: (theme: 'light' | 'dark') => Promise<void>;
 			loadPresets: () => Promise<Preset[]>;
 			savePresets: (presets: Preset[]) => Promise<void>;
 		};

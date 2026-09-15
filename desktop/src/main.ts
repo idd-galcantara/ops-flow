@@ -23,6 +23,13 @@ interface StoredPreset {
   targets: Array<{ cluster: string; namespace: string }>;
 }
 
+type Theme = 'light' | 'dark';
+
+interface StoredPreferences {
+  selectedKubeconfigPath?: string;
+  theme?: Theme;
+}
+
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ReturnType<typeof startBackend> | null = null;
 let shuttingDown = false;
@@ -67,24 +74,44 @@ async function savePresets(value: unknown): Promise<void> {
   await writeFile(presetsFile(), `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-async function readSelectedKubeconfigPath(): Promise<string | undefined> {
+async function readPreferences(): Promise<StoredPreferences> {
   try {
     const contents = await readFile(preferencesFile(), 'utf8');
-    const preferences = JSON.parse(contents) as { selectedKubeconfigPath?: unknown };
-    return typeof preferences.selectedKubeconfigPath === 'string' && preferences.selectedKubeconfigPath.trim()
-      ? preferences.selectedKubeconfigPath.trim()
-      : undefined;
+    const parsed: unknown = JSON.parse(contents);
+    if (!parsed || typeof parsed !== 'object') return {};
+    const candidate = parsed as { selectedKubeconfigPath?: unknown; theme?: unknown };
+    return {
+      ...(typeof candidate.selectedKubeconfigPath === 'string' && candidate.selectedKubeconfigPath.trim()
+        ? { selectedKubeconfigPath: candidate.selectedKubeconfigPath.trim() }
+        : {}),
+      ...(candidate.theme === 'light' || candidate.theme === 'dark' ? { theme: candidate.theme } : {}),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
+async function writePreferences(update: Partial<StoredPreferences>): Promise<void> {
+  const current = await readPreferences();
+  await writeFile(preferencesFile(), `${JSON.stringify({ ...current, ...update }, null, 2)}\n`, 'utf8');
+}
+
+async function readTheme(): Promise<Theme | null> {
+  const preferences = await readPreferences();
+  return preferences.theme ?? null;
+}
+
+async function saveTheme(theme: unknown): Promise<void> {
+  if (theme !== 'light' && theme !== 'dark') throw new Error('Invalid theme.');
+  await writePreferences({ theme });
+}
+
+async function readSelectedKubeconfigPath(): Promise<string | undefined> {
+  return (await readPreferences()).selectedKubeconfigPath;
+}
+
 async function saveSelectedKubeconfigPath(selectedPath: string): Promise<void> {
-  await writeFile(
-    preferencesFile(),
-    `${JSON.stringify({ selectedKubeconfigPath: selectedPath }, null, 2)}\n`,
-    'utf8',
-  );
+  await writePreferences({ selectedKubeconfigPath: selectedPath });
 }
 
 async function availablePort(): Promise<number> {
@@ -223,6 +250,8 @@ if (!hasLock) {
   process.once('SIGINT', () => void shutdownApplication());
   process.once('SIGTERM', () => void shutdownApplication());
   ipcMain.handle('select-kubeconfig', selectKubeconfig);
+  ipcMain.handle('load-theme', readTheme);
+  ipcMain.handle('save-theme', (_event, theme: unknown) => saveTheme(theme));
   ipcMain.handle('load-presets', readPresets);
   ipcMain.handle('save-presets', (_event, value: unknown) => savePresets(value));
 

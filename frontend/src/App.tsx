@@ -35,14 +35,42 @@ export default function App() {
   const [health, setHealth] = useState<HealthState>('loading');
   const [selected, setSelected] = useState<PodRef | null>(null);
   const [theme, setTheme] = useState<Theme>(readStoredTheme);
+  const [themeReady, setThemeReady] = useState(() => !Boolean(window.opsFlowDesktop));
 
   useEffect(() => {
+    const desktop = window.opsFlowDesktop;
+    if (!desktop) {
+      setThemeReady(true);
+      return;
+    }
+
+    let active = true;
+    void desktop.loadTheme()
+      .then((storedTheme) => {
+        if (active && storedTheme) setTheme(storedTheme);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setThemeReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!themeReady) return;
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch {
       // Storage can be unavailable in restricted browser profiles.
     }
-  }, [theme]);
+
+    if (window.opsFlowDesktop) {
+      void window.opsFlowDesktop.saveTheme(theme).catch(() => undefined);
+    }
+  }, [theme, themeReady]);
 
   const sidebar = useResizablePanel({
     storageKey: 'ops-flow.sidebarWidth.v1',
@@ -136,6 +164,7 @@ export default function App() {
             type="button"
             className={`theme-toggle ${theme === 'dark' ? 'is-dark' : ''}`}
             onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+            disabled={!themeReady}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-pressed={theme === 'dark'}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
