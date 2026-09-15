@@ -1,7 +1,7 @@
 # ops-flow - Definição técnica do MVP Electron
 
 > Documento de referência da arquitetura e do comportamento de comunicação do
-> ops-flow v0.2.0.
+> ops-flow v0.4.0.
 
 ## 1. Objetivo e escopo
 
@@ -93,7 +93,7 @@ Essas funções são a seleção nativa do kubeconfig e a persistência de prese
 
 ### 3.1 Processo Electron Main
 
-Entrada compilada: [desktop/src/main.ts](desktop/src/main.ts)
+Entrada compilada: [desktop/src/main.ts](../desktop/src/main.ts)
 
 Responsabilidades:
 
@@ -122,7 +122,7 @@ Configuração de segurança da janela:
 
 ### 3.2 Preload
 
-Entrada: [desktop/src/preload.ts](desktop/src/preload.ts)
+Entrada: [desktop/src/preload.ts](../desktop/src/preload.ts)
 
 O preload expõe apenas `window.opsFlowDesktop`:
 
@@ -143,10 +143,10 @@ acesso a credenciais no renderer.
 
 Entradas:
 
-- [backend/src/index.ts](backend/src/index.ts): servidor HTTP e WebSocket;
-- [backend/src/app.ts](backend/src/app.ts): Express, rotas e frontend estático;
-- [backend/src/config.ts](backend/src/config.ts): host, porta e variáveis locais;
-- [backend/src/logsWebSocket.ts](backend/src/logsWebSocket.ts): upgrade e ciclo
+- [backend/src/index.ts](../backend/src/index.ts): servidor HTTP e WebSocket;
+- [backend/src/app.ts](../backend/src/app.ts): Express, rotas e frontend estático;
+- [backend/src/config.ts](../backend/src/config.ts): host, porta e variáveis locais;
+- [backend/src/logsWebSocket.ts](../backend/src/logsWebSocket.ts): upgrade e ciclo
   de vida do stream de logs.
 
 O backend:
@@ -163,16 +163,16 @@ O backend:
 
 Entradas principais:
 
-- [frontend/src/main.tsx](frontend/src/main.tsx): montagem do React;
-- [frontend/src/App.tsx](frontend/src/App.tsx): shell, health check e refresh;
-- [frontend/src/api.ts](frontend/src/api.ts): cliente REST e construtor de URL
+- [frontend/src/main.tsx](../frontend/src/main.tsx): montagem do React;
+- [frontend/src/App.tsx](../frontend/src/App.tsx): shell, health check e refresh;
+- [frontend/src/api.ts](../frontend/src/api.ts): cliente REST e construtor de URL
   WebSocket;
-- [frontend/src/store.ts](frontend/src/store.ts): estado global Zustand;
-- [frontend/src/components/TargetSelector.tsx](frontend/src/components/TargetSelector.tsx):
+- [frontend/src/store.ts](../frontend/src/store.ts): estado global Zustand;
+- [frontend/src/components/TargetSelector.tsx](../frontend/src/components/TargetSelector.tsx):
   contextos, namespaces, alvos e presets;
-- [frontend/src/components/PodDetailsPanel.tsx](frontend/src/components/PodDetailsPanel.tsx):
+- [frontend/src/components/PodDetailsPanel.tsx](../frontend/src/components/PodDetailsPanel.tsx):
   describe, métricas e logs;
-- [frontend/src/components/LogViewer.tsx](frontend/src/components/LogViewer.tsx):
+- [frontend/src/components/LogViewer.tsx](../frontend/src/components/LogViewer.tsx):
   consumo do stream de logs.
 
 O renderer conhece somente os contratos normalizados. Ele não recebe o objeto
@@ -238,7 +238,7 @@ interrompido quando o processo backend termina.
 | Presets | `localStorage` | `presets.json`, com fallback localStorage |
 | Frontend estático | Não servido pelo backend | Express serve `frontend/dist` |
 
-Configuração do proxy de desenvolvimento: [frontend/vite.config.ts](frontend/vite.config.ts).
+Configuração do proxy de desenvolvimento: [frontend/vite.config.ts](../frontend/vite.config.ts).
 
 ## 5. Canais de comunicação
 
@@ -587,7 +587,7 @@ Configurações do viewer:
 
 ### 8.1 Handlers registrados no Main
 
-Em [desktop/src/main.ts](desktop/src/main.ts), existem exatamente três handlers:
+Em [desktop/src/main.ts](../desktop/src/main.ts), existem exatamente três handlers:
 
 | Canal | Renderer chama | Main faz | Momento |
 | --- | --- | --- | --- |
@@ -690,7 +690,7 @@ Ao montar a interface, as ações lógicas são:
 
 Essas chamadas podem ocorrer em paralelo.
 
-Como [frontend/src/main.tsx](frontend/src/main.tsx) usa `StrictMode`, efeitos de
+Como [frontend/src/main.tsx](../frontend/src/main.tsx) usa `StrictMode`, efeitos de
 montagem podem ser executados duas vezes pelo React em desenvolvimento. Isso
 pode duplicar chamadas iniciais observadas no DevTools; não representa um
 polling de produção e não altera a frequência do auto-refresh.
@@ -808,7 +808,7 @@ a configuração anterior continua ativa.
 
 ### 10.2 Cache de clientes
 
-O módulo [backend/src/kube/kubeconfig.ts](backend/src/kube/kubeconfig.ts) mantém
+O módulo [backend/src/kube/kubeconfig.ts](../backend/src/kube/kubeconfig.ts) mantém
 em memória, por contexto:
 
 - `KubeConfig` escopado;
@@ -1056,28 +1056,28 @@ Ao trocar container ou desmontar o LogViewer:
 
 Arquivos que controlam diretamente este comportamento:
 
-- [desktop/src/main.ts](desktop/src/main.ts)
-- [desktop/src/backendProcess.ts](desktop/src/backendProcess.ts)
-- [desktop/src/preload.ts](desktop/src/preload.ts)
-- [backend/src/index.ts](backend/src/index.ts)
-- [backend/src/app.ts](backend/src/app.ts)
-- [backend/src/logsWebSocket.ts](backend/src/logsWebSocket.ts)
-- [backend/src/routes/contexts.ts](backend/src/routes/contexts.ts)
-- [backend/src/routes/kubeconfig.ts](backend/src/routes/kubeconfig.ts)
-- [backend/src/routes/namespaces.ts](backend/src/routes/namespaces.ts)
-- [backend/src/routes/pods.ts](backend/src/routes/pods.ts)
-- [backend/src/kube/kubeconfig.ts](backend/src/kube/kubeconfig.ts)
-- [backend/src/kube/kubeconfigDiscovery.ts](backend/src/kube/kubeconfigDiscovery.ts)
-- [backend/src/kube/namespacesService.ts](backend/src/kube/namespacesService.ts)
-- [backend/src/kube/podsService.ts](backend/src/kube/podsService.ts)
-- [backend/src/kube/podDetailsService.ts](backend/src/kube/podDetailsService.ts)
-- [backend/src/kube/logsService.ts](backend/src/kube/logsService.ts)
-- [frontend/src/api.ts](frontend/src/api.ts)
-- [frontend/src/store.ts](frontend/src/store.ts)
-- [frontend/src/App.tsx](frontend/src/App.tsx)
-- [frontend/src/presets.ts](frontend/src/presets.ts)
-- [frontend/src/components/TargetSelector.tsx](frontend/src/components/TargetSelector.tsx)
-- [frontend/src/components/PodDetailsPanel.tsx](frontend/src/components/PodDetailsPanel.tsx)
-- [frontend/src/components/LogViewer.tsx](frontend/src/components/LogViewer.tsx)
-- [electron-builder.yml](electron-builder.yml)
-- [scripts/prepare-desktop-runtime.mjs](scripts/prepare-desktop-runtime.mjs)
+- [desktop/src/main.ts](../desktop/src/main.ts)
+- [desktop/src/backendProcess.ts](../desktop/src/backendProcess.ts)
+- [desktop/src/preload.ts](../desktop/src/preload.ts)
+- [backend/src/index.ts](../backend/src/index.ts)
+- [backend/src/app.ts](../backend/src/app.ts)
+- [backend/src/logsWebSocket.ts](../backend/src/logsWebSocket.ts)
+- [backend/src/routes/contexts.ts](../backend/src/routes/contexts.ts)
+- [backend/src/routes/kubeconfig.ts](../backend/src/routes/kubeconfig.ts)
+- [backend/src/routes/namespaces.ts](../backend/src/routes/namespaces.ts)
+- [backend/src/routes/pods.ts](../backend/src/routes/pods.ts)
+- [backend/src/kube/kubeconfig.ts](../backend/src/kube/kubeconfig.ts)
+- [backend/src/kube/kubeconfigDiscovery.ts](../backend/src/kube/kubeconfigDiscovery.ts)
+- [backend/src/kube/namespacesService.ts](../backend/src/kube/namespacesService.ts)
+- [backend/src/kube/podsService.ts](../backend/src/kube/podsService.ts)
+- [backend/src/kube/podDetailsService.ts](../backend/src/kube/podDetailsService.ts)
+- [backend/src/kube/logsService.ts](../backend/src/kube/logsService.ts)
+- [frontend/src/api.ts](../frontend/src/api.ts)
+- [frontend/src/store.ts](../frontend/src/store.ts)
+- [frontend/src/App.tsx](../frontend/src/App.tsx)
+- [frontend/src/presets.ts](../frontend/src/presets.ts)
+- [frontend/src/components/TargetSelector.tsx](../frontend/src/components/TargetSelector.tsx)
+- [frontend/src/components/PodDetailsPanel.tsx](../frontend/src/components/PodDetailsPanel.tsx)
+- [frontend/src/components/LogViewer.tsx](../frontend/src/components/LogViewer.tsx)
+- [electron-builder.yml](../electron-builder.yml)
+- [scripts/prepare-desktop-runtime.mjs](../scripts/prepare-desktop-runtime.mjs)

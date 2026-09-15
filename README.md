@@ -25,7 +25,8 @@ Cada resultado preserva sua origem. Assim, pods com o mesmo nome em clusters dif
 - Consulta CPU e memoria por container quando o `metrics-server` esta disponivel.
 - Transmite logs de containers por WebSocket, com follow, pausa, filtro e auto-scroll.
 - Atualiza a lista manualmente ou em intervalos de 10, 30 ou 60 segundos.
-- Salva presets de alvos no `localStorage` do navegador.
+- Persiste presets de alvos localmente: no `localStorage` em modo web e no diretório de dados do
+  Electron em modo desktop.
 - Permite redimensionar a sidebar e o painel de detalhes.
 
 O projeto e deliberadamente **somente leitura**. Nao existem operacoes de restart, scale, exec, attach, port-forward, create, patch, update ou delete.
@@ -48,34 +49,38 @@ flowchart LR
 - **Frontend:** React 19, TypeScript, Vite, Zustand e `lucide-react`.
 - **Backend:** Node.js, TypeScript, Express, `@kubernetes/client-node` e `ws`.
 - **Testes:** test runner nativo do Node via `tsx --test`.
-- **Monorepo:** npm workspaces com os pacotes `backend` e `frontend`.
+- **Monorepo:** npm workspaces com os pacotes `backend`, `frontend` e `desktop`.
 - **Interface:** Manrope para texto, DM Mono para dados tecnicos e paleta clara com acento terracota.
 
 ## Downloads
 
-A release mais recente e a **v0.2.0**. Os instaladores e pacotes estao disponiveis na pagina de
-[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.2.0).
+A release mais recente e a **v0.4.0**. Os instaladores e pacotes estao disponiveis na pagina de
+[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.4.0).
 
 ### Linux
 
-- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-linux-x86_64.AppImage)
-- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-linux-amd64.deb)
+- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-linux-x86_64.AppImage)
+- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-linux-amd64.deb)
 
-Instrucoes de instalacao e execucao: [guia de release Linux](README-release-linux.md).
+Instrucoes de instalacao e execucao: [guia de release Linux](docs/README-release-linux.md).
 
 ### Windows
 
-- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-win-x64.exe)
-- [Arquivo blockmap](https://github.com/idd-galcantara/ops-flow/releases/download/v0.2.0/ops-flow-0.2.0-win-x64.exe.blockmap)
+- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-win-x64.exe)
 
-Instrucoes de instalacao: [guia de release Windows](README-release-windows.md).
+Instrucoes de instalacao: [guia de release Windows](docs/README-release-windows.md).
 
 ### macOS
 
 O empacotamento macOS gera instaladores `.dmg` e `.zip` para Macs Intel (`x64`) e Apple Silicon
-(`arm64`). A geracao esta disponivel pelo comando `npm run package:mac`; uma release publica ainda
-precisa ser assinada e notarizada pela Apple.
+(`arm64`). A release `v0.4.0` inclui os quatro artefatos macOS:
 
+- [DMG Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-arm64.dmg)
+- [DMG Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-x64.dmg)
+- [ZIP Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-arm64.zip)
+- [ZIP Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.4.0/ops-flow-0.4.0-mac-x64.zip)
+
+Instrucoes de instalacao: [guia de release macOS](docs/README-release-mac.md).
 Instrucoes de empacotamento: [guia de distribuicao](docs/DISTRIBUTION.md).
 
 ## Fluxo local
@@ -177,8 +182,10 @@ A consulta e feita para todas as combinacoes selecionadas. Por exemplo, dois clu
 npm run dev            # backend + frontend em desenvolvimento
 npm run dev:backend    # somente backend
 npm run dev:frontend   # somente frontend
-npm run build          # build dos dois workspaces
+npm run build          # build dos tres workspaces
 npm run typecheck      # typecheck dos dois workspaces
+npm run package:linux  # empacotamento Linux AppImage e .deb
+npm run package:win    # empacotamento Windows NSIS
 npm run package:mac    # empacotamento macOS x64 e arm64
 ```
 
@@ -396,7 +403,7 @@ ops-flow/
 │       ├── store.ts               # Estado global Zustand
 │       ├── types.ts               # Contratos do frontend
 │       ├── podPresentation.ts     # Filtro, agrupamento e ordenacao
-│       ├── presets.ts             # Presets no localStorage
+│       ├── presets.ts             # Persistência de presets web e desktop
 │       └── components/
 │           ├── TargetSelector.tsx
 │           ├── PodTable.tsx
@@ -404,7 +411,13 @@ ops-flow/
 │           └── LogViewer.tsx
 ├── docs/
 │   ├── DESIGN-SYSTEM.md
-│   └── PLANO.md
+│   ├── DISTRIBUTION.md
+│   ├── PLANO.md
+│   ├── README-release-linux.md
+│   ├── README-release-mac.md
+│   ├── README-release-windows.md
+│   ├── TECH-DEFINITION.md
+│   └── VERSIONING-AND-RELEASE.md
 ├── specs/                         # Especificacoes do produto
 ├── package.json                   # Workspaces e scripts da raiz
 └── package-lock.json
@@ -437,7 +450,8 @@ A verificacao TLS continua ativa. O projeto nao usa `skipTLSVerify` nem `NODE_TL
 - Nao ha autenticacao propria nem multiusuario.
 - Credenciais, certificados, tokens e headers de autenticacao nao sao retornados nem registrados.
 - Erros da API Kubernetes sao sanitizados antes de chegar ao cliente.
-- Presets armazenam somente nomes de contextos/clusters e namespaces no `localStorage`.
+- Presets armazenam somente nomes de contextos/clusters e namespaces. No modo web, ficam no
+  `localStorage`; no modo desktop, ficam em `presets.json` no diretório de dados do Electron.
 - A aplicacao nao oferece nenhuma rota de mutacao do Kubernetes.
 
 Esse modelo e adequado para uso pessoal/local. Ele nao deve ser tratado como um servico multiusuario ou publicado diretamente na rede.
@@ -453,7 +467,7 @@ npm run typecheck
 npm run build
 ```
 
-A cobertura atual inclui **89 testes**: 39 no backend e 50 no frontend. Os testes verificam, entre outros pontos:
+A cobertura atual inclui **99 testes**: 48 no backend e 51 no frontend. Os testes verificam, entre outros pontos:
 
 - normalizacao de pods e status;
 - parsing e validacao de alvos;

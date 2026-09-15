@@ -6,7 +6,7 @@ Este guia explica como instalar e executar uma versao empacotada do ops-flow no 
 
 O instalador NSIS e gerado em `release/`:
 
-- `ops-flow-<versao>-win-<arch>.exe`
+- `ops-flow-0.4.0-win-x64.exe`
 
 A instalacao cria atalhos no menu Iniciar e, quando selecionado, na area de trabalho. O instalador permite escolher o diretorio de instalacao.
 

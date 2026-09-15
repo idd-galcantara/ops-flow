@@ -6,9 +6,10 @@ producao do backend sao copiados para recursos explicitos do aplicativo.
 
 Para instalar e executar artefatos ja gerados, consulte:
 
-- [Release Linux](../README-release-linux.md)
-- [Release macOS](../README-release-mac.md)
-- [Release Windows](../README-release-windows.md)
+- [Release Linux](README-release-linux.md)
+- [Release macOS](README-release-mac.md)
+- [Release Windows](README-release-windows.md)
+- [Versionamento e release](VERSIONING-AND-RELEASE.md)
 
 ## Linux
 
@@ -65,8 +66,8 @@ empacotamento continuam usando `--publish never`, portanto o `electron-builder` 
 diretamente. Para criar uma release, atualize a versão, faça push da `main` e envie a tag:
 
 ```bash
-git tag -a v0.4.0 -m "Release v0.4.0"
-git push origin v0.4.0
+git tag -a v0.5.0 -m "Release v0.5.0"
+git push origin v0.5.0
 ```
 
 A publicação oficial ainda deve configurar assinatura e notarização quando necessário. A release

@@ -6,8 +6,8 @@ Este guia explica como instalar e executar uma versao empacotada do ops-flow em 
 
 Os arquivos sao gerados em `release/`:
 
-- `ops-flow-<versao>-linux-x86_64.AppImage`
-- `ops-flow-<versao>-linux-amd64.deb`
+- `ops-flow-0.4.0-linux-x86_64.AppImage`
+- `ops-flow-0.4.0-linux-amd64.deb`
 
 O AppImage e portatil: nao instala o aplicativo no sistema. O `.deb` instala o aplicativo e cria os atalhos registrados pelo pacote.
 
@@ -27,8 +27,9 @@ Em outras distribuicoes, instale o pacote equivalente a `libfuse2` ou `libfuse2t
 A partir da pasta que contem o arquivo:
 
 ```bash
-chmod +x ops-flow-0.2.0-linux-x86_64.AppImage
-./ops-flow-0.2.0-linux-x86_64.AppImage
+VERSION=0.4.0
+chmod +x "ops-flow-${VERSION}-linux-x86_64.AppImage"
+"./ops-flow-${VERSION}-linux-x86_64.AppImage"
 ```
 
 Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessaria.
@@ -36,7 +37,7 @@ Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessa
 Se o sistema bloquear a execucao por permissao, confirme que o arquivo tem permissao de execucao:
 
 ```bash
-ls -l ops-flow-0.2.0-linux-x86_64.AppImage
+ls -l "ops-flow-${VERSION}-linux-x86_64.AppImage"
 ```
 
 ## Instalar o pacote Debian
@@ -44,7 +45,7 @@ ls -l ops-flow-0.2.0-linux-x86_64.AppImage
 Em Ubuntu, Debian e distribuicoes compativeis:
 
 ```bash
-sudo apt install ./ops-flow-0.2.0-linux-amd64.deb
+sudo apt install "./ops-flow-${VERSION}-linux-amd64.deb"
 ```
 
 O `./` e importante: ele informa ao `apt` que o arquivo esta na pasta atual.
@@ -72,7 +73,7 @@ O aplicativo nao inclui kubeconfigs, tokens, certificados ou chaves no instalado
 Para iniciar usando outro arquivo:
 
 ```bash
-KUBECONFIG=/caminho/para/config ./ops-flow-0.2.0-linux-x86_64.AppImage
+KUBECONFIG=/caminho/para/config "./ops-flow-${VERSION}-linux-x86_64.AppImage"
 ```
 
 Tambem e possivel usar **Selecionar kubeconfig** dentro do aplicativo.
