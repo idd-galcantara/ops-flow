@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  actions: read
+  contents: write
 
 concurrency:
   group: package-desktop-${{ github.ref }}
@@ -101,3 +104,131 @@ jobs:
             release/*.zip
           if-no-files-found: error
           retention-days: 14
+
+  create-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - package-linux
+      - package-windows
+      - package-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.2.1
+          cache: npm
+
+      - name: Validate tag version
+        shell: bash
+        run: |
+          git fetch origin main --no-tags
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on main"
+            exit 1
+          fi
+
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ "$tag_version" != "$package_version" ]]; then
+            echo "Tag v$tag_version does not match package.json version $package_version"
+            exit 1
+          fi
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ops-flow-linux-${{ github.sha }}
+          path: downloaded/linux
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ops-flow-windows-${{ github.sha }}
+          path: downloaded/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ops-flow-macos-${{ github.sha }}
+          path: downloaded/macos
+
+      - name: Prepare release assets and notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          previous_tag="$(git tag --sort=-version:refname --merged "${GITHUB_SHA}^" | head -n 1 || true)"
+
+          mkdir -p release-assets
+          find downloaded -type f \( \
+            -name '*.AppImage' -o \
+            -name '*.deb' -o \
+            -name '*.exe' -o \
+            -name '*.dmg' -o \
+            -name '*.zip' \
+          \) -exec cp {} release-assets/ \;
+
+          asset_count="$(find release-assets -maxdepth 1 -type f | wc -l)"
+          if [[ "$asset_count" -ne 7 ]]; then
+            echo "Expected 7 release assets, found $asset_count"
+            find release-assets -maxdepth 1 -type f -print
+            exit 1
+          fi
+
+          if [[ -n "$previous_tag" ]]; then
+            changes="$(git log --pretty=format:'- %s (%h)' "$previous_tag..$GITHUB_SHA")"
+          else
+            changes="$(git log --pretty=format:'- %s (%h)' "$GITHUB_SHA")"
+          fi
+
+          cat > release-notes.md <<EOF
+          # ops-flow v$version
+
+          ## Destaques
+
+          - Instaladores para Linux, Windows e macOS.
+          - macOS Intel (\`x64\`) e Apple Silicon (\`arm64\`).
+          - Aplicacao read-only para workloads Kubernetes.
+
+          ## Instalacao
+
+          - **Ubuntu/Debian:** baixe o arquivo \`.deb\` e execute \`sudo apt install ./ops-flow-$version-linux-amd64.deb\`.
+          - **Linux geral:** baixe o \`.AppImage\`, execute \`chmod +x\` e abra o arquivo.
+          - **Windows 64-bit:** execute o instalador \`.exe\`.
+          - **macOS Apple Silicon:** use \`ops-flow-$version-mac-arm64.dmg\` ou o ZIP \`arm64\`.
+          - **macOS Intel:** use \`ops-flow-$version-mac-x64.dmg\` ou o ZIP \`x64\`.
+
+          ## Commits incluidos
+
+          $changes
+
+          ## Observacoes
+
+          - Os instaladores podem nao possuir assinatura de codigo ou notarizacao.
+          - O AppImage pode exigir o pacote FUSE da distribuicao Linux.
+          - O kubeconfig e os executaveis de autenticacao `exec` devem existir na maquina do usuario.
+
+          ## Arquivos
+
+          Os instaladores para todas as plataformas estao anexados abaixo.
+          EOF
+
+          echo "Release assets:"
+          ls -lh release-assets
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "ops-flow ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            release-assets/*

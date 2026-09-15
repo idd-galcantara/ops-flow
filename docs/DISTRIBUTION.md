@@ -55,9 +55,22 @@ para Linux, Windows e macOS e publica os arquivos gerados como artifacts separad
 - Windows: `.exe`;
 - macOS: `.dmg` e `.zip` para `x64` e `arm64`.
 
-Esse workflow gera artifacts de validação. A publicação de uma release oficial deve ser feita
-separadamente, preferencialmente a partir de uma tag de versão, depois de configurar assinatura
-e notarização quando necessário.
+Quando uma tag no formato `v<versao>` é enviada, o workflow também baixa e extrai os artifacts,
+seleciona os instaladores finais (`.deb`, `.AppImage`, `.exe`, `.dmg` e `.zip`), gera release notes
+com os commits desde a tag anterior e cria a GitHub Release automaticamente. A tag precisa apontar
+para um commit da `main`, e a versão da tag precisa ser igual à versão em `package.json`.
+
+O workflow usa `GITHUB_TOKEN` com permissão de escrita apenas para criar a release. Os scripts de
+empacotamento continuam usando `--publish never`, portanto o `electron-builder` não publica nada
+diretamente. Para criar uma release, atualize a versão, faça push da `main` e envie a tag:
+
+```bash
+git tag -a v0.4.0 -m "Release v0.4.0"
+git push origin v0.4.0
+```
+
+A publicação oficial ainda deve configurar assinatura e notarização quando necessário. A release
+automática não assina os artefatos.
 
 ## Conteudo e seguranca
 
