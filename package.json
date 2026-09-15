@@ -21,6 +21,7 @@
     "dev:desktop": "npm run build && npm run dev --workspace=desktop",
     "build:desktop": "npm run build",
     "package:linux": "npm run build && node scripts/prepare-desktop-runtime.mjs && electron-builder --config electron-builder.yml --linux AppImage deb",
+    "package:mac": "npm run build && node scripts/prepare-desktop-runtime.mjs && electron-builder --config electron-builder.yml --mac dmg zip --x64 --arm64",
     "package:win": "npm run build && node scripts/prepare-desktop-runtime.mjs && electron-builder --config electron-builder.yml --win nsis",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=desktop",
     "typecheck": "npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend && npm run typecheck --workspace=desktop"

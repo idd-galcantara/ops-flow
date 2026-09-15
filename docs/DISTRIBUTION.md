@@ -7,6 +7,7 @@ producao do backend sao copiados para recursos explicitos do aplicativo.
 Para instalar e executar artefatos ja gerados, consulte:
 
 - [Release Linux](../README-release-linux.md)
+- [Release macOS](../README-release-mac.md)
 - [Release Windows](../README-release-windows.md)
 
 ## Linux
@@ -29,6 +30,35 @@ npm run package:win
 O alvo e um instalador NSIS `.exe`. A geracao deve ser validada em Windows ou em CI Windows,
 especialmente quando houver dependencias nativas, assinatura ou autenticacao de instalador.
 
+## macOS
+
+```bash
+npm run package:mac
+```
+
+O comando gera artefatos `.dmg` e `.zip` para `x64` (Mac Intel) e `arm64` (Apple Silicon) em
+`release/`. A geracao dos artefatos macOS deve ser executada em macOS ou em um runner macOS de
+CI, porque o DMG e a assinatura dependem das ferramentas da Apple.
+
+O empacotamento usa `desktop/build/icon.icns`. O aplicativo ainda pode ser gerado sem assinatura
+para testes internos, mas a distribuicao publica deve usar assinatura Developer ID e notarizacao
+da Apple para evitar bloqueios do Gatekeeper.
+
+## GitHub Actions
+
+O workflow `.github/workflows/package-desktop.yml` executa automaticamente em cada push na
+`main` e também pode ser iniciado manualmente pela interface do GitHub. Ele usa runners padrão
+para Linux, Windows e macOS e publica os arquivos gerados como artifacts separados, retidos por
+14 dias:
+
+- Linux: `.AppImage` e `.deb`;
+- Windows: `.exe`;
+- macOS: `.dmg` e `.zip` para `x64` e `arm64`.
+
+Esse workflow gera artifacts de validação. A publicação de uma release oficial deve ser feita
+separadamente, preferencialmente a partir de uma tag de versão, depois de configurar assinatura
+e notarização quando necessário.
+
 ## Conteudo e seguranca
 
 O empacotamento nao inclui `~/.kube`, `KUBECONFIG`, certificados, chaves ou qualquer arquivo do
@@ -42,8 +72,9 @@ filho resolva suas dependencias. O renderer continua sem acesso a Node ou ao fil
 ## Assinatura
 
 Os artefatos devem ser assinados antes da distribuicao. No Windows, configure o certificado e as
-variaveis do `electron-builder` em CI; no Linux, assine o AppImage e publique checksums. Segredos
-de assinatura nunca devem ser commitados no repositorio.
+variaveis do `electron-builder` em CI; no macOS, configure a assinatura Developer ID e a
+notarizacao da Apple; no Linux, assine o AppImage e publique checksums. Segredos de assinatura
+nunca devem ser commitados no repositorio.
 
 Kubeconfigs com autenticacao `exec` continuam dependendo do executavel externo instalado no
 computador do usuario e disponivel no `PATH`.

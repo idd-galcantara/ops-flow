@@ -948,6 +948,10 @@ Empacotamento:
    - `backend/package.json`;
    - runtime de `backend/node_modules`.
 
+Para macOS, `package:mac` gera `.dmg` e `.zip` para `x64` e `arm64`, usando
+`desktop/build/icon.icns`. A assinatura e a notarização da Apple são etapas de distribuição e
+não fazem parte do build local padrão.
+
 O backend fica fora do ASAR para resolver suas dependências. O instalador não
 inclui o kubeconfig do usuário.
 

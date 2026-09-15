@@ -70,6 +70,14 @@ Instrucoes de instalacao e execucao: [guia de release Linux](README-release-linu
 
 Instrucoes de instalacao: [guia de release Windows](README-release-windows.md).
 
+### macOS
+
+O empacotamento macOS gera instaladores `.dmg` e `.zip` para Macs Intel (`x64`) e Apple Silicon
+(`arm64`). A geracao esta disponivel pelo comando `npm run package:mac`; uma release publica ainda
+precisa ser assinada e notarizada pela Apple.
+
+Instrucoes de empacotamento: [guia de distribuicao](docs/DISTRIBUTION.md).
+
 ## Fluxo local
 
 O ops-flow tambem pode ser executado localmente sem instalar um pacote desktop. Nesse fluxo, o
@@ -133,6 +141,9 @@ npm run dev:desktop
 
 Para gerar os artefatos de distribuicao, consulte [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
 
+Cada push na branch `main` também aciona o workflow do GitHub Actions que gera os pacotes Linux,
+Windows e macOS. Os arquivos ficam disponíveis como artifacts da execução por 14 dias.
+
 Para instalar ou executar uma release pronta, consulte a secao [Downloads](#downloads) e os
 guias de release por sistema operacional.
 
@@ -168,6 +179,7 @@ npm run dev:backend    # somente backend
 npm run dev:frontend   # somente frontend
 npm run build          # build dos dois workspaces
 npm run typecheck      # typecheck dos dois workspaces
+npm run package:mac    # empacotamento macOS x64 e arm64
 ```
 
 ### Backend
