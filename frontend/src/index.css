@@ -1954,6 +1954,21 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.log-search-status {
+  color: var(--muted);
+  font: 9px var(--mono);
+}
+
+.log-validation-error {
+  margin: 8px 14px 0;
+  padding: 8px 10px;
+  color: var(--error-ink);
+  background: var(--error-soft);
+  border: 1px solid var(--error);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
 .log-control {
   display: grid;
   gap: 3px;
@@ -2318,6 +2333,100 @@ button {
   overflow-wrap: anywhere;
 }
 
+.source-scope-summary {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr);
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.source-scope-identity,
+.source-scope-contexts {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+
+.source-scope-identity strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.source-scope-identity code,
+.source-scope-contexts span:not(.summary-label) {
+  color: var(--muted);
+  font: 9px var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.source-scope-stats,
+.source-scope-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--muted);
+  font: 9px var(--mono);
+}
+
+.source-scope-stats strong {
+  color: var(--ink);
+}
+
+.source-scope-actions {
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.source-scope-actions .secondary-button {
+  min-height: 28px;
+}
+
+.source-scope-state {
+  grid-column: 1 / -1;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.source-details {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.source-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 18px;
+  color: var(--ink);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  list-style-position: inside;
+}
+
+.source-details > summary span {
+  color: var(--muted);
+  font: 9px var(--mono);
+  font-weight: 400;
+}
+
+.source-context-sidecars {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 8px;
+}
+
 .source-modal-toolbar {
   flex-wrap: wrap;
   justify-content: space-between;
@@ -2655,6 +2764,32 @@ button {
   .source-tree {
     padding-left: 6px;
     padding-right: 6px;
+  }
+
+  .source-scope-summary {
+    grid-template-columns: 1fr;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .source-scope-stats,
+  .source-scope-actions,
+  .source-scope-state {
+    grid-column: auto;
+  }
+
+  .source-scope-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .source-scope-actions .secondary-button {
+    width: 100%;
+  }
+
+  .source-details > summary {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
   .source-tree-children {
@@ -3956,6 +4091,269 @@ button {
 
 .log-viewer .feedback-error {
   margin: 8px 12px;
+}
+
+/* ---------- Dedicated logs workspace ---------- */
+
+.main-panel.is-log-workspace {
+  min-width: 0;
+  min-height: 0;
+}
+
+.log-workspace-header {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1.2fr) auto auto;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 12px 18px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.log-workspace-identity,
+.log-workspace-contexts {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.log-workspace-identity h2 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-workspace-identity > span:last-child,
+.log-workspace-contexts > div,
+.log-workspace-contexts > div span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font: 9px var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-workspace-contexts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+}
+
+.log-workspace-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  color: var(--muted);
+  font: 9px var(--mono);
+  white-space: nowrap;
+}
+
+.log-workspace-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-workspace-status .status-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+}
+
+.log-workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-source-inspection {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--line);
+  font: 9px var(--mono);
+}
+
+.log-source-inspection summary {
+  padding: 7px 14px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.log-source-inspection summary:focus-visible {
+  outline: 2px solid rgba(223, 112, 69, 0.55);
+  outline-offset: -2px;
+}
+
+.log-source-inspection-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 12px;
+  max-height: 150px;
+  overflow: auto;
+  padding: 0 14px 9px;
+}
+
+.log-source-inspection-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-output {
+  min-width: 0;
+}
+
+.log-output-inner {
+  position: relative;
+  min-width: 900px;
+}
+
+.structured-log-line {
+  display: grid;
+  grid-template-columns: 145px minmax(145px, 1.1fr) minmax(180px, 1.2fr) minmax(360px, 3fr);
+  align-items: start;
+  min-height: 34px;
+  padding: 7px 0;
+  gap: 10px;
+}
+
+.structured-log-line > * {
+  min-width: 0;
+}
+
+.log-timestamp,
+.log-context-cell,
+.log-source-cell {
+  overflow: hidden;
+  color: #91a0b4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-timestamp {
+  color: #75859c;
+}
+
+.log-source-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.log-source-cell strong {
+  overflow: hidden;
+  color: #f1b08e;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-source-cell small {
+  overflow: hidden;
+  color: #91a0b4;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-message {
+  min-width: 0;
+  color: #e6ebf2;
+  user-select: text;
+}
+
+.log-output-inner.is-nowrap .log-message {
+  overflow: visible;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.log-output-inner.is-wrapped .log-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.log-output-inner.is-nowrap .structured-log-line {
+  white-space: nowrap;
+}
+
+.log-output-inner.is-wrapped .structured-log-line {
+  white-space: normal;
+}
+
+.log-empty {
+  min-width: 900px;
+}
+
+@media (max-width: 1000px) {
+  .app-body:has(.is-log-workspace) {
+    height: calc(100vh - 66px);
+    min-height: 0;
+    overflow: hidden;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .app-shell:has(.is-log-workspace) {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app-body:has(.is-log-workspace) > .sidebar {
+    display: none;
+  }
+
+  .app-body:has(.is-log-workspace) .main-panel {
+    min-height: 0;
+  }
+
+  .app-body:has(.is-log-workspace) .log-output {
+    max-height: none;
+  }
+
+  .log-workspace-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .log-workspace-contexts,
+  .log-workspace-stats {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .log-workspace-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .log-workspace-header {
+    padding: 10px 12px;
+    gap: 8px 10px;
+  }
+
+  .log-workspace-actions .secondary-button {
+    min-height: 28px;
+    padding: 0 8px;
+  }
+
+  .log-output-inner {
+    min-width: 900px;
+  }
+
+  .structured-log-line {
+    grid-template-columns: 135px 145px 180px minmax(360px, 1fr);
+    gap: 8px;
+  }
 }
 
 /* ---------- Namespace autocomplete ---------- */

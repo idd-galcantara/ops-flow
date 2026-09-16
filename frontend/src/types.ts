@@ -70,6 +70,7 @@ export interface InventoryIssue {
 
 export interface ApplicationLogInventory {
   application: ApplicationIdentity;
+  consultedContexts: Target[];
   contexts: InventoryContext[];
   issues: InventoryIssue[];
   snapshotAt?: number;

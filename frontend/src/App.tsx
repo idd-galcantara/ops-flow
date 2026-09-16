@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Bookmark, Layers, Moon, Search, ScrollText, Sun, Workflow } from 'lucide-react';
 import { EmptyState, ErrorState } from './components/Feedback';
 import { ApplicationLogSourceModal } from './components/ApplicationLogSourceModal';
+import { LogViewer } from './components/LogViewer';
 import { PodDetailsPanel } from './components/PodDetailsPanel';
 import { PodTable, podRowKey } from './components/PodTable';
 import { TargetErrorBanner } from './components/TargetErrorBanner';
@@ -49,6 +50,7 @@ export default function App() {
   const [selectedPodKeys, setSelectedPodKeys] = useState<Set<string>>(new Set());
   const [selectedLogPods, setSelectedLogPods] = useState<PodRef[]>([]);
   const [logSources, setLogSources] = useState<LogSource[]>([]);
+  const [logConsultedContexts, setLogConsultedContexts] = useState<Target[]>([]);
   const [logModal, setLogModal] = useState<LogModalState | null>(null);
   const [logSelectionError, setLogSelectionError] = useState<string | null>(null);
   const [detailsInitialTab, setDetailsInitialTab] = useState<'describe' | 'metrics' | 'logs'>('describe');
@@ -118,6 +120,7 @@ export default function App() {
     });
     setSelectedLogPods([]);
     setLogSources([]);
+    setLogConsultedContexts([]);
     setLogModal(null);
     setLogSelectionError(null);
     setDetailsInitialTab('describe');
@@ -170,7 +173,7 @@ export default function App() {
       namespace: item.target.namespace,
       message: item.message,
     }));
-    const inventory = buildApplicationLogInventory(pods, first.application, issues, lastUpdatedAt);
+    const inventory = buildApplicationLogInventory(pods, first.application, issues, lastUpdatedAt, targets);
     const currentKeys = preserveCurrent && logSources.length > 0 && logSources[0].application?.key === first.application.key
       ? logSources.map(inventorySourceKey)
       : undefined;
@@ -183,14 +186,27 @@ export default function App() {
     openLogModalFromPods(selectedPods);
   };
 
+  const openCurrentLogSources = () => {
+    const sourcePods = selectedLogPods.length > 0
+      ? pods.filter((item) => selectedLogPods.some((ref) => ref.cluster === item.cluster && ref.namespace === item.namespace && ref.name === item.name))
+      : [pods.find((item) => item.cluster === selected?.cluster && item.namespace === selected?.namespace && item.name === selected?.name)].filter((item): item is NormalizedPod => Boolean(item));
+    openLogModalFromPods(sourcePods, true);
+  };
+
+  const closeLogWorkspace = () => {
+    setLogSources([]);
+    setDetailsInitialTab('describe');
+  };
+
   const confirmLogSources = (selection: LogSourceSelection[]) => {
     const confirmed = selectionToLogSources(selection);
     if (confirmed.length === 0) return;
     setLogSources(confirmed);
+    setLogConsultedContexts(logModal?.inventory.consultedContexts ?? confirmed.map(({ cluster, namespace }) => ({ cluster, namespace })));
     setSelectedLogPods(pods
       .filter((pod) => confirmed.some((source) => source.cluster === pod.cluster && source.namespace === pod.namespace && source.pod === pod.name))
       .map((pod) => ({ cluster: pod.cluster, namespace: pod.namespace, name: pod.name, containers: pod.containers, application: pod.application })));
-    setDetailsInitialTab('logs');
+    setDetailsInitialTab('describe');
     setLogModal(null);
   };
 
@@ -202,6 +218,7 @@ export default function App() {
     setSelectedPodKeys(new Set());
     setSelectedLogPods([]);
     setLogSources([]);
+    setLogConsultedContexts([]);
     setLogModal(null);
     setLogSelectionError(null);
     setQuickPresetId(null);
@@ -235,7 +252,7 @@ export default function App() {
       namespace: item.target.namespace,
       message: item.message,
     }));
-    const inventory = buildApplicationLogInventory(pods, application, issues, lastUpdatedAt);
+    const inventory = buildApplicationLogInventory(pods, application, issues, lastUpdatedAt, targets);
     setLogModal((current) => {
       if (!current || current.inventory.application.key !== application.key) return current;
       return { ...current, inventory };
@@ -341,7 +358,18 @@ export default function App() {
           onResizeNudge={sidebar.nudge}
         />
 
-        <section className="main-panel">
+        <section className={`main-panel ${logSources.length > 0 ? 'is-log-workspace' : ''}`}>
+          {logSources.length > 0 ? (
+            <LogViewer
+              pod={selected ?? selectedLogPods[0]}
+              pods={selectedLogPods}
+              sources={logSources}
+              consultedContexts={logConsultedContexts}
+              onChangeSources={openCurrentLogSources}
+              onClose={closeLogWorkspace}
+            />
+          ) : (
+            <>
           <div className="panel-header">
             <div>
               <span className="eyebrow">Unified view</span>
@@ -501,6 +529,8 @@ export default function App() {
               />
             )}
           </div>
+            </>
+          )}
         </section>
 
         {selected && (
@@ -510,11 +540,13 @@ export default function App() {
             logPods={selectedLogPods.length > 0 ? selectedLogPods : [selected]}
             logSources={logSources}
             initialTab={detailsInitialTab}
-            onOpenLogs={() => openLogModalFromPods(selectedLogPods.length > 0 ? pods.filter((item) => selectedLogPods.some((ref) => ref.cluster === item.cluster && ref.namespace === item.namespace && ref.name === item.name)) : [pods.find((item) => item.cluster === selected.cluster && item.namespace === selected.namespace && item.name === selected.name)].filter((item): item is NormalizedPod => Boolean(item)), true)}
+            showLogsTab={logSources.length === 0}
+            onOpenLogs={openCurrentLogSources}
             onClose={() => {
               setSelected(null);
               setSelectedLogPods([]);
               setLogSources([]);
+              setLogConsultedContexts([]);
               setSelectedPodKeys(new Set());
               setLogSelectionError(null);
             }}

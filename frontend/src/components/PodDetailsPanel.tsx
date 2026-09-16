@@ -13,6 +13,7 @@ interface PodDetailsPanelProps {
   logPods?: PodRef[];
   logSources?: LogSource[];
   initialTab?: Tab;
+  showLogsTab?: boolean;
   onClose: () => void;
   onOpenLogs: () => void;
   /** True while the panel is being dragged, to keep the handle highlighted. */
@@ -34,6 +35,7 @@ export function PodDetailsPanel({
   logPods = [pod],
   logSources = [],
   initialTab = 'describe',
+  showLogsTab = true,
   onClose,
   onOpenLogs,
   resizing,
@@ -134,9 +136,9 @@ export function PodDetailsPanel({
         <TabButton active={tab === 'metrics'} onClick={() => setTab('metrics')} icon={<Activity size={13} />}>
           Metrics
         </TabButton>
-        <TabButton active={tab === 'logs'} onClick={() => { onOpenLogs(); if (logSources.length > 0) setTab('logs'); }} icon={<ScrollText size={13} />}>
+        {showLogsTab && <TabButton active={tab === 'logs'} onClick={() => { onOpenLogs(); if (logSources.length > 0) setTab('logs'); }} icon={<ScrollText size={13} />}>
           Logs
-        </TabButton>
+        </TabButton>}
       </div>
 
       {/*
@@ -156,7 +158,7 @@ export function PodDetailsPanel({
             containers={describe?.containers ?? []}
           />
         )}
-        {tab === 'logs' && (logSources.length > 0 ? <LogViewer key={podId} pod={pod} pods={logPods} sources={logSources} /> : <LogPrompt onOpenLogs={onOpenLogs} />)}
+        {tab === 'logs' && showLogsTab && (logSources.length > 0 ? <LogViewer key={podId} pod={pod} pods={logPods} sources={logSources} /> : <LogPrompt onOpenLogs={onOpenLogs} />)}
       </div>
     </section>
   );

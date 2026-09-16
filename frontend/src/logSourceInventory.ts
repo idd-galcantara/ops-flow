@@ -58,10 +58,22 @@ export function buildApplicationLogInventory(
   application: ApplicationIdentity,
   issues: InventoryIssue[] = [],
   snapshotAt?: number,
+  consultedContexts?: readonly Target[],
 ): ApplicationLogInventory {
+  const normalizedContexts = normalizeConsultedContexts(consultedContexts ?? pods.filter((pod) => pod.application.key === application.key));
+  const consultedKeys = new Set(normalizedContexts.map(inventoryContextKey));
   const contexts = new Map<string, InventoryContext>();
+  for (const context of normalizedContexts) {
+    contexts.set(inventoryContextKey(context), {
+      cluster: context.cluster,
+      namespace: context.namespace,
+      pods: [],
+      sidecarOnlyPods: [],
+    });
+  }
   for (const pod of pods) {
     if (pod.application.key !== application.key) continue;
+    if (!consultedKeys.has(inventoryContextKey(pod))) continue;
     const key = inventoryContextKey(pod);
     const current = contexts.get(key) ?? {
       cluster: pod.cluster,
@@ -69,25 +81,32 @@ export function buildApplicationLogInventory(
       pods: [],
       sidecarOnlyPods: [],
     };
+    const existingPod = current.pods.find((item) => item.pod === pod.name);
+    if (existingPod) {
+      const knownContainers = new Set(existingPod.containers.map((container) => container.container));
+      existingPod.containers.push(...pod.containers.filter((container) => !knownContainers.has(container)).map(inventoryContainerFor));
+      continue;
+    }
     const inventoryPod: InventoryPod = {
       pod: pod.name,
       containers: pod.containers.map(inventoryContainerFor),
       status: pod.status,
     };
-    if (inventoryPod.containers.length > 0 && inventoryPod.containers.every((container) => container.role === 'sidecar')) {
-      current.sidecarOnlyPods.push(inventoryPod.pod);
-    }
     current.pods.push(inventoryPod);
     contexts.set(key, current);
   }
 
   return {
     application,
+    consultedContexts: normalizedContexts,
     contexts: [...contexts.values()]
       .map((context) => ({
         ...context,
         pods: [...context.pods].sort((a, b) => a.pod.localeCompare(b.pod)),
-        sidecarOnlyPods: [...context.sidecarOnlyPods].sort(),
+        sidecarOnlyPods: context.pods
+          .filter((pod) => pod.containers.length > 0 && pod.containers.every((container) => container.role === 'sidecar'))
+          .map((pod) => pod.pod)
+          .sort(),
       }))
       .sort((a, b) => inventoryContextKey(a).localeCompare(inventoryContextKey(b))),
     issues,
@@ -97,19 +116,54 @@ export function buildApplicationLogInventory(
 
 export function defaultSelectionKeys(
   inventory: ApplicationLogInventory,
-  originatingContext: Pick<Target, 'cluster' | 'namespace'>,
+  _originatingContext?: Pick<Target, 'cluster' | 'namespace'>,
 ): Set<string> {
   const selected = new Set<string>();
-  const context = inventory.contexts.find((item) => inventoryContextKey(item) === inventoryContextKey(originatingContext));
-  if (!context) return selected;
-  for (const pod of context.pods) {
-    const actionable = pod.containers.filter((container) => container.role !== 'sidecar');
-    const containers = actionable.length > 0 ? actionable : pod.containers;
-    for (const container of containers) {
-      selected.add(inventorySourceKey({ cluster: context.cluster, namespace: context.namespace, pod: pod.pod, container: container.container }));
+  for (const context of inventory.contexts) {
+    for (const pod of context.pods) {
+      const actionable = pod.containers.filter((container) => container.role !== 'sidecar');
+      const containers = actionable.length > 0 ? actionable : pod.containers;
+      for (const container of containers) {
+        selected.add(inventorySourceKey({ cluster: context.cluster, namespace: context.namespace, pod: pod.pod, container: container.container }));
+      }
     }
   }
   return selected;
+}
+
+export type SidecarActionScope = 'application' | Pick<Target, 'cluster' | 'namespace'>;
+
+export function sidecarSourceKeys(inventory: ApplicationLogInventory, scope: SidecarActionScope = 'application'): string[] {
+  return inventory.contexts
+    .filter((context) => scope === 'application' || inventoryContextKey(context) === inventoryContextKey(scope))
+    .flatMap((context) => context.pods.flatMap((pod) => pod.containers
+      .filter((container) => container.role === 'sidecar')
+      .map((container) => inventorySourceKey({ cluster: context.cluster, namespace: context.namespace, pod: pod.pod, container: container.container }))));
+}
+
+export function applySidecarAction(
+  inventory: ApplicationLogInventory,
+  selectedKeys: ReadonlySet<string>,
+  scope: SidecarActionScope,
+  include: boolean,
+): Set<string> {
+  const next = new Set(selectedKeys);
+  for (const key of sidecarSourceKeys(inventory, scope)) {
+    if (include) next.add(key);
+    else next.delete(key);
+  }
+  return next;
+}
+
+export function normalizeConsultedContexts(contexts: readonly Pick<Target, 'cluster' | 'namespace'>[]): Target[] {
+  const seen = new Set<string>();
+  return contexts.flatMap((context) => {
+    const normalized = { cluster: context.cluster, namespace: context.namespace };
+    const key = inventoryContextKey(normalized);
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [normalized];
+  });
 }
 
 export function selectionFromKeys(
