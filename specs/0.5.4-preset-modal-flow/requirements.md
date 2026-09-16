@@ -1,4 +1,4 @@
-# Requirements - ops-flow v0.5.4 preset modal flow
+# Requirements - ops-union v0.5.4 preset modal flow
 
 ## Scope
 

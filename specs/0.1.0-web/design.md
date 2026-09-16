@@ -1,8 +1,8 @@
-# Design — ops-flow MVP
+# Design — ops-union MVP
 
 ## Visão geral
 
-ops-flow é composto por um **backend Node/TypeScript** que agrega recursos Kubernetes de vários
+ops-union é composto por um **backend Node/TypeScript** que agrega recursos Kubernetes de vários
 alvos `(cluster, namespace)` e um **frontend React/Vite** que oferece a visão unificada. Tudo roda
 local, é read-only e usa o `~/.kube/config` existente.
 

@@ -30,7 +30,7 @@ export function hasExactNamespaceMatch(namespaces: NamespaceInfo[], value: strin
  * 1. exact match
  * 2. prefix match ("bank-ov" -> "bank-overdraft" before "autbank-overdraft")
  * 3. namespaces present in every selected cluster, since a unified view across
- *    clusters is the whole point of ops-flow
+ *    clusters is the whole point of ops-union
  * 4. alphabetical, so the list is stable
  */
 export function suggestNamespaces(

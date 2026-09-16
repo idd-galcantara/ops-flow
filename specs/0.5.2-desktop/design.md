@@ -1,8 +1,8 @@
-# Design — ops-flow v2 desktop
+# Design — ops-union v2 desktop
 
 ## Visão geral
 
-O ops-flow v2 transforma a aplicação web local da V1 em um aplicativo desktop para Windows e
+O ops-union v2 transforma a aplicação web local da V1 em um aplicativo desktop para Windows e
 Linux. A lógica de consulta Kubernetes continua no backend Node/TypeScript e a interface continua
 sendo React. O Electron passa a controlar a janela, o ciclo de vida do backend e os recursos
 nativos, como o seletor de arquivos.
@@ -11,7 +11,7 @@ O aplicativo continua sendo local e read-only. Não existe servidor externo, ban
 Docker ou dependência de `kubectl` para consultar os clusters.
 
 ```text
-Aplicativo ops-flow
+Aplicativo ops-union
 ├── Electron main process
 │   ├── inicia e encerra o backend local
 │   ├── abre a janela da interface
@@ -50,7 +50,7 @@ O backend centraliza a descoberta em um único loader:
    reiniciar a janela.
 
 O caminho escolhido manualmente pode ser salvo nas preferências do aplicativo, mas o conteúdo do
-kubeconfig, tokens, certificados e chaves nunca são persistidos pelo ops-flow. A variável
+kubeconfig, tokens, certificados e chaves nunca são persistidos pelo ops-union. A variável
 `KUBECONFIG` continua tendo prioridade para manter compatibilidade com usuários avançados.
 
 ## Comunicação entre Electron, renderer e backend
@@ -97,7 +97,7 @@ O pacote inclui o runtime necessário para o backend. O usuário não precisa in
 executar `npm`, abrir terminal ou gerenciar uma porta manualmente.
 
 Kubeconfigs que usam autenticação `exec` continuam dependendo do executável externo referenciado
-por eles. O ops-flow deve informar a falha de autenticação de forma segura, sem registrar
+por eles. O ops-union deve informar a falha de autenticação de forma segura, sem registrar
 credenciais.
 
 ## Estratégia de testes

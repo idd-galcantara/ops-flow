@@ -1,8 +1,8 @@
-# ops-flow
+# ops-union
 
 > Visao unificada, local e read-only de workloads Kubernetes em multiplos clusters e namespaces.
 
-O **ops-flow** reduz a necessidade de repetir comandos `kubectl` trocando de contexto manualmente. A aplicacao permite selecionar varios contextos do kubeconfig, combinar namespaces, consultar os pods em paralelo e investigar cada pod em uma unica interface web.
+O **ops-union** reduz a necessidade de repetir comandos `kubectl` trocando de contexto manualmente. A aplicacao permite selecionar varios contextos do kubeconfig, combinar namespaces, consultar os pods em paralelo e investigar cada pod em uma unica interface web.
 
 A unidade de consulta do sistema e o par:
 
@@ -55,18 +55,18 @@ flowchart LR
 ## Downloads
 
 A release mais recente e a **v0.5.1**. Os instaladores e pacotes estao disponiveis na pagina de
-[releases do GitHub](https://github.com/idd-galcantara/ops-flow/releases/tag/v0.5.1).
+[releases do GitHub](https://github.com/idd-galcantara/ops-union/releases/tag/v0.5.1).
 
 ### Linux
 
-- [AppImage](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-linux-x86_64.AppImage)
-- [Pacote Debian](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-linux-amd64.deb)
+- [AppImage](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-linux-x86_64.AppImage)
+- [Pacote Debian](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-linux-amd64.deb)
 
 Instrucoes de instalacao e execucao: [guia de release Linux](docs/README-release-linux.md).
 
 ### Windows
 
-- [Instalador `.exe`](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-win-x64.exe)
+- [Instalador `.exe`](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-win-x64.exe)
 
 Instrucoes de instalacao: [guia de release Windows](docs/README-release-windows.md).
 
@@ -75,17 +75,17 @@ Instrucoes de instalacao: [guia de release Windows](docs/README-release-windows.
 O empacotamento macOS gera instaladores `.dmg` e `.zip` para Macs Intel (`x64`) e Apple Silicon
 arm64`). A release `v0.5.1` inclui os quatro artefatos macOS:
 
-- [DMG Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-mac-arm64.dmg)
-- [DMG Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-mac-x64.dmg)
-- [ZIP Apple Silicon](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-mac-arm64.zip)
-- [ZIP Intel](https://github.com/idd-galcantara/ops-flow/releases/download/v0.5.1/ops-flow-0.5.1-mac-x64.zip)
+- [DMG Apple Silicon](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-mac-arm64.dmg)
+- [DMG Intel](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-mac-x64.dmg)
+- [ZIP Apple Silicon](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-mac-arm64.zip)
+- [ZIP Intel](https://github.com/idd-galcantara/ops-union/releases/download/v0.5.1/ops-union-0.5.1-mac-x64.zip)
 
 Instrucoes de instalacao: [guia de release macOS](docs/README-release-mac.md).
 Instrucoes de empacotamento: [guia de distribuicao](docs/DISTRIBUTION.md).
 
 ## Fluxo local
 
-O ops-flow tambem pode ser executado localmente sem instalar um pacote desktop. Nesse fluxo, o
+O ops-union tambem pode ser executado localmente sem instalar um pacote desktop. Nesse fluxo, o
 frontend roda no Vite, o backend roda em `127.0.0.1` e o kubeconfig continua sendo lido na
 maquina do usuario. Isso e util para desenvolvimento, validacao de mudancas e uso temporario.
 
@@ -246,7 +246,7 @@ Resposta:
 ```json
 {
   "status": "ok",
-  "service": "ops-flow-backend",
+  "service": "ops-union-backend",
   "readOnly": true
 }
 ```
@@ -379,7 +379,7 @@ Ao fechar a conexao do navegador, o backend interrompe a requisicao de logs no c
 ## Arquitetura do codigo
 
 ```text
-ops-flow/
+ops-union/
 ├── backend/
 │   └── src/
 │       ├── app.ts                 # Express e registro das rotas

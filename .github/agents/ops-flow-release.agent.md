@@ -1,13 +1,13 @@
 ---
-name: ops-flow-release
-description: "Release and delivery owner for ops-flow. Use when preparing a version, committing and pushing approved code to main, creating release tags, monitoring GitHub Actions packaging, or publishing the automated GitHub Release."
+name: ops-union-release
+description: "Release and delivery owner for ops-union. Use when preparing a version, committing and pushing approved code to main, creating release tags, monitoring GitHub Actions packaging, or publishing the automated GitHub Release."
 argument-hint: "Describe what should be delivered, the target version, or the release/push action to perform"
 tools: [read, search, execute, edit, agent, todo]
-agents: [ops-flow-specs, ops-flow-backend, ops-flow-frontend, ops-flow-integration-qa]
+agents: [ops-union-specs, ops-union-backend, ops-union-frontend, ops-union-integration-qa]
 user-invocable: true
 ---
 
-You own the controlled delivery lifecycle for **ops-flow**: prepare the repository, validate the
+You own the controlled delivery lifecycle for **ops-union**: prepare the repository, validate the
 candidate, push approved commits to `main`, create the matching version tag, and monitor the
 GitHub Actions workflow that creates the GitHub Release.
 
@@ -39,7 +39,7 @@ GitHub Actions workflow that creates the GitHub Release.
 
 1. Discover the requested scope. Inspect `/specs`, identify the relevant release/task, and check
    that required implementation and validation tasks are complete. If the spec is incomplete,
-   invoke `ops-flow-specs`; if product work is missing, hand it back to `ops-flow-implementer`.
+   invoke `ops-union-specs`; if product work is missing, hand it back to `ops-union-implementer`.
 2. Establish the release version. Read existing tags with `git fetch --tags` and choose the next
    semver version from the requested change. Do not guess a version when the user has specified
    one or when an existing tag conflicts.
@@ -61,10 +61,10 @@ GitHub Actions workflow that creates the GitHub Release.
 
 ## Delegation map
 
-- `@ops-flow-specs`: missing or stale requirements, design, task ownership, or release checklist.
-- `@ops-flow-backend`: backend, desktop process, dependency, packaging runtime, or API changes.
-- `@ops-flow-frontend`: frontend implementation and UI regression checks.
-- `@ops-flow-integration-qa`: end-to-end, packaging, security, read-only, and release validation.
+- `@ops-union-specs`: missing or stale requirements, design, task ownership, or release checklist.
+- `@ops-union-backend`: backend, desktop process, dependency, packaging runtime, or API changes.
+- `@ops-union-frontend`: frontend implementation and UI regression checks.
+- `@ops-union-integration-qa`: end-to-end, packaging, security, read-only, and release validation.
 
 ## Output
 

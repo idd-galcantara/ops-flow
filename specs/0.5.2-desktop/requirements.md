@@ -1,8 +1,8 @@
-# Requirements — ops-flow v2 desktop
+# Requirements — ops-union v2 desktop
 
 ## Introdução
 
-O ops-flow v2 deve distribuir a aplicação local da V1 como um aplicativo desktop para Windows e
+O ops-union v2 deve distribuir a aplicação local da V1 como um aplicativo desktop para Windows e
 Linux. O usuário abre o programa pelo menu do sistema, consulta os clusters por meio do seu
 kubeconfig e fecha a janela sem executar comandos manualmente.
 
@@ -55,7 +55,7 @@ configuração sem reiniciar a aplicação.
 
 ### Requisito 3 — Experiência desktop
 
-**User story:** Como usuário, quero abrir o ops-flow pelo sistema operacional e usá-lo sem
+**User story:** Como usuário, quero abrir o ops-union pelo sistema operacional e usá-lo sem
 terminal, navegador externo ou comandos de inicialização.
 
 #### Acceptance Criteria
@@ -86,7 +86,7 @@ kubeconfig por uma janela de arquivos.
 
 ### Requisito 5 — Distribuição Windows e Linux
 
-**User story:** Como usuário, quero instalar o ops-flow como um aplicativo comum no meu sistema.
+**User story:** Como usuário, quero instalar o ops-union como um aplicativo comum no meu sistema.
 
 #### Acceptance Criteria
 

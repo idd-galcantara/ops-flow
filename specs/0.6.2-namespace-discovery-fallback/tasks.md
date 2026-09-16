@@ -1,4 +1,4 @@
-# Implementation Tasks - ops-flow v0.6.2 namespace discovery fallback
+# Implementation Tasks - ops-union v0.6.2 namespace discovery fallback
 
 ## Phase 1 - Diagnostics and fallback
 

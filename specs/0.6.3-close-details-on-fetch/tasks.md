@@ -1,4 +1,4 @@
-# Implementation Tasks - ops-flow v0.6.3 close pod details on fetch
+# Implementation Tasks - ops-union v0.6.3 close pod details on fetch
 
 ## Phase 1 - Query lifecycle behavior
 

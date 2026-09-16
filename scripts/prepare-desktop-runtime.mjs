@@ -46,8 +46,8 @@ await run(
 await assertNoKubeconfigFiles(path.join(root, 'backend', 'dist'));
 await assertNoKubeconfigFiles(path.join(root, 'frontend', 'dist'));
 await writeFile(
-  path.join(stagingDirectory, '.ops-flow-runtime'),
-  'Production dependencies for the local ops-flow backend.\n',
+  path.join(stagingDirectory, '.ops-union-runtime'),
+  'Production dependencies for the local ops-union backend.\n',
   'utf8',
 );
 

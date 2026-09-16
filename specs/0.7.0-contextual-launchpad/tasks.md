@@ -1,4 +1,4 @@
-# Implementation Tasks - ops-flow v0.7.0 contextual launchpad
+# Implementation Tasks - ops-union v0.7.0 contextual launchpad
 
 ## Phase 1 - Main-panel launchpad
 
@@ -6,7 +6,7 @@
   - Distinguish initial, ready-to-query, querying, no-results, filtered-empty, and request-error
     states using existing store fields.
   - Preserve the current state priority so loading and errors are not hidden by the launchpad.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: none_
   - _Requirements: 1.1, 2.1, 3.1-3.4_
   - _Validation: focused frontend typecheck and state review._
@@ -15,7 +15,7 @@
   - Add a narrow request signal from `App` through `TargetSelector` to `PresetSection`.
   - Keep modal ownership, search state, edit flow, apply flow, and persistence in the existing
     preset components.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1_
   - _Requirements: 1.2, 4.1, 4.2_
   - _Validation: open the library from the central launchpad and from the sidebar._
@@ -24,7 +24,7 @@
   - Show a compact bounded list only when saved presets exist.
   - Reuse `applyPresetAndLoad` and the existing store state; do not add a second fetch path.
   - Preserve query loading, partial errors, request errors, and active-preset behavior.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1_
   - _Requirements: 1.3, 1.4, 1.5, 4.4_
   - _Validation: focused apply-flow test plus manual success and error scenarios._
@@ -32,7 +32,7 @@
 - [x] 1.4 Add the ready-to-query action.
   - Show the selected target count and invoke the existing `loadPods` operation.
   - Disable the action while the existing query loading state is active.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1_
   - _Requirements: 2.1-2.4_
   - _Validation: click the central action and confirm the normal query lifecycle._
@@ -41,7 +41,7 @@
   - Use existing button and icon conventions, visible focus states, bounded dimensions, and no
     overlapping labels.
   - Keep the empty state visually lightweight rather than introducing dashboard cards.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.3, 1.4_
   - _Requirements: 4.3, 4.5_
   - _Validation: responsive browser smoke check._
@@ -53,7 +53,7 @@
   - Add `lastUsedAt?: number` with tolerant validation so legacy web and desktop records remain
     readable.
   - Keep the existing preset storage keys, Electron IPC, and user-data file.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.3_
   - _Requirements: 5.1, 5.7_
   - _Validation: legacy-shape and malformed-metadata unit tests._
@@ -63,7 +63,7 @@
   - Update `lastUsedAt` in the existing store `applyPreset` operation.
   - Ensure library and launchpad application both update the same preset record before loading pods.
   - Do not update usage for library open, edit, save, or delete actions.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.6_
   - _Requirements: 5.2, 5.6, 5.7_
   - _Validation: focused store/apply-flow tests and persisted round-trip test._
@@ -73,7 +73,7 @@
   - Add a stable ordering helper: recent timestamps first, then never-used presets, preserving
     relative order for equal or missing timestamps.
   - Apply it before filtering/rendering the library and before selecting the four shortcuts.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.6, 1.7_
   - _Requirements: 5.3-5.5_
   - _Validation: ordering unit tests and manual reload scenario._
@@ -85,7 +85,7 @@
   - Reuse `clearTargets`, close local pod details, and signal the target selector to close preset
     library/editor layers.
   - Preserve presets, usage metadata, theme, grouping, filter, and refresh preferences.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1, 1.2, 1.4_
   - _Requirements: 6.1-6.5_
   - _Validation: keyboard and pointer smoke test from populated, detail-panel, and modal states._

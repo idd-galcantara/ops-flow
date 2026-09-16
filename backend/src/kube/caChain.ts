@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 /**
  * Well-known locations of the OS trust store (Debian/Ubuntu, RHEL/Fedora).
- * Read-only: ops-flow never writes to or modifies the system trust store.
+ * Read-only: ops-union never writes to or modifies the system trust store.
  */
 const SYSTEM_CA_BUNDLES = [
   '/etc/ssl/certs/ca-certificates.crt',

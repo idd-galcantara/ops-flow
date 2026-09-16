@@ -38,7 +38,7 @@ const KEYBOARD_STEP = 24;
 /**
  * Builds the list of (cluster, namespace) targets to query.
  *
- * Supports the core ops-flow use case — the same namespace across several
+ * Supports the core ops-union use case — the same namespace across several
  * clusters — and also multiple namespaces on the same cluster, since each
  * target is an independent pair.
  */

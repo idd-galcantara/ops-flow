@@ -1,13 +1,13 @@
-# ops-flow - release Linux
+# ops-union - release Linux
 
-Este guia explica como instalar e executar uma versao empacotada do ops-flow em Linux.
+Este guia explica como instalar e executar uma versao empacotada do ops-union em Linux.
 
 ## Artefatos
 
 Os arquivos sao gerados em `release/`:
 
-- `ops-flow-0.4.0-linux-x86_64.AppImage`
-- `ops-flow-0.4.0-linux-amd64.deb`
+- `ops-union-0.4.0-linux-x86_64.AppImage`
+- `ops-union-0.4.0-linux-amd64.deb`
 
 O AppImage e portatil: nao instala o aplicativo no sistema. O `.deb` instala o aplicativo e cria os atalhos registrados pelo pacote.
 
@@ -28,8 +28,8 @@ A partir da pasta que contem o arquivo:
 
 ```bash
 VERSION=0.4.0
-chmod +x "ops-flow-${VERSION}-linux-x86_64.AppImage"
-"./ops-flow-${VERSION}-linux-x86_64.AppImage"
+chmod +x "ops-union-${VERSION}-linux-x86_64.AppImage"
+"./ops-union-${VERSION}-linux-x86_64.AppImage"
 ```
 
 Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessaria.
@@ -37,7 +37,7 @@ Para remover o AppImage, basta apagar o arquivo. Nenhuma desinstalacao e necessa
 Se o sistema bloquear a execucao por permissao, confirme que o arquivo tem permissao de execucao:
 
 ```bash
-ls -l "ops-flow-${VERSION}-linux-x86_64.AppImage"
+ls -l "ops-union-${VERSION}-linux-x86_64.AppImage"
 ```
 
 ## Instalar o pacote Debian
@@ -45,21 +45,21 @@ ls -l "ops-flow-${VERSION}-linux-x86_64.AppImage"
 Em Ubuntu, Debian e distribuicoes compativeis:
 
 ```bash
-sudo apt install "./ops-flow-${VERSION}-linux-amd64.deb"
+sudo apt install "./ops-union-${VERSION}-linux-amd64.deb"
 ```
 
 O `./` e importante: ele informa ao `apt` que o arquivo esta na pasta atual.
 
-Depois, abra **ops-flow** pelo menu de aplicativos ou execute:
+Depois, abra **ops-union** pelo menu de aplicativos ou execute:
 
 ```bash
-ops-flow
+ops-union
 ```
 
 Para remover a instalacao:
 
 ```bash
-sudo apt remove ops-flow
+sudo apt remove ops-union
 ```
 
 ## Kubeconfig
@@ -73,7 +73,7 @@ O aplicativo nao inclui kubeconfigs, tokens, certificados ou chaves no instalado
 Para iniciar usando outro arquivo:
 
 ```bash
-KUBECONFIG=/caminho/para/config "./ops-flow-${VERSION}-linux-x86_64.AppImage"
+KUBECONFIG=/caminho/para/config "./ops-union-${VERSION}-linux-x86_64.AppImage"
 ```
 
 Tambem e possivel usar **Selecionar kubeconfig** dentro do aplicativo.
@@ -92,7 +92,7 @@ execucoes.
 
 ## Autenticacao `exec`
 
-Se o kubeconfig usa autenticacao `exec`, o executavel indicado nele precisa estar instalado no computador e disponivel no `PATH`. O ops-flow nao instala nem substitui esse executavel.
+Se o kubeconfig usa autenticacao `exec`, o executavel indicado nele precisa estar instalado no computador e disponivel no `PATH`. O ops-union nao instala nem substitui esse executavel.
 
 Exemplos comuns incluem plugins de login de provedores de nuvem e ferramentas de identidade corporativa.
 
@@ -112,7 +112,7 @@ O cluster precisa ter `metrics-server` disponivel. A consulta de pods continua f
 
 ### O AppImage parece nao fazer nada no terminal
 
-Isso normalmente significa que a janela foi aberta em segundo plano. Procure por **ops-flow** entre as janelas abertas ou no menu de aplicativos.
+Isso normalmente significa que a janela foi aberta em segundo plano. Procure por **ops-union** entre as janelas abertas ou no menu de aplicativos.
 
 ## Observacoes de seguranca
 

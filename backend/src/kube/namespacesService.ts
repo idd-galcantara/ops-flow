@@ -36,7 +36,7 @@ const defaultNamespaceLister: NamespaceLister = async (cluster) => {
  *
  * Namespaces are keyed by name and annotated with every cluster that has them, so
  * the UI can highlight the ones shared across the whole selection — exactly the
- * case ops-flow exists for. A failing cluster is isolated into `errors[]`.
+ * case ops-union exists for. A failing cluster is isolated into `errors[]`.
  */
 export async function getNamespaces(
   clusters: string[],

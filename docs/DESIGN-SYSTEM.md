@@ -1,6 +1,6 @@
-# ops-flow — Design System
+# ops-union — Design System
 
-A linha visual do ops-flow segue o projeto irmão **our-flow**: mesma paleta terracota,
+A linha visual do ops-union segue o projeto irmão **our-flow**: mesma paleta terracota,
 tipografia e componentes base, para manter a família coesa.
 
 ## Tokens de cor
@@ -50,7 +50,7 @@ tipografia e componentes base, para manter a família coesa.
 - **badges de status**: pílulas em `var(--mono)` com as cores de estado (ok/warn/error/info).
 - **live-badge**: pílula verde com ponto pulsante para indicar dado ao vivo (útil para o refresh de pods/logs).
 
-## Aplicação no ops-flow
+## Aplicação no ops-union
 
 - **Coluna Cluster / Namespace**: usar `var(--mono)` para o nome do cluster (dado técnico).
 - **Status de pod**: mapear para as cores de estado — Running → `--ok`, Pending/warning → `--warn`, CrashLoopBackOff/Error → `--error`.

@@ -1,6 +1,6 @@
-# ops-flow - release macOS
+# ops-union - release macOS
 
-Este guia explica como gerar e executar uma versão empacotada do ops-flow no macOS.
+Este guia explica como gerar e executar uma versão empacotada do ops-union no macOS.
 
 ## Gerar os artefatos
 
@@ -13,8 +13,8 @@ npm run package:mac
 
 Os arquivos são gerados em `release/`:
 
-- `ops-flow-<versão>-mac-x64.dmg` e `.zip` para Macs Intel;
-- `ops-flow-<versão>-mac-arm64.dmg` e `.zip` para Apple Silicon.
+- `ops-union-<versão>-mac-x64.dmg` e `.zip` para Macs Intel;
+- `ops-union-<versão>-mac-arm64.dmg` e `.zip` para Apple Silicon.
 
 ## Assinatura e notarização
 
@@ -43,13 +43,13 @@ Também é possível usar **Selecionar kubeconfig** dentro do aplicativo. Essa e
 no diretório de dados do Electron, normalmente:
 
 ```text
-~/Library/Application Support/ops-flow/
+~/Library/Application Support/ops-union/
 ```
 
 ## Autenticação `exec`
 
 Se o kubeconfig usa autenticação `exec`, o executável indicado precisa estar instalado no Mac e
-disponível no `PATH` do processo que abre o ops-flow.
+disponível no `PATH` do processo que abre o ops-union.
 
 ## Certificados do cluster
 

@@ -1,12 +1,12 @@
-# ops-flow - release Windows
+# ops-union - release Windows
 
-Este guia explica como instalar e executar uma versao empacotada do ops-flow no Windows.
+Este guia explica como instalar e executar uma versao empacotada do ops-union no Windows.
 
 ## Artefato
 
 O instalador NSIS e gerado em `release/`:
 
-- `ops-flow-0.4.0-win-x64.exe`
+- `ops-union-0.4.0-win-x64.exe`
 
 A instalacao cria atalhos no menu Iniciar e, quando selecionado, na area de trabalho. O instalador permite escolher o diretorio de instalacao.
 
@@ -16,13 +16,13 @@ A instalacao cria atalhos no menu Iniciar e, quando selecionado, na area de trab
 2. Execute o instalador.
 3. Se o Windows SmartScreen exibir um aviso, confirme a origem do arquivo antes de continuar. Builds sem assinatura digital podem gerar esse aviso.
 4. Escolha o diretorio de instalacao, se necessario.
-5. Abra **ops-flow** pelo menu Iniciar ou pelo atalho criado.
+5. Abra **ops-union** pelo menu Iniciar ou pelo atalho criado.
 
 O Node.js nao e necessario para executar a versao instalada. O runtime do backend ja vem incluido no pacote.
 
 ## Desinstalar
 
-Use **Configuracoes > Aplicativos > Aplicativos instalados > ops-flow > Desinstalar**, ou execute o desinstalador no diretorio de instalacao.
+Use **Configuracoes > Aplicativos > Aplicativos instalados > ops-union > Desinstalar**, ou execute o desinstalador no diretorio de instalacao.
 
 ## Kubeconfig
 
@@ -36,16 +36,16 @@ Para usar outro arquivo no PowerShell antes de abrir o aplicativo:
 
 ```powershell
 $env:KUBECONFIG = "C:\caminho\para\config"
-Start-Process "C:\Program Files\ops-flow\ops-flow.exe"
+Start-Process "C:\Program Files\ops-union\ops-union.exe"
 ```
 
 Tambem e possivel usar **Selecionar kubeconfig** dentro do aplicativo.
 
 ## Autenticacao `exec`
 
-Se o kubeconfig usa autenticacao `exec`, o executavel indicado nele precisa estar instalado no computador e disponivel no `PATH`. O ops-flow nao instala nem substitui esse executavel.
+Se o kubeconfig usa autenticacao `exec`, o executavel indicado nele precisa estar instalado no computador e disponivel no `PATH`. O ops-union nao instala nem substitui esse executavel.
 
-Depois de instalar ou atualizar um plugin de autenticacao, reinicie o ops-flow para que o processo herde o `PATH` atualizado.
+Depois de instalar ou atualizar um plugin de autenticacao, reinicie o ops-union para que o processo herde o `PATH` atualizado.
 
 ## Problemas comuns
 
@@ -63,7 +63,7 @@ O cluster precisa ter `metrics-server` disponivel. A consulta de pods continua f
 
 ### A autenticacao `exec` falha
 
-Verifique se o executavel do plugin esta instalado e se o diretorio dele esta no `PATH` do Windows. Teste tambem a autenticacao fora do ops-flow para confirmar que o kubeconfig e o plugin funcionam.
+Verifique se o executavel do plugin esta instalado e se o diretorio dele esta no `PATH` do Windows. Teste tambem a autenticacao fora do ops-union para confirmar que o kubeconfig e o plugin funcionam.
 
 ## Observacoes de seguranca
 

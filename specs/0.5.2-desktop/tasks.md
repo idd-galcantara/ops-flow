@@ -1,4 +1,4 @@
-# Implementation Plan — ops-flow v2 desktop
+# Implementation Plan — ops-union v2 desktop
 
 As tarefas abaixo evoluem a aplicação web da V1 para uma distribuição desktop multiplataforma.
 Cada etapa deve preservar o comportamento existente e manter o projeto executável em modo web
@@ -14,7 +14,7 @@ durante o desenvolvimento.
 - [x] Implementar recarga segura da configuração e limpeza dos caches de clients.
 - [x] Adicionar testes unitários para prioridade de fontes, arquivo ausente, arquivo inválido e
   troca de configuração.
-- _Copilot agent: @ops-flow-backend_
+- _Copilot agent: @ops-union-backend_
 - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.2, 2.4_
 
 ## Step 2 — Status e contrato de configuração
@@ -26,7 +26,7 @@ durante o desenvolvimento.
   indisponível.
 - [x] Adicionar testes de status, recarga, erro e não exposição de caminhos ou credenciais
   sensíveis.
-- _Copilot agent: @ops-flow-backend_
+- _Copilot agent: @ops-union-backend_
 - _Requirements: 2.1, 2.3, 2.5, 6.1, 6.5_
 
 ## Step 3 — Shell Electron e ciclo de vida
@@ -37,7 +37,7 @@ durante o desenvolvimento.
 - [x] Encerrar o backend, WebSocket e recursos associados quando a janela for fechada.
 - [x] Impedir duas instâncias conflitantes ou apresentar uma mensagem clara ao usuário.
 - [x] Manter o backend vinculado a `127.0.0.1`.
-- _Copilot agents: @ops-flow-backend, @ops-flow-frontend_
+- _Copilot agents: @ops-union-backend, @ops-union-frontend_
 - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 6.4_
 
 ## Step 4 — Seleção manual e preferências
@@ -52,7 +52,7 @@ durante o desenvolvimento.
 - [x] Recarregar contexts e namespaces após uma seleção válida sem recarregar a aplicação inteira.
 - [x] Persistir apenas o caminho escolhido e preferências mínimas do aplicativo.
 - [x] Exibir mensagens úteis sem mostrar tokens, certificados ou conteúdo do arquivo.
-- _Copilot agent: @ops-flow-frontend_
+- _Copilot agent: @ops-union-frontend_
 - _Requirements: 2.2, 2.3, 4.1, 4.2, 4.3, 4.4, 4.5_
 
 ## Step 5 — Build e distribuição multiplataforma
@@ -67,7 +67,7 @@ durante o desenvolvimento.
   aplicável.
 - _Validação local: AppImage e `.deb` gerados e executável testado em Linux; o `.exe` requer
   Windows ou Wine/CI Windows para concluir o instalador NSIS._
-- _Copilot agent: @ops-flow-backend_
+- _Copilot agent: @ops-union-backend_
 - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.3_
 
 ## Step 6 — Validação final e garantia read-only
@@ -81,5 +81,5 @@ durante o desenvolvimento.
 - [ ] Auditar rotas HTTP, WebSocket, preload e processos para confirmar que nenhuma operação
   mutável foi adicionada.
 - [ ] Confirmar que logs, erros e respostas nunca expõem segredos do kubeconfig.
-- _Copilot agent: @ops-flow-integration-qa_
+- _Copilot agent: @ops-union-integration-qa_
 - _Requirements: 1.1-1.5, 2.1-2.5, 3.1-3.5, 4.1-4.5, 5.1-5.5, 6.1-6.5_

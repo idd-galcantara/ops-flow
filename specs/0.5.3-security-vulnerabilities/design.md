@@ -34,7 +34,7 @@ runtime dependency.
 
 ## Risk map
 
-| Chain | Finding | Exposure in ops-flow | Priority | Planned treatment |
+| Chain | Finding | Exposure in ops-union | Priority | Planned treatment |
 | --- | --- | --- | --- | --- |
 | Electron | Context-isolation, navigation, protocol, DevTools, window and memory-safety advisories | Electron is embedded in every desktop package; exploitability is reduced by the local renderer and current BrowserWindow restrictions | High | Controlled Electron major upgrade and package smoke tests |
 | extract-zip | Symlink path traversal and arbitrary file writes in ZIP extraction | Primarily install/build supply-chain exposure; inherited from Electron | High | Resolve through the fixed Electron line |

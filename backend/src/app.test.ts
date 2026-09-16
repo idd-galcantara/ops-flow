@@ -47,7 +47,7 @@ async function requestSelection(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'X-Ops-Flow-Token': token } : {}),
+      ...(token ? { 'X-ops-union-Token': token } : {}),
     },
     body: JSON.stringify({ path: selectedPath }),
   });
@@ -58,7 +58,7 @@ async function requestSelection(
 }
 
 test('kubeconfig status route reports source safely and sanitizes unavailable configs', async () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'ops-flow-status-route-'));
+  const directory = mkdtempSync(path.join(tmpdir(), 'ops-union-status-route-'));
   const validFile = path.join(directory, 'valid-config');
   const invalidFile = path.join(directory, 'invalid-config');
   const missingFile = path.join(directory, 'missing-config');
@@ -128,7 +128,7 @@ test('kubeconfig status route reports source safely and sanitizes unavailable co
 });
 
 test('kubeconfig selection requires the internal token and keeps responses safe', async () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'ops-flow-select-route-'));
+  const directory = mkdtempSync(path.join(tmpdir(), 'ops-union-select-route-'));
   const validFile = path.join(directory, 'selected-config');
   const invalidFile = path.join(directory, 'invalid-config');
   const previousEnvironment = process.env.KUBECONFIG;
@@ -186,7 +186,7 @@ test('kubeconfig selection requires the internal token and keeps responses safe'
 });
 
 test('serves the compiled frontend from the local backend origin', async () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'ops-flow-frontend-dist-'));
+  const directory = mkdtempSync(path.join(tmpdir(), 'ops-union-frontend-dist-'));
   const server = createServer(createApp({ frontendDist: directory }));
 
   writeFileSync(path.join(directory, 'index.html'), '<html><body>desktop shell</body></html>', 'utf8');

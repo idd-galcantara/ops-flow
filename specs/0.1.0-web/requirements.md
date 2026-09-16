@@ -1,8 +1,8 @@
-# Requirements — ops-flow MVP
+# Requirements — ops-union MVP
 
 ## Introdução
 
-O ops-flow é uma aplicação web **local** e **read-only** que oferece uma visão unificada de
+O ops-union é uma aplicação web **local** e **read-only** que oferece uma visão unificada de
 recursos Kubernetes (pods, describe, métricas e logs) agregados de **múltiplos clusters** e
 **múltiplos namespaces** simultaneamente. Substitui a repetição manual de `kubectl` por context,
 permitindo inspecionar, por exemplo, os pods de `bank-overdraft` em `kubernetes-qa-tb` e

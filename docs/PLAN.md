@@ -1,4 +1,4 @@
-# ops-flow — Plano de Desenvolvimento
+# ops-union — Plano de Desenvolvimento
 
 Visualização unificada e read-only de recursos Kubernetes (pods, describe, métricas, logs)
 agregados de **múltiplos clusters e múltiplos namespaces** ao mesmo tempo, por uma interface web local.
@@ -171,7 +171,7 @@ Importante:
 
 O `istio-proxy` é injetado como **init container com `restartPolicy: Always`** (sidecar
 nativo, Kubernetes 1.29+). O `kubectl` conta esses sidecars nas colunas `READY` e
-`RESTARTS`. A normalização do ops-flow faz o mesmo, garantindo paridade com o terminal,
+`RESTARTS`. A normalização do ops-union faz o mesmo, garantindo paridade com o terminal,
 e expõe o sidecar na lista de containers para seleção de logs.
 
 ## Nota de escala: paginação de linhas na tabela

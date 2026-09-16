@@ -1,4 +1,4 @@
-# Requirements - ops-flow v0.6.1 dark-mode readability
+# Requirements - ops-union v0.6.1 dark-mode readability
 
 ## Scope
 

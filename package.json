@@ -1,12 +1,13 @@
 {
-  "name": "ops-flow",
+  "name": "ops-union",
+  "desktopName": "ops-union",
   "private": true,
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "Local, read-only Kubernetes workload viewer.",
-  "homepage": "https://github.com/ops-flow/ops-flow",
+  "homepage": "https://github.com/idd-galcantara/ops-union",
   "author": {
-    "name": "ops-flow maintainers",
-    "email": "ops-flow@users.noreply.github.com"
+    "name": "ops-union maintainers",
+    "email": "ops-union@users.noreply.github.com"
   },
   "type": "module",
   "workspaces": [

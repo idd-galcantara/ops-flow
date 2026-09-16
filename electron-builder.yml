@@ -1,6 +1,6 @@
 appId: com.opsflow.desktop
-productName: ops-flow
-artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+productName: Ops Union
+artifactName: ops-union-${version}-${os}-${arch}.${ext}
 
 directories:
   output: release
@@ -29,16 +29,17 @@ extraResources:
 asar: true
 
 linux:
-  executableName: ops-flow
+  executableName: ops-union
+  syncDesktopName: true
   category: Utility
-  maintainer: ops-flow maintainers <ops-flow@users.noreply.github.com>
+  maintainer: ops-union maintainers <ops-union@users.noreply.github.com>
   icon: desktop/build/icon.png
   target:
     - AppImage
     - deb
 
 win:
-  executableName: ops-flow
+  executableName: ops-union
   icon: desktop/build/icon.ico
   target:
     - nsis

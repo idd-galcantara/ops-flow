@@ -11,7 +11,7 @@ import {
  *
  * Security: this module only ever surfaces context/cluster/namespace *names*.
  * Tokens, client certificates and other credentials from the kubeconfig are
- * never returned, logged or persisted — ops-flow is a local, read-only tool.
+ * never returned, logged or persisted — ops-union is a local, read-only tool.
  */
 
 export interface ContextInfo {

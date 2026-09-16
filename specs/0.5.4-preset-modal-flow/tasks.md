@@ -1,4 +1,4 @@
-# Implementation Tasks - ops-flow v0.5.4 preset modal flow
+# Implementation Tasks - ops-union v0.5.4 preset modal flow
 
 The tasks below are incremental and preserve the completed history in the earlier MVP, desktop,
 and security specifications. No task authorizes changes outside the frontend product code and
@@ -10,7 +10,7 @@ focused validation artifacts required for this behavior.
   - Update `PresetSection` so `onEdit` sets the editor id without closing the library.
   - Render the editor above the library with an explicit stacking and interaction contract.
   - Preserve library search text, active status, and visible rows while the editor is open.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: none_
   - _Requirements: 1.1, 1.2, 3.3_
   - _Validation: frontend typecheck; open the library and click edit while a search filter is active._
@@ -19,7 +19,7 @@ focused validation artifacts required for this behavior.
   - Verify cancel, close button, Escape, and editor-backdrop dismissal clear only
     `editingPresetId`.
   - Ensure the library remains available for another action without reopening or losing context.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1_
   - _Requirements: 1.3, 3.3_
   - _Validation: focused UI scenarios for all four dismissal paths._
@@ -30,7 +30,7 @@ focused validation artifacts required for this behavior.
   - Read the resulting row from Zustand state; do not add a parallel preset collection.
   - Cover inactive and active preset saves according to the existing store contract, including
     stale-query clearing for an active preset and no implicit pod query.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1, 1.2_
   - _Requirements: 1.4-1.8, 3.1, 3.4_
   - _Validation: focused frontend test or documented component scenario; `npm test --workspace=frontend`._
@@ -39,7 +39,7 @@ focused validation artifacts required for this behavior.
   - Ensure the editor backdrop/panel is topmost and receives interaction priority.
   - Preserve dialog semantics, close controls, Escape handling, and an accessible pending/status
     contract for later apply work.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1, 1.2_
   - _Requirements: 3.3_
   - _Validation: keyboard and pointer smoke test at desktop and narrow viewport sizes._
@@ -50,7 +50,7 @@ focused validation artifacts required for this behavior.
   - Track the id of the preset currently being applied.
   - Keep the library open during the apply attempt, show a clear pending state, and disable
     competing apply actions.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 1.1_
   - _Requirements: 2.3, 3.3_
   - _Validation: typecheck and a UI scenario with a delayed pod request._
@@ -62,7 +62,7 @@ focused validation artifacts required for this behavior.
   - Preserve the store's request-id, revision, target-signature, `pods`, `targetErrors`, and
     `podsError` behavior; do not fetch through a second API path.
   - Leave the selected preset active and targets applied after the attempt.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 2.1_
   - _Requirements: 2.1, 2.2, 2.4-2.8, 3.1, 3.2_
   - _Validation: focused sequencing test with a deferred `loadPods`; success, partial-error, and request-error scenarios._
@@ -70,7 +70,7 @@ focused validation artifacts required for this behavior.
 - [x] 2.3 Handle missing preset ids without side effects.
   - Keep the library open when an apply callback cannot resolve a preset.
   - Do not mutate targets, active state, pod results, or loading state for this case.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 2.2_
   - _Requirements: 2.7_
   - _Validation: focused store/component test for an unknown id._
@@ -78,7 +78,7 @@ focused validation artifacts required for this behavior.
 - [x] 2.4 Verify table freshness after selection.
   - Confirm the table is populated from the selected preset's query result after the library closes.
   - Confirm partial target failures remain visible and request-level errors remain retryable.
-  - _Copilot agent: @ops-flow-frontend_
+  - _Copilot agent: @ops-union-frontend_
   - _Dependencies: 2.2, 2.3_
   - _Requirements: 2.4-2.6, 2.8_
   - _Validation: frontend tests plus a connected-backend smoke scenario._
@@ -89,7 +89,7 @@ focused validation artifacts required for this behavior.
   - Verify edit opens above the still-visible library; cancel and save close only the editor.
   - Verify the updated name, description, target summary, and search result are reflected without
     reload.
-  - _Copilot agent: @ops-flow-integration-qa_
+  - _Copilot agent: @ops-union-integration-qa_
   - _Dependencies: 1.3, 1.4_
   - _Requirements: 1.1-1.8, 3.3, 3.4_
   - _Validation: desktop/web UI smoke test using the existing preset persistence path._
@@ -99,7 +99,7 @@ focused validation artifacts required for this behavior.
   - Verify the library remains open during loading and closes only after the request settles.
   - Verify successful results, partial target errors, and request-level errors are visible in the
     expected table/error states.
-  - _Copilot agent: @ops-flow-integration-qa_
+  - _Copilot agent: @ops-union-integration-qa_
   - _Dependencies: 2.4_
   - _Requirements: 2.1-2.8_
   - _Validation: delayed-response scenario and one real or controlled partial-failure scenario._
@@ -108,7 +108,7 @@ focused validation artifacts required for this behavior.
   - Run `npm run typecheck --workspace=frontend`.
   - Run `npm test --workspace=frontend`.
   - Confirm the change adds no backend route, Kubernetes mutation, or renderer filesystem access.
-  - _Copilot agent: @ops-flow-integration-qa_
+  - _Copilot agent: @ops-union-integration-qa_
   - _Dependencies: 3.1, 3.2_
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
   - _Validation: commands above and a diff review limited to the intended frontend/test files._

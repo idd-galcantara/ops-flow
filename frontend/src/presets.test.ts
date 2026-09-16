@@ -21,7 +21,7 @@ function installStorage(initial: Record<string, string> = {}): void {
   };
 }
 
-const STORAGE_KEY = 'ops-flow.presets.v1';
+const STORAGE_KEY = 'ops-union.presets.v1';
 
 test('createPreset trims the name and copies the targets', () => {
   const preset = createPreset('  QA overdraft  ', [

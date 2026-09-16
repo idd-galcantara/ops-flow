@@ -1,6 +1,6 @@
 # Versionamento e release
 
-Este guia descreve como preparar uma versao e publicar uma release do ops-flow.
+Este guia descreve como preparar uma versao e publicar uma release do ops-union.
 
 ## Como funciona
 
@@ -99,13 +99,13 @@ O job `Create GitHub Release` so inicia depois que os tres jobs de empacotamento
 sucesso. A release final deve conter sete arquivos:
 
 ```text
-ops-flow-$VERSION-linux-amd64.deb
-ops-flow-$VERSION-linux-x86_64.AppImage
-ops-flow-$VERSION-win-x64.exe
-ops-flow-$VERSION-mac-arm64.dmg
-ops-flow-$VERSION-mac-x64.dmg
-ops-flow-$VERSION-mac-arm64.zip
-ops-flow-$VERSION-mac-x64.zip
+ops-union-$VERSION-linux-amd64.deb
+ops-union-$VERSION-linux-x86_64.AppImage
+ops-union-$VERSION-win-x64.exe
+ops-union-$VERSION-mac-arm64.dmg
+ops-union-$VERSION-mac-x64.dmg
+ops-union-$VERSION-mac-arm64.zip
+ops-union-$VERSION-mac-x64.zip
 ```
 
 O push da `main` e o push da tag geram execucoes separadas. A execucao da `main` serve para

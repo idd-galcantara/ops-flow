@@ -9,7 +9,7 @@ export interface Preset {
   lastUsedAt?: number;
 }
 
-const STORAGE_KEY = 'ops-flow.presets.v1';
+const STORAGE_KEY = 'ops-union.presets.v1';
 
 /** Loads the web fallback. Desktop hydration uses the Electron data directory. */
 export function loadPresets(): Preset[] {

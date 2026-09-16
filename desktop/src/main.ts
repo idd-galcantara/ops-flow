@@ -225,7 +225,7 @@ async function selectKubeconfig(): Promise<SelectionResult> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Ops-Flow-Token': internalToken,
+        'X-ops-union-Token': internalToken,
       },
       body: JSON.stringify({ path: selection.filePaths[0] }),
     });
@@ -271,7 +271,7 @@ if (!hasLock) {
     } catch (error) {
       await closeBackend();
       dialog.showErrorBox(
-        'Could not start ops-flow',
+        'Could not start ops-union',
         error instanceof Error ? error.message : 'The desktop application could not start.',
       );
       app.quit();

@@ -16,7 +16,7 @@ attachLogsWebSocket(server);
 server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
     console.error(
-      `\nPort ${config.port} is already in use — there is probably another ops-flow running.\n` +
+      `\nPort ${config.port} is already in use — there is probably another ops-union running.\n` +
         `Stop the previous process or use another port: OPS_FLOW_PORT=4001 npm run dev\n`,
     );
     process.exit(1);
@@ -26,5 +26,5 @@ server.on('error', (err: NodeJS.ErrnoException) => {
 });
 
 server.listen(config.port, config.host, () => {
-  console.log(`ops-flow backend (read-only) listening on http://${config.host}:${config.port}`);
+  console.log(`ops-union backend (read-only) listening on http://${config.host}:${config.port}`);
 });

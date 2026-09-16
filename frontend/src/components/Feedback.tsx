@@ -1,7 +1,7 @@
 import { CircleAlert, Loader } from 'lucide-react';
 
 /**
- * Shared loading and error primitives, so every surface in ops-flow reports
+ * Shared loading and error primitives, so every surface in ops-union reports
  * progress and failure the same way.
  */
 

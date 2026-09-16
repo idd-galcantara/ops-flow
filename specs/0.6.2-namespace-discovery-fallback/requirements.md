@@ -1,4 +1,4 @@
-# Requirements - ops-flow v0.6.2 namespace discovery fallback
+# Requirements - ops-union v0.6.2 namespace discovery fallback
 
 ## Scope
 

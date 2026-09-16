@@ -9,7 +9,7 @@ kubeconfigRouter.get('/status', (_req: Request, res: Response) => {
 });
 
 kubeconfigRouter.post('/select', (req: Request, res: Response) => {
-  if (!config.internalToken || req.get('x-ops-flow-token') !== config.internalToken) {
+  if (!config.internalToken || req.get('x-ops-union-token') !== config.internalToken) {
     res.status(404).json({ error: 'Not found.' });
     return;
   }

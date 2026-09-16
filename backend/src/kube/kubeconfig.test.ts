@@ -42,7 +42,7 @@ current-context: ${context}
 }
 
 function temporaryConfig(content: string): { directory: string; file: string } {
-  const directory = mkdtempSync(path.join(tmpdir(), 'ops-flow-kubeconfig-'));
+  const directory = mkdtempSync(path.join(tmpdir(), 'ops-union-kubeconfig-'));
   const file = path.join(directory, 'config');
   writeFileSync(file, content, 'utf8');
   return { directory, file };

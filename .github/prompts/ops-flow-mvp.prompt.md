@@ -1,12 +1,12 @@
 ---
-name: ops-flow-mvp
-description: "Implement or validate a task from the ops-flow MVP specification while preserving its local read-only Kubernetes architecture."
+name: ops-union-mvp
+description: "Implement or validate a task from the ops-union MVP specification while preserving its local read-only Kubernetes architecture."
 argument-hint: "Describe the MVP task or phase to implement"
 agent: "agent"
 tools: [read, edit, execute]
 ---
 
-Work on the requested ops-flow MVP task using the project specification:
+Work on the requested ops-union MVP task using the project specification:
 
 - [Requirements](../../specs/0.1.0-web/requirements.md)
 - [Design](../../specs/0.1.0-web/design.md)

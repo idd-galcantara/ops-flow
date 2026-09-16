@@ -1,4 +1,4 @@
-# Design - ops-flow v0.6.2 namespace discovery fallback
+# Design - ops-union v0.6.2 namespace discovery fallback
 
 ## Overview
 

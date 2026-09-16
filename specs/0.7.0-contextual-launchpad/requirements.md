@@ -1,4 +1,4 @@
-# Requirements - ops-flow v0.7.0 contextual launchpad
+# Requirements - ops-union v0.7.0 contextual launchpad
 
 ## Scope
 
@@ -86,7 +86,7 @@ Kubernetes flow, preset persistence, or target-selection behavior.
 
 ### Requirement 6 - Return to the initial state from the brand header
 
-1. WHEN the user clicks the ops-flow logo or application name in the top header THEN the system
+1. WHEN the user clicks the ops-union logo or application name in the top header THEN the system
    SHALL invoke the existing clear-targets behavior and return the main view to its initial empty
    state.
 2. The header reset SHALL clear the selected targets, pod results, target errors, query error, and

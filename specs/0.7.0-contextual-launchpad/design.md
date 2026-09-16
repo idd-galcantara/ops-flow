@@ -1,4 +1,4 @@
-# Design - ops-flow v0.7.0 contextual launchpad
+# Design - ops-union v0.7.0 contextual launchpad
 
 ## Overview
 
@@ -41,7 +41,7 @@ into a dashboard or duplicating target-selection state.
 - `Feedback.tsx` keeps the generic `EmptyState` primitive; the launchpad-specific content is
   composed by `App.tsx`.
 - `index.css` styles the launchpad as a compact action group and responsive preset list, matching
-  the existing restrained ops-flow visual language.
+  the existing restrained ops-union visual language.
 - `presetFlow.ts` and `store.ts` remain the only path for applying presets and loading pods.
 - No new backend route, Kubernetes operation, Electron storage location, or persistence mechanism
   is required; the existing preset format and storage paths are extended in place.

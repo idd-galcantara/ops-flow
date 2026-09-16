@@ -39,7 +39,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ops-flow-linux-${{ github.sha }}
+          name: ops-union-linux-${{ github.sha }}
           path: |
             release/*.AppImage
             release/*.deb
@@ -68,7 +68,7 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ops-flow-windows-${{ github.sha }}
+          name: ops-union-windows-${{ github.sha }}
           path: release/*.exe
           if-no-files-found: error
           retention-days: 14
@@ -98,7 +98,7 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ops-flow-macos-${{ github.sha }}
+          name: ops-union-macos-${{ github.sha }}
           path: |
             release/*.dmg
             release/*.zip
@@ -144,19 +144,19 @@ jobs:
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ops-flow-linux-${{ github.sha }}
+          name: ops-union-linux-${{ github.sha }}
           path: downloaded/linux
 
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ops-flow-windows-${{ github.sha }}
+          name: ops-union-windows-${{ github.sha }}
           path: downloaded/windows
 
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ops-flow-macos-${{ github.sha }}
+          name: ops-union-macos-${{ github.sha }}
           path: downloaded/macos
 
       - name: Prepare release assets and notes
@@ -189,7 +189,7 @@ jobs:
           fi
 
           cat > release-notes.md <<EOF
-          # ops-flow v$version
+          # ops-union v$version
 
           ## Destaques
 
@@ -199,11 +199,11 @@ jobs:
 
           ## Instalacao
 
-          - **Ubuntu/Debian:** baixe o arquivo \`.deb\` e execute \`sudo apt install ./ops-flow-$version-linux-amd64.deb\`.
+          - **Ubuntu/Debian:** baixe o arquivo \`.deb\` e execute \`sudo apt install ./ops-union-$version-linux-amd64.deb\`.
           - **Linux geral:** baixe o \`.AppImage\`, execute \`chmod +x\` e abra o arquivo.
           - **Windows 64-bit:** execute o instalador \`.exe\`.
-          - **macOS Apple Silicon:** use \`ops-flow-$version-mac-arm64.dmg\` ou o ZIP \`arm64\`.
-          - **macOS Intel:** use \`ops-flow-$version-mac-x64.dmg\` ou o ZIP \`x64\`.
+          - **macOS Apple Silicon:** use \`ops-union-$version-mac-arm64.dmg\` ou o ZIP \`arm64\`.
+          - **macOS Intel:** use \`ops-union-$version-mac-x64.dmg\` ou o ZIP \`x64\`.
 
           ## Commits incluidos
 
@@ -229,6 +229,6 @@ jobs:
         run: |
           gh release create "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --title "ops-flow ${GITHUB_REF_NAME}" \
+            --title "ops-union ${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             release-assets/*

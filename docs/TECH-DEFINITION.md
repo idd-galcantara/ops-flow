@@ -1,11 +1,11 @@
-# ops-flow - Definição técnica do MVP Electron
+# ops-union - Definição técnica do MVP Electron
 
 > Documento de referência da arquitetura e do comportamento de comunicação do
-> ops-flow v0.4.0.
+> ops-union v0.4.0.
 
 ## 1. Objetivo e escopo
 
-O ops-flow é um aplicativo local, desktop e estritamente read-only para
+O ops-union é um aplicativo local, desktop e estritamente read-only para
 inspeção de pods Kubernetes em vários contextos e namespaces.
 
 A unidade de consulta do produto é o par:
@@ -298,7 +298,7 @@ Resposta normal:
 ```json
 {
   "status": "ok",
-  "service": "ops-flow-backend",
+  "service": "ops-union-backend",
   "readOnly": true
 }
 ```
@@ -612,7 +612,7 @@ sequenceDiagram
   R->>P: selectKubeconfig()
   P->>M: ipcRenderer.invoke(select-kubeconfig)
   M->>M: dialog.showOpenDialog()
-  M->>B: POST /api/kubeconfig/select + X-Ops-Flow-Token
+  M->>B: POST /api/kubeconfig/select + X-ops-union-Token
   B->>F: lê o arquivo escolhido
   B->>B: reloadKubeConfig(path)
   B-->>M: status seguro
@@ -659,7 +659,7 @@ também dispara `save-presets` sem bloquear a interface. O carregamento inicial
 do desktop prefere `presets.json`; se falhar, cai para `localStorage`.
 
 Na web, sem preload, somente `localStorage` é usado com a chave
-`ops-flow.presets.v1`.
+`ops-union.presets.v1`.
 
 ### 8.4 Arquivos locais do Main
 
@@ -670,9 +670,9 @@ Na web, sem preload, somente `localStorage` é usado com a chave
 
 O caminho de `userData` é definido pelo Electron, normalmente:
 
-- Linux: `~/.config/ops-flow/`;
-- Windows: `%APPDATA%/ops-flow/`;
-- macOS: `~/Library/Application Support/ops-flow/`.
+- Linux: `~/.config/ops-union/`;
+- Windows: `%APPDATA%/ops-union/`;
+- macOS: `~/Library/Application Support/ops-union/`.
 
 Credenciais, tokens, certificados e conteúdo do kubeconfig não são persistidos
 por esses mecanismos.
@@ -881,7 +881,7 @@ Ainda assim, qualquer processo local com acesso ao loopback pode tentar chamar
 as rotas públicas. O MVP não possui autenticação própria para consultas.
 
 A rota `POST /api/kubeconfig/select` é uma exceção: exige o header
-`X-Ops-Flow-Token` com o token efêmero compartilhado entre Main e backend.
+`X-ops-union-Token` com o token efêmero compartilhado entre Main e backend.
 Esse token não é exposto ao renderer.
 
 ### 11.2 Dados retornados
@@ -920,7 +920,7 @@ As únicas chamadas de API Kubernetes usadas no MVP estão listadas na seção
 O monorepo usa npm workspaces:
 
 ```text
-ops-flow/
+ops-union/
   backend/   Node + TypeScript -> backend/dist
   frontend/  React + Vite -> frontend/dist
   desktop/   Electron + TypeScript -> desktop/dist

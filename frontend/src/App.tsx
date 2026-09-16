@@ -22,7 +22,7 @@ const DETAILS_DEFAULT = 420;
 const SIDEBAR_MIN = 240;
 const SIDEBAR_MAX = 520;
 const SIDEBAR_DEFAULT = 292;
-const THEME_STORAGE_KEY = 'ops-flow.theme.v1';
+const THEME_STORAGE_KEY = 'ops-union.theme.v1';
 
 type Theme = 'light' | 'dark';
 
@@ -79,7 +79,7 @@ export default function App() {
   }, [theme, themeReady]);
 
   const sidebar = useResizablePanel({
-    storageKey: 'ops-flow.sidebarWidth.v1',
+    storageKey: 'ops-union.sidebarWidth.v1',
     defaultWidth: SIDEBAR_DEFAULT,
     min: SIDEBAR_MIN,
     max: SIDEBAR_MAX,
@@ -87,7 +87,7 @@ export default function App() {
   });
 
   const details = useResizablePanel({
-    storageKey: 'ops-flow.detailsWidth.v1',
+    storageKey: 'ops-union.detailsWidth.v1',
     defaultWidth: DETAILS_DEFAULT,
     min: DETAILS_MIN,
     max: DETAILS_MAX,
@@ -194,7 +194,7 @@ export default function App() {
             <Workflow size={17} strokeWidth={2.5} />
           </div>
           <div>
-            <strong>ops-flow</strong>
+            <strong>Ops Union</strong>
             <span>Kubernetes unified view</span>
           </div>
         </button>
