@@ -2736,12 +2736,12 @@ button {
 }
 
 .app-shell[data-theme='dark'] {
-  --ink: #edf1f5;
-  --muted: #9da8b8;
-  --line: #343d4b;
-  --panel: #202733;
-  --canvas: #171d26;
-  --navy: #c4cfdb;
+  --ink: #f4f7fa;
+  --muted: #bcc7d4;
+  --line: #414c5c;
+  --panel: #252e3a;
+  --canvas: #1d2530;
+  --navy: #d1dae4;
   --accent: #e98761;
   --accent-soft: #3d2926;
   --accent-hover: #f19b78;
@@ -2755,13 +2755,13 @@ button {
   --error-soft: #3e292b;
   --error-ink: #f09b95;
   --info: #88a8c7;
-  --surface: #252d39;
-  --surface-subtle: #202733;
-  --surface-muted: #2d3745;
-  --field: #1d2530;
-  --hover: #303a49;
-  --text-soft: #b4bfcc;
-  --line-strong: #4b5666;
+  --surface: #2b3542;
+  --surface-subtle: #252f3b;
+  --surface-muted: #344050;
+  --field: #222c38;
+  --hover: #3b4859;
+  --text-soft: #d0d9e3;
+  --line-strong: #5a687a;
   color-scheme: dark;
 }
 
@@ -2852,6 +2852,16 @@ button {
   color: var(--ink);
 }
 
+.app-shell[data-theme='dark'] .eyebrow,
+.app-shell[data-theme='dark'] .detail-item dt,
+.app-shell[data-theme='dark'] .metric-label,
+.app-shell[data-theme='dark'] .metric-limit,
+.app-shell[data-theme='dark'] .metric-percent,
+.app-shell[data-theme='dark'] .pod-table th {
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
 .app-shell[data-theme='dark'] .inspector-field > span {
   color: var(--text-soft);
 }
@@ -2867,7 +2877,7 @@ button {
 
 .app-shell[data-theme='dark'] .pod-table .mono-cell {
   color: var(--text-soft);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .app-shell[data-theme='dark'] .pod-table .pod-name-cell {
@@ -2876,12 +2886,6 @@ button {
 
 .app-shell[data-theme='dark'] .metric-card strong {
   color: var(--ink);
-}
-
-.app-shell[data-theme='dark'] .metric-label,
-.app-shell[data-theme='dark'] .metric-limit,
-.app-shell[data-theme='dark'] .metric-percent {
-  color: var(--text-soft);
 }
 
 .app-shell[data-theme='dark'] .metric-bar {
@@ -2927,6 +2931,14 @@ button {
 .app-shell[data-theme='dark'] .target-error-message,
 .app-shell[data-theme='dark'] .preset-text em {
   color: var(--text-soft);
+}
+
+.app-shell[data-theme='dark'] .event-message,
+.app-shell[data-theme='dark'] .kv-value,
+.app-shell[data-theme='dark'] .container-meta,
+.app-shell[data-theme='dark'] .target-error-message,
+.app-shell[data-theme='dark'] .preset-text em {
+  font-weight: 500;
 }
 
 .app-shell[data-theme='dark'] .topbar-status.status-loading {
