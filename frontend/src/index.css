@@ -1945,16 +1945,38 @@ button {
 
 .log-toolbar {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   padding: 10px 14px;
   background: #fafbfc;
   border-bottom: 1px solid var(--line);
 }
 
+.log-toolbar-range,
+.log-toolbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-toolbar-actions {
+  align-items: center;
+}
+
+.log-search-cluster {
+  display: inline-flex;
+  align-items: end;
+  flex: 0 0 auto;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .log-search-status {
+  min-width: 0;
+  flex: 1 1 180px;
   color: var(--muted);
   font: 9px var(--mono);
 }
@@ -2676,31 +2698,37 @@ button {
 }
 
 .log-structured-filters {
-  flex: 1 1 100%;
+  min-width: 0;
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   flex-wrap: wrap;
   gap: 7px;
 }
 
 .log-filter-select {
   position: relative;
+  min-width: 0;
+  flex: 1 1 150px;
 }
 
 .log-filter-select select {
-  min-width: 108px;
-  padding-right: 22px;
+  width: 100%;
+  min-width: 0;
+  padding-right: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .log-filter {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-width: 150px;
+  min-width: 0;
   flex: 1 1 160px;
   height: 26px;
   gap: 5px;
-  padding: 0 6px;
+  padding: 0 6px 0 6px;
+  padding-right: 32px;
   color: var(--muted);
   background: var(--field);
   border: 1px solid var(--line);
@@ -2719,17 +2747,30 @@ button {
   font: 9px var(--mono);
 }
 
-.filter-clear {
-  display: inline-grid;
+.log-toolbar .filter-clear {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  width: 24px;
+  height: 24px;
+  display: grid;
   place-items: center;
-  padding: 2px;
+  padding: 0;
   color: var(--muted);
   background: transparent;
   border: 0;
+  border-radius: 3px;
+  z-index: 1;
 }
 
-.filter-clear:hover {
+.log-toolbar .filter-clear:hover {
   color: var(--ink);
+}
+
+.log-toolbar .filter-clear:focus-visible {
+  color: var(--ink);
+  outline: 2px solid rgba(223, 112, 69, 0.55);
+  outline-offset: 1px;
 }
 
 @media (max-width: 560px) {
@@ -2818,6 +2859,19 @@ button {
     width: 100%;
     min-width: 0;
   }
+
+  .log-toolbar-actions {
+    align-items: flex-start;
+  }
+
+  .log-search-cluster {
+    width: 100%;
+  }
+
+  .log-search-cluster .log-grouping,
+  .log-search-cluster .log-search-button {
+    flex: 1 1 0;
+  }
 }
 
 @media (max-width: 1000px) {
@@ -2849,15 +2903,6 @@ button {
 
   .log-output {
     max-height: 60vh;
-  }
-
-  .log-toolbar {
-    align-items: stretch;
-  }
-
-  .log-filter {
-    flex-basis: 100%;
-    order: 4;
   }
 
   .log-range-summary {
