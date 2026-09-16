@@ -8,9 +8,12 @@ tools: [read, edit, execute]
 
 Work on the requested ops-flow MVP task using the project specification:
 
-- [Requirements](../../docs/specs/ops-flow-mvp/requirements.md)
-- [Design](../../docs/specs/ops-flow-mvp/design.md)
-- [Implementation plan](../../docs/specs/ops-flow-mvp/tasks.md)
+- [Requirements](../../specs/0.1.0-web/requirements.md)
+- [Design](../../specs/0.1.0-web/design.md)
+- [Implementation plan](../../specs/0.1.0-web/tasks.md)
+
+If the requested work belongs to a newer release or another area, inspect `../../specs/` and use
+the matching specification instead of assuming the MVP files are current.
 
 Before editing, read the relevant existing implementation and tests. Keep the change scoped to the requested task, preserve the backend/frontend API contract, and follow the Copilot custom-agent boundaries in `.github/agents/`.
 

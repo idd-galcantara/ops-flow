@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { suggestNamespaces } from '../namespaceSuggestions';
+import { applyPresetAndLoad } from '../presetFlow';
 import { describePreset, type Preset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey, type NamespaceInfo } from '../types';
@@ -383,6 +384,7 @@ function PresetSection() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [startNaming, setStartNaming] = useState(false);
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [applyingPresetId, setApplyingPresetId] = useState<string | null>(null);
   const contextNames = useMemo(() => contexts.map((context) => context.name), [contexts]);
   const activePreset = presets.find((preset) => preset.id === activePresetId);
   const canUpdateActivePreset = Boolean(activePreset && activePresetDirty && targets.length > 0);
@@ -444,19 +446,29 @@ function PresetSection() {
           activePresetId={activePresetId}
           activePresetDirty={activePresetDirty}
           startNaming={startNaming}
+          applyingPresetId={applyingPresetId}
           onClose={() => {
+            if (editingPresetId || applyingPresetId) return;
             setLibraryOpen(false);
             setStartNaming(false);
           }}
           onApply={(id) => {
-            useOpsFlowStore.getState().applyPreset(id);
-            setLibraryOpen(false);
+            if (applyingPresetId) return;
+            if (!useOpsFlowStore.getState().presets.some((preset) => preset.id === id)) return;
+            setApplyingPresetId(id);
+            void applyPresetAndLoad(id, useOpsFlowStore.getState, () => {
+              setApplyingPresetId(null);
+              setLibraryOpen(false);
+            }).catch(() => undefined);
           }}
           onEdit={(id) => {
-            setLibraryOpen(false);
+            if (applyingPresetId) return;
             setEditingPresetId(id);
           }}
-          onDelete={(id) => useOpsFlowStore.getState().deletePreset(id)}
+          onDelete={(id) => {
+            if (applyingPresetId || id === editingPresetId) return;
+            useOpsFlowStore.getState().deletePreset(id);
+          }}
         />
       )}
 
@@ -466,6 +478,7 @@ function PresetSection() {
           contexts={contextNames}
           onClose={() => setEditingPresetId(null)}
           onSave={(preset) => {
+            if (!useOpsFlowStore.getState().presets.some((item) => item.id === preset.id)) return;
             updatePreset(preset.id, preset.name, preset.description ?? '', preset.targets);
             setEditingPresetId(null);
           }}
@@ -481,6 +494,7 @@ interface PresetLibraryProps {
   activePresetId: string | null;
   activePresetDirty: boolean;
   startNaming: boolean;
+  applyingPresetId: string | null;
   onClose: () => void;
   onApply: (id: string) => void;
   onEdit: (id: string) => void;
@@ -493,6 +507,7 @@ function PresetLibrary({
   activePresetId,
   activePresetDirty,
   startNaming,
+  applyingPresetId,
   onClose,
   onApply,
   onEdit,
@@ -547,7 +562,7 @@ function PresetLibrary({
             <span className="eyebrow">Saved target combinations</span>
             <h2 id="preset-library-title">Presets <b>{presets.length}</b></h2>
           </div>
-          <button type="button" className="icon-button subtle" onClick={onClose} aria-label="Close presets">
+          <button type="button" className="icon-button subtle" onClick={onClose} aria-label="Close presets" disabled={Boolean(applyingPresetId)}>
             <X size={15} />
           </button>
         </div>
@@ -559,6 +574,13 @@ function PresetLibrary({
               Active preset: <strong>{presets.find((preset) => preset.id === activePresetId)?.name ?? 'unknown'}</strong>
             </span>
             {activePresetDirty && <em>edited</em>}
+          </div>
+        )}
+
+        {applyingPresetId && (
+          <div className="preset-library-status is-pending" aria-live="polite">
+            <RefreshCw size={13} className="spinning" />
+            <span>Loading pods for <strong>{presets.find((preset) => preset.id === applyingPresetId)?.name ?? 'selected preset'}</strong>...</span>
           </div>
         )}
 
@@ -618,7 +640,13 @@ function PresetLibrary({
             const active = preset.id === activePresetId;
             return (
               <div className={`preset-library-item ${active ? 'is-active' : ''}`} key={preset.id}>
-                <button type="button" className="preset-library-apply" onClick={() => onApply(preset.id)}>
+                <button
+                  type="button"
+                  className="preset-library-apply"
+                  onClick={() => onApply(preset.id)}
+                  disabled={Boolean(applyingPresetId)}
+                  aria-busy={applyingPresetId === preset.id}
+                >
                   <Bookmark size={14} />
                   <span className="preset-text">
                     <strong>{preset.name}</strong>
@@ -627,10 +655,10 @@ function PresetLibrary({
                   </span>
                 </button>
                 {active && <span className="preset-library-active-label">{activePresetDirty ? 'Edited' : 'Active'}</span>}
-                <button type="button" className="icon-button subtle" onClick={() => onEdit(preset.id)} aria-label={`Edit preset ${preset.name}`} title={`Edit ${preset.name}`}>
+                <button type="button" className="icon-button subtle" onClick={() => onEdit(preset.id)} aria-label={`Edit preset ${preset.name}`} title={`Edit ${preset.name}`} disabled={Boolean(applyingPresetId)}>
                   <Pencil size={13} />
                 </button>
-                <button type="button" className="icon-button subtle danger" onClick={() => onDelete(preset.id)} aria-label={`Remove preset ${preset.name}`} title={`Remove ${preset.name}`}>
+                <button type="button" className="icon-button subtle danger" onClick={() => onDelete(preset.id)} aria-label={`Remove preset ${preset.name}`} title={`Remove ${preset.name}`} disabled={Boolean(applyingPresetId)}>
                   <Trash2 size={13} />
                 </button>
               </div>
