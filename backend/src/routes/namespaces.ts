@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { getNamespaces, parseClusters } from '../kube/namespacesService.js';
+import { safeErrorMessage } from '../kube/podsService.js';
 
 /**
  * POST /api/namespaces
@@ -23,7 +24,6 @@ namespacesRouter.post('/', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     // getNamespaces isolates per-cluster failures, so reaching here is unexpected.
-    const message = err instanceof Error ? err.message : 'Error listing namespaces.';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: safeErrorMessage(err) });
   }
 });

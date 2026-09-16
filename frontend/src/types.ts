@@ -21,6 +21,134 @@ export interface Target {
   namespace: string;
 }
 
+export interface ApplicationIdentity {
+  key: string;
+  name: string;
+  source: 'label' | 'ownerReference' | 'pod';
+  labelKey?: 'app.kubernetes.io/name' | 'app' | 'k8s-app';
+  ownerKind?: string;
+  ownerName?: string;
+}
+
+export interface LogSource {
+  sourceId: string;
+  cluster: string;
+  namespace: string;
+  pod: string;
+  container: string;
+  application?: ApplicationIdentity;
+  containerRole?: ContainerRole;
+}
+
+export type ContainerRole = 'primary' | 'sidecar' | 'unknown';
+
+export interface InventoryContainer {
+  container: string;
+  role: ContainerRole;
+  roleReason?: string;
+}
+
+export interface InventoryPod {
+  pod: string;
+  containers: InventoryContainer[];
+  status?: string;
+}
+
+export interface InventoryContext {
+  cluster: string;
+  namespace: string;
+  pods: InventoryPod[];
+  sidecarOnlyPods: string[];
+}
+
+export interface InventoryIssue {
+  cluster?: string;
+  namespace?: string;
+  pod?: string;
+  message: string;
+}
+
+export interface ApplicationLogInventory {
+  application: ApplicationIdentity;
+  contexts: InventoryContext[];
+  issues: InventoryIssue[];
+  snapshotAt?: number;
+}
+
+export interface LogSourceSelection {
+  cluster: string;
+  namespace: string;
+  pod: string;
+  container: string;
+  application: ApplicationIdentity;
+  containerRole: ContainerRole;
+}
+
+export interface LogLimits {
+  maxLinesPerSource: number;
+  maxBytesPerSource: number;
+  maxLinesTotal: number;
+  maxBytesTotal: number;
+}
+
+export type LogPeriod = 'all' | '5m' | '15m' | '1h' | '6h' | '24h' | 'custom';
+
+export interface LogRange {
+  from?: string;
+  to?: string;
+}
+
+export interface LogSubscription extends LogRange {
+  type: 'subscribe';
+  period: LogPeriod;
+  follow: boolean;
+  sources: LogSource[];
+  limits: LogLimits;
+}
+
+export interface LogCounters {
+  emittedLines: number;
+  emittedBytes: number;
+  droppedLines: number;
+}
+
+export interface LogLineEvent {
+  type: 'line';
+  sourceId: string;
+  sequence: number;
+  timestamp: string | null;
+  message: string;
+  bytes: number;
+  application?: ApplicationIdentity;
+}
+
+export interface LogEventRecord {
+  event: LogLineEvent;
+  source: LogSource;
+}
+
+export type SourceEndReason = 'eof' | 'to-reached' | 'limit' | 'cancelled';
+export type SummaryReason = 'completed' | 'aggregate-limit' | 'cancelled' | 'all-failed';
+
+export type AggregateLogEvent =
+  | { type: 'accepted'; from: string | null; to: string | null; follow: boolean; limits: LogLimits; sourceCount: number }
+  | { type: 'sourceStarted'; source: LogSource; counters: LogCounters }
+  | LogLineEvent
+  | { type: 'sourceWarning'; sourceId: string; warning: 'dropped-unparseable'; count: number }
+  | { type: 'sourceError'; source: LogSource; message: string; counters: LogCounters; status: 'error' }
+  | { type: 'sourceEnded'; source: LogSource; counters: LogCounters; reason: SourceEndReason }
+  | { type: 'summary'; sources: Array<{ source: LogSource; counters: LogCounters; status: 'ended' | 'error' }>; limits: LogLimits; reason: SummaryReason }
+  | { type: 'error'; message: string };
+
+export interface LogSourceState {
+  source: LogSource;
+  status: 'started' | 'ended' | 'error';
+  counters: LogCounters;
+  warningCount?: number;
+  error?: string;
+  endReason?: SourceEndReason;
+}
+
 /** A pod normalized for the unified view, annotated with its origin. */
 export interface NormalizedPod {
   cluster: string;
@@ -32,6 +160,7 @@ export interface NormalizedPod {
   node: string;
   ageSeconds: number;
   containers: string[];
+  application: ApplicationIdentity;
 }
 
 /** An error for a single target that failed during fan-out. */
@@ -47,7 +176,7 @@ export interface PodsResponse {
 }
 
 /** How the unified table groups its rows. */
-export type GroupingMode = 'namespace' | 'cluster' | 'flat';
+export type GroupingMode = 'namespace' | 'cluster' | 'application' | 'flat';
 
 /** Stable key for a target, used for dedupe and React keys. */
 export function targetKey(target: Target): string {
@@ -109,6 +238,7 @@ export interface PodRef {
   namespace: string;
   name: string;
   containers: string[];
+  application?: ApplicationIdentity;
 }
 
 /** A namespace and the clusters (within the current selection) that have it. */

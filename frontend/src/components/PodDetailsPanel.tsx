@@ -4,13 +4,17 @@ import { fetchPodDescribe, fetchPodMetrics } from '../api';
 import { formatCpu, formatMemory, formatTimestamp, usageRatio } from '../k8sUnits';
 import { ErrorState, LoadingState } from './Feedback';
 import { LogViewer } from './LogViewer';
-import type { ContainerDetail, PodDescribe, PodMetricsResult, PodRef } from '../types';
+import type { ContainerDetail, LogSource, PodDescribe, PodMetricsResult, PodRef } from '../types';
 
 type Tab = 'describe' | 'metrics' | 'logs';
 
 interface PodDetailsPanelProps {
   pod: PodRef;
+  logPods?: PodRef[];
+  logSources?: LogSource[];
+  initialTab?: Tab;
   onClose: () => void;
+  onOpenLogs: () => void;
   /** True while the panel is being dragged, to keep the handle highlighted. */
   resizing: boolean;
   onResizeStart: (event: React.MouseEvent | React.TouchEvent) => void;
@@ -27,12 +31,16 @@ const KEYBOARD_STEP = 24;
  */
 export function PodDetailsPanel({
   pod,
+  logPods = [pod],
+  logSources = [],
+  initialTab = 'describe',
   onClose,
+  onOpenLogs,
   resizing,
   onResizeStart,
   onResizeNudge,
 }: PodDetailsPanelProps) {
-  const [tab, setTab] = useState<Tab>('describe');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [describe, setDescribe] = useState<PodDescribe | null>(null);
   const [describeError, setDescribeError] = useState<string>();
   const [metrics, setMetrics] = useState<PodMetricsResult | null>(null);
@@ -66,6 +74,10 @@ export function PodDetailsPanel({
       active = false;
     };
   }, [pod.cluster, pod.namespace, pod.name]);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab, pod.cluster, pod.namespace, pod.name]);
 
   return (
     <section className="details-panel" aria-label={`Details for pod ${pod.name}`}>
@@ -113,6 +125,8 @@ export function PodDetailsPanel({
         </button>
       </header>
 
+      {logSources.length > 0 && <LogSourceSummary sources={logSources} onChange={onOpenLogs} />}
+
       <div className="details-tabs" role="tablist" aria-label="Pod sections">
         <TabButton active={tab === 'describe'} onClick={() => setTab('describe')} icon={<FileText size={13} />}>
           Describe
@@ -120,7 +134,7 @@ export function PodDetailsPanel({
         <TabButton active={tab === 'metrics'} onClick={() => setTab('metrics')} icon={<Activity size={13} />}>
           Metrics
         </TabButton>
-        <TabButton active={tab === 'logs'} onClick={() => setTab('logs')} icon={<ScrollText size={13} />}>
+        <TabButton active={tab === 'logs'} onClick={() => { onOpenLogs(); if (logSources.length > 0) setTab('logs'); }} icon={<ScrollText size={13} />}>
           Logs
         </TabButton>
       </div>
@@ -142,10 +156,23 @@ export function PodDetailsPanel({
             containers={describe?.containers ?? []}
           />
         )}
-        {tab === 'logs' && <LogViewer key={podId} pod={pod} />}
+        {tab === 'logs' && (logSources.length > 0 ? <LogViewer key={podId} pod={pod} pods={logPods} sources={logSources} /> : <LogPrompt onOpenLogs={onOpenLogs} />)}
       </div>
     </section>
   );
+}
+
+function LogPrompt({ onOpenLogs }: { onOpenLogs: () => void }) {
+  return <div className="log-prompt"><ScrollText size={21} /><h4>Choose log sources</h4><p>Select application contexts, pods, and containers before starting the aggregate stream.</p><button type="button" className="primary-button" onClick={onOpenLogs}>Change sources</button></div>;
+}
+
+function LogSourceSummary({ sources, onChange }: { sources: LogSource[]; onChange: () => void }) {
+  const contexts = [...new Set(sources.map((source) => `${source.cluster} / ${source.namespace}`))];
+  const pods = new Set(sources.map((source) => `${source.cluster}\u0000${source.namespace}\u0000${source.pod}`)).size;
+  const primary = sources.filter((source) => source.containerRole === 'primary' || source.containerRole === 'unknown').length;
+  const sidecars = sources.filter((source) => source.containerRole === 'sidecar').length;
+  const application = sources[0].application;
+  return <section className="log-source-summary" aria-label="Selected log source summary"><div><span className="eyebrow">Application</span><strong>{application?.name ?? sources[0].pod}</strong><small>{application?.key ?? 'pod identity'}</small></div><div className="log-summary-contexts"><span className="summary-label">Contexts</span>{contexts.map((context) => <span key={context}>{context}</span>)}</div><div className="log-summary-counts"><span>session: confirmed</span><span>{pods} pod(s)</span><span>{sources.length} container(s)</span><span>{primary} primary</span><span>{sidecars} sidecar(s)</span></div><button type="button" className="secondary-button" onClick={onChange}>Change sources</button></section>;
 }
 
 function messageOf(reason: unknown): string {

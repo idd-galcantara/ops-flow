@@ -6,6 +6,8 @@ import type {
   PodMetricsResult,
   PodsResponse,
   Target,
+  LogSource,
+  LogSubscription,
 } from './types';
 
 /** Reads safe metadata about the active kubeconfig. */
@@ -107,4 +109,19 @@ export function podLogsUrl(
     tailLines: String(options.tailLines),
   });
   return `${protocol}//${window.location.host}${podPath(cluster, namespace, pod)}/logs?${params}`;
+}
+
+/** Builds the single multiplexed WebSocket URL for an aggregate log session. */
+export function aggregateLogsUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/api/logs`;
+}
+
+/** Keeps the aggregate subscription shape explicit at the transport boundary. */
+export function serializeLogSubscription(subscription: LogSubscription): string {
+  return JSON.stringify(subscription);
+}
+
+export function logSourceKey(source: Pick<LogSource, 'cluster' | 'namespace' | 'pod' | 'container'>): string {
+  return [source.cluster, source.namespace, source.pod, source.container].join('\u0000');
 }

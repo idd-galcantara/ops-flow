@@ -14,6 +14,7 @@ function pod(overrides: Partial<NormalizedPod> = {}): NormalizedPod {
     node: 'node-a',
     ageSeconds: 3600,
     containers: ['app', 'istio-proxy'],
+    application: { key: 'label:billing', name: 'billing', source: 'label', labelKey: 'app' },
     ...overrides,
   };
 }
@@ -55,6 +56,7 @@ test('matchesFilter searches across name, cluster, namespace, status, node and c
   assert.equal(matchesFilter(p, 'istio'), true, 'busca em containers');
   assert.equal(matchesFilter(p, 'node-a'), true);
   assert.equal(matchesFilter(p, 'inexistente'), false);
+  assert.equal(matchesFilter(p, 'billing'), true);
 });
 
 test('groupPods groups by namespace across clusters', () => {
@@ -85,6 +87,19 @@ test('groupPods groups by cluster', () => {
       ['kubernetes-qa-tb', 1],
     ],
   );
+});
+
+test('groupPods groups by application without merging context in each pod', () => {
+  const pods = [
+    pod({ cluster: 'qa', name: 'billing-a', application: { key: 'label:billing', name: 'billing', source: 'label' } }),
+    pod({ cluster: 'prod', name: 'billing-b', application: { key: 'label:billing', name: 'billing', source: 'label' } }),
+    pod({ cluster: 'qa', name: 'checkout', application: { key: 'label:checkout', name: 'checkout', source: 'label' } }),
+  ];
+  const groups = groupPods(pods, 'application');
+  assert.deepEqual(groups.map((group) => [group.key, group.pods.map((item) => item.cluster)]), [
+    ['label:billing', ['prod', 'qa']],
+    ['label:checkout', ['qa']],
+  ]);
 });
 
 test('groupPods flat mode returns a single unkeyed group', () => {

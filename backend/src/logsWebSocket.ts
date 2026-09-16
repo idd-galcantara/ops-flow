@@ -1,16 +1,16 @@
 import type { Server } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { normalizeTailLines, streamPodLogs } from './kube/logsService.js';
+import { startLogSubscription, type RunningLogSubscription } from './logsSubscription.js';
+import type { AggregateLogEvent, LegacyLogEvent } from './logsTypes.js';
+import { validateSubscription } from './logsProtocol.js';
 import { safeErrorMessage } from './kube/podsService.js';
 
 /** Messages pushed to the browser over the log socket. */
-type OutboundMessage =
-  | { type: 'line'; line: string }
-  | { type: 'error'; message: string }
-  | { type: 'end' }
-  | { type: 'started'; container: string };
+type OutboundMessage = LegacyLogEvent;
 
 const LOGS_PATH = /^\/api\/pods\/([^/]+)\/([^/]+)\/([^/]+)\/logs$/;
+const AGGREGATE_LOGS_PATH = '/api/logs';
 
 /**
  * Attaches the log-streaming WebSocket endpoint to the HTTP server.
@@ -25,6 +25,10 @@ export function attachLogsWebSocket(server: Server): WebSocketServer {
 
   server.on('upgrade', (request, socket, head) => {
     const url = new URL(request.url ?? '', 'http://localhost');
+    if (url.pathname === AGGREGATE_LOGS_PATH) {
+      wss.handleUpgrade(request, socket, head, (ws) => handleAggregateLogSocket(ws));
+      return;
+    }
     const match = LOGS_PATH.exec(url.pathname);
 
     if (!match) {
@@ -46,6 +50,57 @@ export function attachLogsWebSocket(server: Server): WebSocketServer {
   });
 
   return wss;
+}
+
+function handleAggregateLogSocket(ws: WebSocket): void {
+  let receivedMessage = false;
+  let subscription: RunningLogSubscription | undefined;
+
+  const send = (event: AggregateLogEvent) => {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(event));
+  };
+
+  const failProtocol = (message: string) => {
+    send({ type: 'error', message });
+    if (ws.readyState === ws.OPEN) ws.close();
+  };
+
+  ws.on('close', () => subscription?.cancel());
+  ws.on('error', () => subscription?.cancel());
+  ws.on('message', (data) => {
+    if (receivedMessage) {
+      failProtocol('Only one subscribe message is allowed.');
+      return;
+    }
+    receivedMessage = true;
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(data.toString());
+    } catch {
+      failProtocol('The subscribe message must be valid JSON.');
+      return;
+    }
+    const validated = validateSubscription(raw);
+    if ('error' in validated) {
+      failProtocol(validated.error);
+      return;
+    }
+
+    const effective = validated.subscription;
+    send({
+      type: 'accepted',
+      from: effective.from ?? null,
+      to: effective.to ?? null,
+      follow: effective.follow,
+      limits: effective.limits,
+      sourceCount: effective.sources.length,
+    });
+    subscription = startLogSubscription(effective, send);
+    void subscription.completion.then(() => {
+      if (ws.readyState === ws.OPEN) ws.close();
+    });
+  });
 }
 
 function handleLogSocket(

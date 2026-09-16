@@ -129,3 +129,54 @@ test('normalizePod ignores plain init containers in ready', () => {
   assert.equal(result.ready, '1/1');
   assert.deepEqual(result.containers, ['app']);
 });
+
+test('normalizePod derives application identity by label precedence', () => {
+  const result = normalizePod(
+    {
+      metadata: {
+        name: 'api-1',
+        labels: {
+          'app.kubernetes.io/name': 'payments',
+          app: 'legacy',
+          'k8s-app': 'kube',
+        },
+      },
+    },
+    target,
+  );
+  assert.deepEqual(result.application, {
+    key: 'label:app.kubernetes.io%2Fname:payments',
+    name: 'payments',
+    source: 'label',
+    labelKey: 'app.kubernetes.io/name',
+  });
+});
+
+test('normalizePod falls back through labels, controller owner, and pod', () => {
+  const app = normalizePod({ metadata: { name: 'api', labels: { app: 'payments' } } }, target);
+  assert.equal(app.application.source, 'label');
+  assert.equal(app.application.name, 'payments');
+
+  const owner = normalizePod(
+    {
+      metadata: {
+        name: 'api',
+        ownerReferences: [
+          { apiVersion: 'v1', kind: 'Pod', name: 'ignored', uid: '1', controller: false },
+          { apiVersion: 'apps/v1', kind: 'Deployment', name: 'payments', uid: '2', controller: true },
+        ],
+      },
+    },
+    target,
+  );
+  assert.deepEqual(owner.application, {
+    key: 'ownerReference:Deployment:payments',
+    name: 'payments',
+    source: 'ownerReference',
+    ownerKind: 'Deployment',
+    ownerName: 'payments',
+  });
+
+  const fallback = normalizePod({ metadata: { name: 'api' } }, target);
+  assert.deepEqual(fallback.application, { key: 'pod:api', name: 'api', source: 'pod' });
+});

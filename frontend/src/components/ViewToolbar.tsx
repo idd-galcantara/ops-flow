@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layers, RefreshCw, Rows3, Search, Server, X } from 'lucide-react';
+import { AppWindow, Layers, RefreshCw, Rows3, Search, Server, X } from 'lucide-react';
 import { REFRESH_INTERVALS } from '../store';
 import type { GroupingMode } from '../types';
 
@@ -15,6 +15,12 @@ const GROUPING_OPTIONS: { mode: GroupingMode; label: string; icon: React.ReactNo
     label: 'Cluster',
     icon: <Server size={13} />,
     hint: 'Group by cluster',
+  },
+  {
+    mode: 'application',
+    label: 'Application',
+    icon: <AppWindow size={13} />,
+    hint: 'Group by normalized application identity',
   },
   { mode: 'flat', label: 'Flat', icon: <Rows3 size={13} />, hint: 'Single list, no grouping' },
 ];

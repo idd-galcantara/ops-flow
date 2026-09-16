@@ -65,7 +65,16 @@ export function isDegraded(pod: NormalizedPod): boolean {
 export function matchesFilter(pod: NormalizedPod, filter: string): boolean {
   const needle = filter.trim().toLowerCase();
   if (!needle) return true;
-  return [pod.name, pod.cluster, pod.namespace, pod.status, pod.node, ...pod.containers]
+  return [
+    pod.name,
+    pod.cluster,
+    pod.namespace,
+    pod.status,
+    pod.node,
+    pod.application.key,
+    pod.application.name,
+    ...pod.containers,
+  ]
     .join(' ')
     .toLowerCase()
     .includes(needle);
@@ -74,6 +83,8 @@ export function matchesFilter(pod: NormalizedPod, filter: string): boolean {
 export interface PodGroup {
   /** Group heading, e.g. a namespace or a cluster name. Empty for flat mode. */
   key: string;
+  /** Human-readable heading for identity-backed groups. */
+  label?: string;
   pods: NormalizedPod[];
 }
 
@@ -95,7 +106,11 @@ export function groupPods(pods: NormalizedPod[], grouping: GroupingMode): PodGro
 
   const buckets = new Map<string, NormalizedPod[]>();
   for (const pod of sorted) {
-    const key = grouping === 'namespace' ? pod.namespace : pod.cluster;
+    const key = grouping === 'namespace'
+      ? pod.namespace
+      : grouping === 'cluster'
+        ? pod.cluster
+        : pod.application.key;
     const bucket = buckets.get(key);
     if (bucket) bucket.push(pod);
     else buckets.set(key, [pod]);
@@ -103,5 +118,9 @@ export function groupPods(pods: NormalizedPod[], grouping: GroupingMode): PodGro
 
   return [...buckets.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, groupPods]) => ({ key, pods: groupPods }));
+    .map(([key, groupPods]) => ({
+      key,
+      ...(grouping === 'application' ? { label: groupPods[0].application.name } : {}),
+      pods: groupPods,
+    }));
 }

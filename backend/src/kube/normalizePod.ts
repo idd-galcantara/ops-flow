@@ -1,4 +1,5 @@
 import type { V1Pod } from '@kubernetes/client-node';
+import { applicationIdentity } from './applicationIdentity.js';
 import type { NormalizedPod, Target } from './types.js';
 
 /**
@@ -80,5 +81,6 @@ export function normalizePod(pod: V1Pod, target: Target, now: number = Date.now(
       ...(pod.spec?.containers ?? []).map((c) => c.name),
       ...nativeSidecars(pod).map((c) => c.name),
     ],
+    application: applicationIdentity(pod),
   };
 }

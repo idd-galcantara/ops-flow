@@ -23,8 +23,7 @@ podsRouter.post('/', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     // getPods isolates per-target failures, so reaching here is unexpected.
-    const message = err instanceof Error ? err.message : 'Error querying pods.';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: safeErrorMessage(err) });
   }
 });
 

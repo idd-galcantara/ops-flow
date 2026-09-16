@@ -4,6 +4,15 @@ export interface Target {
   namespace: string;
 }
 
+export interface ApplicationIdentity {
+  key: string;
+  name: string;
+  source: 'label' | 'ownerReference' | 'pod';
+  labelKey?: 'app.kubernetes.io/name' | 'app' | 'k8s-app';
+  ownerKind?: string;
+  ownerName?: string;
+}
+
 /** A pod normalized for the unified view, annotated with its origin. */
 export interface NormalizedPod {
   /** Origin context/cluster name. */
@@ -23,6 +32,7 @@ export interface NormalizedPod {
   ageSeconds: number;
   /** Container names, used for log/metrics selection. */
   containers: string[];
+  application: ApplicationIdentity;
 }
 
 /** An error for a single target that failed during fan-out. */
