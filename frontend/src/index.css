@@ -111,6 +111,23 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.brand-lockup:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid rgba(223, 112, 69, 0.45);
+  outline-offset: 5px;
+}
+
+.brand-lockup:hover .brand-mark {
+  background: var(--accent);
 }
 
 .brand-mark {
@@ -1226,6 +1243,86 @@ button {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.65;
+}
+
+.launchpad-actions {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.launchpad-primary {
+  align-self: center;
+}
+
+.launchpad-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.launchpad-label {
+  color: var(--muted);
+  font: 9px var(--mono);
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.launchpad-preset {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  text-align: left;
+}
+
+.launchpad-preset:hover:not(:disabled),
+.launchpad-preset:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.launchpad-preset:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.launchpad-preset > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.launchpad-preset strong,
+.launchpad-preset small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launchpad-preset strong {
+  font-size: 11px;
+}
+
+.launchpad-preset small {
+  color: var(--muted);
+  font: 9px var(--mono);
+}
+
+.launchpad-preset > svg {
+  flex: 0 0 auto;
+  color: var(--accent);
 }
 
 /* ---------- Responsive ---------- */

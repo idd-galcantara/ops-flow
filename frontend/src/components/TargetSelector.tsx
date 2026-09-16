@@ -15,7 +15,7 @@ import {
 import { canUseManualNamespace, hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { suggestNamespaces } from '../namespaceSuggestions';
 import { applyPresetAndLoad } from '../presetFlow';
-import { describePreset, type Preset } from '../presets';
+import { describePreset, orderPresetsByRecentUse, type Preset } from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey, type NamespaceInfo } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
@@ -23,6 +23,8 @@ import { NamespaceInput } from './NamespaceInput';
 import { KubeconfigSetup } from './KubeconfigSetup';
 
 interface TargetSelectorProps {
+  openPresetsRequest: number;
+  resetRequest: number;
   sidebarWidth: number;
   sidebarMin: number;
   sidebarMax: number;
@@ -41,6 +43,8 @@ const KEYBOARD_STEP = 24;
  * target is an independent pair.
  */
 export function TargetSelector({
+  openPresetsRequest,
+  resetRequest,
   sidebarWidth,
   sidebarMin,
   sidebarMax,
@@ -348,7 +352,7 @@ export function TargetSelector({
         )}
       </div>
 
-      <PresetSection />
+      <PresetSection openRequest={openPresetsRequest} resetRequest={resetRequest} />
       </div>
 
       <div className="sidebar-footer">
@@ -382,7 +386,7 @@ export function TargetSelector({
  * Saved target combinations, so a recurring investigation (e.g. "QA overdraft =
  * tb + gt") can be restored in one click instead of rebuilt every time.
  */
-function PresetSection() {
+function PresetSection({ openRequest, resetRequest }: { openRequest: number; resetRequest: number }) {
   const presets = useOpsFlowStore((s) => s.presets);
   const targets = useOpsFlowStore((s) => s.targets);
   const contexts = useOpsFlowStore((s) => s.contexts);
@@ -406,6 +410,18 @@ function PresetSection() {
     setStartNaming(saveCurrent);
     setLibraryOpen(true);
   };
+
+  useEffect(() => {
+    if (openRequest > 0) openLibrary();
+  }, [openRequest]);
+
+  useEffect(() => {
+    if (resetRequest === 0) return;
+    setLibraryOpen(false);
+    setStartNaming(false);
+    setEditingPresetId(null);
+    setApplyingPresetId(null);
+  }, [resetRequest]);
 
   return (
     <>
@@ -527,9 +543,10 @@ function PresetLibrary({
   const [name, setName] = useState('');
 
   const visiblePresets = useMemo(() => {
+    const orderedPresets = orderPresetsByRecentUse(presets);
     const needle = query.trim().toLowerCase();
-    if (!needle) return presets;
-    return presets.filter((preset) =>
+    if (!needle) return orderedPresets;
+    return orderedPresets.filter((preset) =>
       [
         preset.name,
         preset.description ?? '',

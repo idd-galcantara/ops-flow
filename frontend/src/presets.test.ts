@@ -5,6 +5,8 @@ import {
   describePreset,
   loadPersistentPresets,
   loadPresets,
+  markPresetUsed,
+  orderPresetsByRecentUse,
   savePresets,
 } from './presets';
 
@@ -50,6 +52,17 @@ test('savePresets and loadPresets round-trip', () => {
   assert.equal(loaded[0].targets.length, 2);
 });
 
+test('savePresets and loadPresets preserve recent usage metadata', () => {
+  installStorage();
+  const preset = createPreset('QA overdraft', [
+    { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
+  ]);
+
+  savePresets(markPresetUsed([preset], preset.id, 4321));
+
+  assert.equal(loadPresets()[0].lastUsedAt, 4321);
+});
+
 test('loadPresets returns empty for missing storage entry', () => {
   installStorage();
   assert.deepEqual(loadPresets(), []);
@@ -78,6 +91,25 @@ test('loadPresets discards entries with the wrong shape', () => {
 test('loadPresets returns empty when the stored value is not an array', () => {
   installStorage({ [STORAGE_KEY]: JSON.stringify({ nope: true }) });
   assert.deepEqual(loadPresets(), []);
+});
+
+test('loadPresets keeps legacy presets and removes invalid usage metadata', () => {
+  installStorage({
+    [STORAGE_KEY]: JSON.stringify([
+      { id: 'legacy', name: 'legacy', targets: [{ cluster: 'c', namespace: 'n' }] },
+      {
+        id: 'invalid-time',
+        name: 'invalid-time',
+        targets: [{ cluster: 'c', namespace: 'n' }],
+        lastUsedAt: 'yesterday',
+      },
+    ]),
+  });
+
+  assert.deepEqual(loadPresets(), [
+    { id: 'legacy', name: 'legacy', targets: [{ cluster: 'c', namespace: 'n' }] },
+    { id: 'invalid-time', name: 'invalid-time', targets: [{ cluster: 'c', namespace: 'n' }] },
+  ]);
 });
 
 test('loadPersistentPresets uses the desktop store when available', async () => {
@@ -113,4 +145,32 @@ test('describePreset summarizes clusters and namespaces', () => {
     { cluster: 'c1', namespace: 'ns-b' },
   ]);
   assert.equal(describePreset(manyNamespaces), '1 cluster · 2 namespaces');
+});
+
+test('orderPresetsByRecentUse puts recent presets first and preserves ties', () => {
+  const presets = [
+    createPreset('never', [{ cluster: 'c1', namespace: 'n1' }]),
+    { ...createPreset('older', [{ cluster: 'c2', namespace: 'n2' }]), lastUsedAt: 100 },
+    { ...createPreset('same-a', [{ cluster: 'c3', namespace: 'n3' }]), lastUsedAt: 200 },
+    { ...createPreset('same-b', [{ cluster: 'c4', namespace: 'n4' }]), lastUsedAt: 200 },
+    { ...createPreset('recent', [{ cluster: 'c5', namespace: 'n5' }]), lastUsedAt: 300 },
+  ];
+
+  assert.deepEqual(
+    orderPresetsByRecentUse(presets).map((preset) => preset.name),
+    ['recent', 'same-a', 'same-b', 'older', 'never'],
+  );
+});
+
+test('markPresetUsed updates only the selected preset with the supplied timestamp', () => {
+  const presets = [
+    createPreset('first', [{ cluster: 'c1', namespace: 'n1' }]),
+    createPreset('second', [{ cluster: 'c2', namespace: 'n2' }]),
+  ];
+
+  assert.deepEqual(markPresetUsed(presets, presets[1].id, 1234), [
+    presets[0],
+    { ...presets[1], lastUsedAt: 1234 },
+  ]);
+  assert.equal(markPresetUsed(presets, 'missing', 1234), presets);
 });

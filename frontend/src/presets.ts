@@ -6,6 +6,7 @@ export interface Preset {
   name: string;
   description?: string;
   targets: Target[];
+  lastUsedAt?: number;
 }
 
 const STORAGE_KEY = 'ops-flow.presets.v1';
@@ -17,7 +18,7 @@ export function loadPresets(): Preset[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isPreset);
+    return parsed.map(normalizePreset).filter((preset): preset is Preset => preset !== null);
   } catch {
     // Corrupted or unavailable storage must never break the app.
     return [];
@@ -40,7 +41,8 @@ export function savePresets(presets: Preset[]): void {
 export async function loadPersistentPresets(): Promise<Preset[]> {
   if (typeof window !== 'undefined' && window.opsFlowDesktop) {
     try {
-      return await window.opsFlowDesktop.loadPresets();
+      const presets = await window.opsFlowDesktop.loadPresets();
+      return presets.map(normalizePreset).filter((preset): preset is Preset => preset !== null);
     } catch {
       // A missing or unreadable desktop store should not break the UI.
     }
@@ -56,6 +58,7 @@ function isPreset(value: unknown): value is Preset {
     name?: unknown;
     description?: unknown;
     targets?: unknown;
+    lastUsedAt?: unknown;
   };
   if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string') return false;
   if (candidate.description !== undefined && typeof candidate.description !== 'string') return false;
@@ -67,6 +70,17 @@ function isPreset(value: unknown): value is Preset {
       typeof (t as Target).cluster === 'string' &&
       typeof (t as Target).namespace === 'string',
   );
+}
+
+function normalizePreset(value: unknown): Preset | null {
+  if (!isPreset(value)) return null;
+  if (value.lastUsedAt === undefined || isValidUsageTimestamp(value.lastUsedAt)) return value;
+  const { lastUsedAt: _ignored, ...legacyPreset } = value;
+  return legacyPreset;
+}
+
+function isValidUsageTimestamp(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
 /** Builds a preset with a stable, collision-resistant id. */
@@ -86,4 +100,30 @@ export function describePreset(preset: Preset): string {
   const clusterPart = `${clusters.size} cluster${clusters.size === 1 ? '' : 's'}`;
   const namespacePart = namespaces.length === 1 ? namespaces[0] : `${namespaces.length} namespaces`;
   return `${clusterPart} · ${namespacePart}`;
+}
+
+/** Orders recent presets first while preserving the original order for ties. */
+export function orderPresetsByRecentUse(presets: Preset[]): Preset[] {
+  return presets
+    .map((preset, index) => ({ preset, index }))
+    .sort((left, right) => {
+      const leftUsage = left.preset.lastUsedAt ?? -Infinity;
+      const rightUsage = right.preset.lastUsedAt ?? -Infinity;
+      return rightUsage - leftUsage || left.index - right.index;
+    })
+    .map(({ preset }) => preset);
+}
+
+/** Returns a new preset collection with one valid preset marked as recently used. */
+export function markPresetUsed(
+  presets: Preset[],
+  id: string,
+  lastUsedAt = Date.now(),
+): Preset[] {
+  if (!isValidUsageTimestamp(lastUsedAt) || !presets.some((preset) => preset.id === id)) {
+    return presets;
+  }
+  return presets.map((preset) =>
+    preset.id === id ? { ...preset, lastUsedAt } : preset,
+  );
 }

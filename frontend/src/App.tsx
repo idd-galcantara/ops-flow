@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Moon, Search, Sun, Workflow } from 'lucide-react';
+import { ArrowRight, Bookmark, Layers, Moon, Search, Sun, Workflow } from 'lucide-react';
 import { EmptyState, ErrorState } from './components/Feedback';
 import { PodDetailsPanel } from './components/PodDetailsPanel';
 import { PodTable, podRowKey } from './components/PodTable';
 import { TargetErrorBanner } from './components/TargetErrorBanner';
 import { TargetSelector } from './components/TargetSelector';
 import { ViewToolbar } from './components/ViewToolbar';
+import { getQuickPresets } from './launchpad';
 import { matchesFilter } from './podPresentation';
+import { applyPresetAndLoad } from './presetFlow';
+import { describePreset } from './presets';
 import { useOpsFlowStore } from './store';
 import { useResizablePanel } from './useResizablePanel';
 import type { NormalizedPod, PodRef } from './types';
@@ -36,6 +39,9 @@ export default function App() {
   const [selected, setSelected] = useState<PodRef | null>(null);
   const [theme, setTheme] = useState<Theme>(readStoredTheme);
   const [themeReady, setThemeReady] = useState(() => !Boolean(window.opsFlowDesktop));
+  const [presetLibraryRequest, setPresetLibraryRequest] = useState(0);
+  const [viewResetRequest, setViewResetRequest] = useState(0);
+  const [quickPresetId, setQuickPresetId] = useState<string | null>(null);
 
   useEffect(() => {
     const desktop = window.opsFlowDesktop;
@@ -98,6 +104,8 @@ export default function App() {
 
   const targets = useOpsFlowStore((s) => s.targets);
   const pods = useOpsFlowStore((s) => s.pods);
+  const presets = useOpsFlowStore((s) => s.presets);
+  const quickPresets = getQuickPresets(presets);
   const targetErrors = useOpsFlowStore((s) => s.targetErrors);
   const podsLoading = useOpsFlowStore((s) => s.podsLoading);
   const podsError = useOpsFlowStore((s) => s.podsError);
@@ -107,11 +115,31 @@ export default function App() {
   const filter = useOpsFlowStore((s) => s.filter);
   const setFilter = useOpsFlowStore((s) => s.setFilter);
   const loadPods = useOpsFlowStore((s) => s.loadPods);
+  const clearTargets = useOpsFlowStore((s) => s.clearTargets);
   const refreshing = useOpsFlowStore((s) => s.refreshing);
   const refreshSeconds = useOpsFlowStore((s) => s.refreshSeconds);
   const setRefreshSeconds = useOpsFlowStore((s) => s.setRefreshSeconds);
   const lastUpdatedAt = useOpsFlowStore((s) => s.lastUpdatedAt);
   const hydratePresets = useOpsFlowStore((s) => s.hydratePresets);
+
+  const openPresetLibrary = () => setPresetLibraryRequest((request) => request + 1);
+
+  const resetView = () => {
+    clearTargets();
+    setSelected(null);
+    setQuickPresetId(null);
+    setViewResetRequest((request) => request + 1);
+  };
+
+  const applyQuickPreset = (id: string) => {
+    if (quickPresetId || podsLoading) return;
+    if (!useOpsFlowStore.getState().presets.some((preset) => preset.id === id)) return;
+
+    setQuickPresetId(id);
+    void applyPresetAndLoad(id, useOpsFlowStore.getState, () => setQuickPresetId(null)).catch(
+      () => setQuickPresetId(null),
+    );
+  };
 
   useEffect(() => {
     void hydratePresets();
@@ -155,7 +183,13 @@ export default function App() {
   return (
     <div className="app-shell" data-theme={theme}>
       <header className="topbar">
-        <div className="brand-lockup">
+        <button
+          type="button"
+          className="brand-lockup"
+          onClick={resetView}
+          aria-label="Return to the initial view"
+          title="Return to the initial view"
+        >
           <div className="brand-mark">
             <Workflow size={17} strokeWidth={2.5} />
           </div>
@@ -163,7 +197,7 @@ export default function App() {
             <strong>ops-flow</strong>
             <span>Kubernetes unified view</span>
           </div>
-        </div>
+        </button>
         <div className="topbar-actions">
           <button
             type="button"
@@ -205,6 +239,8 @@ export default function App() {
         }}
       >
         <TargetSelector
+          openPresetsRequest={presetLibraryRequest}
+          resetRequest={viewResetRequest}
           sidebarWidth={sidebar.width}
           sidebarMin={SIDEBAR_MIN}
           sidebarMax={SIDEBAR_MAX}
@@ -273,22 +309,73 @@ export default function App() {
               />
             )}
 
-            {pods.length === 0 && !podsLoading && (
+            {pods.length === 0 && !podsLoading && !podsError && (
               <EmptyState
                 icon={<Layers size={21} />}
                 title={
                   targets.length === 0
-                    ? 'Build your unified view'
+                    ? hasQueried
+                      ? 'No pods found'
+                      : presets.length > 0
+                        ? 'Continue with a saved view'
+                        : 'Build your unified view'
                     : hasQueried
                       ? 'No pods found'
                       : 'Ready to query'
                 }
                 description={
                   targets.length === 0
-                    ? 'Pick one or more contexts, type a namespace and add the targets. You can combine several clusters and several namespaces in the same view.'
+                    ? hasQueried
+                      ? 'The queried targets returned no pods. Check the namespace you entered.'
+                      : presets.length > 0
+                        ? 'Open a saved preset to restore a target combination, or build a new view from the sidebar.'
+                        : 'Pick one or more contexts, type a namespace and add the targets. You can combine several clusters and several namespaces in the same view.'
                     : hasQueried
                       ? 'The queried targets returned no pods. Check the namespace you entered.'
                       : 'Click "Fetch pods" to query the selected targets.'
+                }
+                action={
+                  !hasQueried && targets.length === 0 ? (
+                    <div className="launchpad-actions">
+                      <button
+                        type="button"
+                        className="primary-button launchpad-primary"
+                        onClick={openPresetLibrary}
+                      >
+                        <Bookmark size={14} /> Open presets
+                      </button>
+                      {presets.length > 0 && (
+                        <div className="launchpad-presets" aria-label="Quick preset access">
+                          <span className="launchpad-label">Quick access</span>
+                          {quickPresets.map((preset) => (
+                            <button
+                              type="button"
+                              className="launchpad-preset"
+                              key={preset.id}
+                              onClick={() => applyQuickPreset(preset.id)}
+                              disabled={Boolean(quickPresetId) || podsLoading}
+                              aria-busy={quickPresetId === preset.id}
+                            >
+                              <span>
+                                <strong>{preset.name}</strong>
+                                <small>{describePreset(preset)}</small>
+                              </span>
+                              <ArrowRight size={14} aria-hidden="true" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : !hasQueried && targets.length > 0 ? (
+                    <button
+                      type="button"
+                      className="primary-button launchpad-primary"
+                      onClick={() => void loadPods()}
+                      disabled={podsLoading}
+                    >
+                      <Layers size={14} /> Fetch pods
+                    </button>
+                  ) : undefined
                 }
               />
             )}

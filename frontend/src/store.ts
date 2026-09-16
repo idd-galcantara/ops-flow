@@ -4,6 +4,7 @@ import {
   createPreset,
   loadPersistentPresets,
   loadPresets,
+  markPresetUsed,
   savePresets,
   type Preset,
 } from './presets';
@@ -377,7 +378,10 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   applyPreset: (id) => {
     const preset = get().presets.find((p) => p.id === id);
     if (!preset) return;
+    const presets = markPresetUsed(get().presets, id);
+    savePresets(presets);
     set({
+      presets,
       targets: preset.targets.map((t) => ({ ...t })),
       activePresetId: id,
       activePresetDirty: false,

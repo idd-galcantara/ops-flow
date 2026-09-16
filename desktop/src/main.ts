@@ -21,6 +21,7 @@ interface StoredPreset {
   id: string;
   name: string;
   targets: Array<{ cluster: string; namespace: string }>;
+  lastUsedAt?: number;
 }
 
 type Theme = 'light' | 'dark';
@@ -46,9 +47,18 @@ function presetsFile(): string {
 
 function isStoredPreset(value: unknown): value is StoredPreset {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as { id?: unknown; name?: unknown; targets?: unknown };
+  const candidate = value as {
+    id?: unknown;
+    name?: unknown;
+    targets?: unknown;
+    lastUsedAt?: unknown;
+  };
   return typeof candidate.id === 'string' &&
     typeof candidate.name === 'string' &&
+    (candidate.lastUsedAt === undefined ||
+      (typeof candidate.lastUsedAt === 'number' &&
+        Number.isFinite(candidate.lastUsedAt) &&
+        candidate.lastUsedAt >= 0)) &&
     Array.isArray(candidate.targets) &&
     candidate.targets.every((target) => {
       if (!target || typeof target !== 'object') return false;
