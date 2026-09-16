@@ -5,8 +5,10 @@ import {
   loadPersistentPresets,
   loadPresets,
   markPresetUsed,
+  presetSemanticKey,
   savePresets,
   type Preset,
+  type PortablePreset,
 } from './presets';
 import {
   targetKey,
@@ -86,6 +88,8 @@ interface OpsFlowState {
   updatePreset: (id: string, name: string, description: string, targets: Target[]) => void;
   applyPreset: (id: string) => void;
   deletePreset: (id: string) => void;
+  appendImportedPresets: (presets: PortablePreset[]) => void;
+  clearPresets: () => void;
 }
 
 export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
@@ -402,5 +406,29 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         ? { activePresetId: null, activePresetDirty: false }
         : {}),
     }));
+  },
+
+  appendImportedPresets: (importedPresets) => {
+    if (importedPresets.length === 0) return;
+    const current = get().presets;
+    const knownKeys = new Set(current.map((preset) => presetSemanticKey(preset.targets)));
+    const accepted = importedPresets.filter((preset) => {
+      const key = presetSemanticKey(preset.targets);
+      if (knownKeys.has(key)) return false;
+      knownKeys.add(key);
+      return true;
+    });
+    if (accepted.length === 0) return;
+
+    const next = [...current, ...accepted.map((preset) =>
+      createPreset(preset.name, preset.targets, preset.description ?? ''),
+    )];
+    savePresets(next);
+    set({ presets: next });
+  },
+
+  clearPresets: () => {
+    savePresets([]);
+    set({ presets: [], activePresetId: null, activePresetDirty: false });
   },
 }));

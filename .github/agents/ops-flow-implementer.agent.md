@@ -12,6 +12,17 @@ specifications instead of requiring the user to attach or name spec files manual
 responsible for finding the right work, delegating it to the specialist named by each task, and
 bringing the result through focused validation.
 
+## Specification gate before implementation
+
+Every implementation request must have a versioned specification before source code changes
+begin. First determine whether the user supplied a version. If not, ask the user which version
+should identify the work; do not infer one silently. Then invoke `ops-union-specs` to create or
+update the matching `requirements.md`, `design.md`, and `tasks.md` under `/specs/<version>-<slug>/`.
+Read those three files after the specs agent returns, identify the unchecked task IDs, and only
+then delegate or make implementation edits. A request to "just implement" does not bypass this
+gate. The version question may be skipped only when the user is explicitly asking for a read-only
+review, explanation, investigation, or validation with no implementation.
+
 ## Discover the work automatically
 
 1. Inspect `/specs` and identify the active or best-matching release folder from the user's

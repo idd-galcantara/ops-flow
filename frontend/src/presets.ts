@@ -1,4 +1,5 @@
 import type { Target } from './types';
+import { targetKey } from './types';
 
 /** A saved combination of targets, e.g. "QA overdraft = tb + gt". */
 export interface Preset {
@@ -7,6 +8,41 @@ export interface Preset {
   description?: string;
   targets: Target[];
   lastUsedAt?: number;
+}
+
+export const PRESET_EXPORT_FORMAT = 'ops-union.presets';
+export const PRESET_EXPORT_VERSION = 1;
+
+export interface PortablePreset {
+  name: string;
+  description?: string;
+  targets: Target[];
+}
+
+export interface PresetExportDocument {
+  format: typeof PRESET_EXPORT_FORMAT;
+  version: typeof PRESET_EXPORT_VERSION;
+  exportedAt: string;
+  presets: PortablePreset[];
+}
+
+export interface InvalidImportedPreset {
+  index: number;
+  name?: string;
+  reason: string;
+}
+
+export interface DuplicateImportedPreset {
+  index: number;
+  name: string;
+  reason: string;
+}
+
+export interface PresetImportResult {
+  accepted: PortablePreset[];
+  invalid: InvalidImportedPreset[];
+  duplicates: DuplicateImportedPreset[];
+  error?: string;
 }
 
 const STORAGE_KEY = 'ops-union.presets.v1';
@@ -35,6 +71,158 @@ export function savePresets(presets: Preset[]): void {
   if (typeof window !== 'undefined' && window.opsFlowDesktop) {
     void window.opsFlowDesktop.savePresets(presets).catch(() => undefined);
   }
+}
+
+/** Returns normalized portable content, excluding local ids and usage metadata. */
+export function toPortablePreset(preset: Preset): PortablePreset {
+  const normalizedTargets = normalizeTargets(preset.targets);
+  return {
+    name: preset.name.trim(),
+    ...(preset.description?.trim() ? { description: preset.description.trim() } : {}),
+    targets: normalizedTargets,
+  };
+}
+
+/** Serializes the complete saved collection into the supported export envelope. */
+export function serializePresets(
+  presets: Preset[],
+  exportedAt = new Date().toISOString(),
+): string {
+  const document: PresetExportDocument = {
+    format: PRESET_EXPORT_FORMAT,
+    version: PRESET_EXPORT_VERSION,
+    exportedAt,
+    presets: presets.map(toPortablePreset),
+  };
+  return JSON.stringify(document, null, 2);
+}
+
+/** Stable identity for a preset's normalized target set. */
+export function presetSemanticKey(targets: Target[]): string {
+  return normalizeTargets(targets)
+    .map((target) => `${target.cluster}/${target.namespace}`)
+    .sort()
+    .join('|');
+}
+
+/** Parses an export without changing the store, producing reviewable results. */
+export function parsePresetImport(raw: string, existingPresets: Preset[] = []): PresetImportResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return emptyImportResult('The selected file is not valid JSON.');
+  }
+
+  if (!isRecord(parsed) || parsed.format !== PRESET_EXPORT_FORMAT) {
+    return emptyImportResult(`Unsupported preset document. Expected format "${PRESET_EXPORT_FORMAT}".`);
+  }
+  if (parsed.version !== PRESET_EXPORT_VERSION) {
+    return emptyImportResult(`Unsupported preset document version: ${String(parsed.version)}.`);
+  }
+  if (typeof parsed.exportedAt !== 'string' || Number.isNaN(Date.parse(parsed.exportedAt))) {
+    return emptyImportResult('The preset document has an invalid exportedAt timestamp.');
+  }
+  if (!Array.isArray(parsed.presets)) {
+    return emptyImportResult('The preset document is missing its presets array.');
+  }
+
+  const knownKeys = new Set(existingPresets.map((preset) => presetSemanticKey(preset.targets)));
+  const accepted: PortablePreset[] = [];
+  const invalid: InvalidImportedPreset[] = [];
+  const duplicates: DuplicateImportedPreset[] = [];
+
+  parsed.presets.forEach((value, index) => {
+    const result = normalizeImportedPreset(value, index);
+    if ('invalid' in result) {
+      invalid.push(result.invalid);
+      return;
+    }
+
+    const key = presetSemanticKey(result.preset.targets);
+    if (knownKeys.has(key)) {
+      duplicates.push({
+        index,
+        name: result.preset.name,
+        reason: 'Its normalized target set already exists in the current library or import.',
+      });
+      return;
+    }
+    knownKeys.add(key);
+    accepted.push(result.preset);
+  });
+
+  return { accepted, invalid, duplicates };
+}
+
+function emptyImportResult(error: string): PresetImportResult {
+  return { accepted: [], invalid: [], duplicates: [], error };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeImportedPreset(
+  value: unknown,
+  index: number,
+): { preset: PortablePreset } | { invalid: InvalidImportedPreset } {
+  if (!isRecord(value)) {
+    return { invalid: { index, reason: 'Preset entry must be an object.' } };
+  }
+
+  const rawName = value.name;
+  const name = typeof rawName === 'string' ? rawName.trim() : '';
+  if (!name) {
+    return {
+      invalid: {
+        index,
+        reason: 'Preset name must be a non-empty string.',
+      },
+    };
+  }
+  if (value.description !== undefined && typeof value.description !== 'string') {
+    return {
+      invalid: { index, name, reason: 'Preset description must be a string when provided.' },
+    };
+  }
+  if (!Array.isArray(value.targets)) {
+    return { invalid: { index, name, reason: 'Preset targets must be an array.' } };
+  }
+
+  const targets = normalizeTargets(value.targets);
+  if (targets.length === 0) {
+    return {
+      invalid: {
+        index,
+        name,
+        reason: 'Preset must contain at least one target with a cluster and namespace.',
+      },
+    };
+  }
+
+  return {
+    preset: {
+      name,
+      ...(typeof value.description === 'string' && value.description.trim()
+        ? { description: value.description.trim() }
+        : {}),
+      targets,
+    },
+  };
+}
+
+function normalizeTargets(value: unknown): Target[] {
+  if (!Array.isArray(value)) return [];
+  const normalized = value.flatMap((target) => {
+    if (!isRecord(target) || typeof target.cluster !== 'string' || typeof target.namespace !== 'string') {
+      return [];
+    }
+    const cluster = target.cluster.trim();
+    const namespace = target.namespace.trim();
+    return cluster && namespace ? [{ cluster, namespace }] : [];
+  });
+  return [...new Map(normalized.map((target) => [targetKey(target), target])).values()];
 }
 
 /** Loads the stable desktop store, falling back to localStorage in web mode. */

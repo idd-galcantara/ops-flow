@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   Bookmark,
   Check,
+  Download,
+  FileUp,
   Layers,
   Pencil,
   Plus,
@@ -15,7 +17,14 @@ import {
 import { canUseManualNamespace, hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { suggestNamespaces } from '../namespaceSuggestions';
 import { applyPresetAndLoad } from '../presetFlow';
-import { describePreset, orderPresetsByRecentUse, type Preset } from '../presets';
+import {
+  describePreset,
+  orderPresetsByRecentUse,
+  parsePresetImport,
+  serializePresets,
+  type Preset,
+  type PresetImportResult,
+} from '../presets';
 import { useOpsFlowStore } from '../store';
 import { targetKey, type NamespaceInfo } from '../types';
 import { ErrorState, LoadingState } from './Feedback';
@@ -34,6 +43,13 @@ interface TargetSelectorProps {
 }
 
 const KEYBOARD_STEP = 24;
+const FILE_OPERATION_MIN_MS = 400;
+
+function waitForFileOperationMinimum(startedAt: number): Promise<void> {
+  const remaining = FILE_OPERATION_MIN_MS - (Date.now() - startedAt);
+  if (remaining <= 0) return Promise.resolve();
+  return new Promise((resolve) => window.setTimeout(resolve, remaining));
+}
 
 /**
  * Builds the list of (cluster, namespace) targets to query.
@@ -538,9 +554,18 @@ function PresetLibrary({
   onDelete,
 }: PresetLibraryProps) {
   const savePreset = useOpsFlowStore((s) => s.savePreset);
+  const appendImportedPresets = useOpsFlowStore((s) => s.appendImportedPresets);
+  const clearPresets = useOpsFlowStore((s) => s.clearPresets);
   const [query, setQuery] = useState('');
   const [naming, setNaming] = useState(startNaming);
   const [name, setName] = useState('');
+  const [importPreview, setImportPreview] = useState<PresetImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [fileOperation, setFileOperation] = useState<'importing' | 'exporting' | null>(null);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileOperationStartedAtRef = useRef<number | null>(null);
+  const libraryBusy = Boolean(applyingPresetId || fileOperation);
 
   const visiblePresets = useMemo(() => {
     const orderedPresets = orderPresetsByRecentUse(presets);
@@ -560,34 +585,109 @@ function PresetLibrary({
   }, [presets, query]);
 
   const confirmSave = () => {
-    if (!name.trim() || targets.length === 0) return;
+    if (libraryBusy || !name.trim() || targets.length === 0) return;
     savePreset(name);
     setName('');
     setNaming(false);
   };
 
+  const exportLibrary = () => {
+    if (libraryBusy) return;
+    const startedAt = Date.now();
+    setFileOperation('exporting');
+    setImportError(null);
+    void (async () => {
+      try {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        const blob = new Blob([serializePresets(presets)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ops-union-presets.json';
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      } catch {
+        setImportError('The preset library could not be exported.');
+      } finally {
+        await waitForFileOperationMinimum(startedAt);
+        setFileOperation(null);
+      }
+    })();
+  };
+
+  const importFile = (file: File, startedAt: number) => {
+    if (applyingPresetId) return;
+    setImportError(null);
+    setFileOperation('importing');
+    void (async () => {
+      try {
+        const raw = await file.text();
+        const preview = parsePresetImport(raw, presets);
+        await waitForFileOperationMinimum(startedAt);
+        setImportPreview(preview);
+      } catch {
+        await waitForFileOperationMinimum(startedAt);
+        setImportError('The selected file could not be read.');
+      } finally {
+        setFileOperation(null);
+      }
+    })();
+  };
+
+  const confirmImport = () => {
+    if (libraryBusy || !importPreview || importPreview.accepted.length === 0) return;
+    appendImportedPresets(importPreview.accepted);
+    setImportPreview(null);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      if (libraryBusy) return;
+      if (importPreview) {
+        setImportPreview(null);
+        return;
+      }
+      if (deleteAllOpen) {
+        setDeleteAllOpen(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [deleteAllOpen, importPreview, libraryBusy, onClose]);
+
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const handleCancel = () => {
+      fileOperationStartedAtRef.current = null;
+      setFileOperation(null);
+    };
+    input.addEventListener('cancel', handleCancel);
+    return () => input.removeEventListener('cancel', handleCancel);
+  }, []);
+
+  const closeLibrary = () => {
+    if (libraryBusy) return;
+    onClose();
+  };
 
   return (
     <div
       className="preset-library-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) closeLibrary();
       }}
     >
-      <section className="preset-library" role="dialog" aria-modal="true" aria-labelledby="preset-library-title">
+      <section className="preset-library" role="dialog" aria-modal="true" aria-labelledby="preset-library-title" aria-busy={libraryBusy}>
         <div className="preset-library-header">
           <div>
             <span className="eyebrow">Saved target combinations</span>
             <h2 id="preset-library-title">Presets <b>{presets.length}</b></h2>
           </div>
-          <button type="button" className="icon-button subtle" onClick={onClose} aria-label="Close presets" disabled={Boolean(applyingPresetId)}>
+          <button type="button" className="icon-button subtle" onClick={closeLibrary} aria-label="Close presets" disabled={libraryBusy}>
             <X size={15} />
           </button>
         </div>
@@ -609,6 +709,13 @@ function PresetLibrary({
           </div>
         )}
 
+        {fileOperation && (
+          <div className="preset-library-status is-pending" role="status" aria-live="polite" aria-atomic="true">
+            <RefreshCw size={13} className="spinning" />
+            <span>{fileOperation === 'importing' ? 'Reading preset library...' : 'Preparing preset library download...'}</span>
+          </div>
+        )}
+
         <div className="preset-library-toolbar">
           {presets.length > 0 ? (
             <label className="preset-search preset-library-search">
@@ -618,21 +725,78 @@ function PresetLibrary({
                 autoFocus={!naming}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                disabled={libraryBusy}
                 placeholder="Search by name, cluster or namespace..."
               />
               {query && (
-                <button type="button" className="preset-search-clear" onClick={() => setQuery('')} aria-label="Clear preset search">
+                <button type="button" className="preset-search-clear" onClick={() => setQuery('')} aria-label="Clear preset search" disabled={libraryBusy}>
                   <X size={12} />
                 </button>
               )}
             </label>
           ) : <span />}
           {targets.length > 0 && !naming && (
-            <button type="button" className="secondary-button" onClick={() => setNaming(true)}>
+            <button type="button" className="secondary-button" onClick={() => setNaming(true)} disabled={libraryBusy}>
               <Save size={13} /> Save as new
             </button>
           )}
+          <div className="preset-library-file-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={exportLibrary}
+              disabled={presets.length === 0 || libraryBusy}
+              title="Download the saved preset library as JSON"
+            >
+              <Download size={13} /> Export JSON
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                if (libraryBusy) return;
+                fileOperationStartedAtRef.current = Date.now();
+                setImportError(null);
+                setFileOperation('importing');
+                window.setTimeout(() => fileInputRef.current?.click(), 0);
+              }}
+              disabled={libraryBusy}
+              title="Choose a preset library JSON file"
+            >
+              <FileUp size={13} /> Import JSON
+            </button>
+            <input
+              ref={fileInputRef}
+              className="visually-hidden"
+              type="file"
+              accept=".json,application/json"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                const startedAt = fileOperationStartedAtRef.current;
+                fileOperationStartedAtRef.current = null;
+                if (file) {
+                  importFile(file, startedAt ?? Date.now());
+                } else {
+                  setFileOperation(null);
+                }
+              }}
+              aria-label="Choose preset JSON file"
+            />
+          </div>
+          {presets.length > 0 && (
+            <button
+              type="button"
+              className="text-button danger-text preset-delete-all"
+              onClick={() => setDeleteAllOpen(true)}
+              disabled={libraryBusy}
+            >
+              <Trash2 size={12} /> Delete all
+            </button>
+          )}
         </div>
+
+        {importError && <div className="preset-library-feedback is-error" role="alert">{importError}</div>}
 
         {naming && (
           <div className="preset-library-save-form">
@@ -640,6 +804,7 @@ function PresetLibrary({
               autoFocus
               value={name}
               onChange={(event) => setName(event.target.value)}
+              disabled={libraryBusy}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
@@ -653,10 +818,10 @@ function PresetLibrary({
               placeholder="Preset name"
               aria-label="Preset name"
             />
-            <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim()}>
+            <button type="button" className="primary-button" onClick={confirmSave} disabled={!name.trim() || libraryBusy}>
               <Save size={13} /> Create preset
             </button>
-            <button type="button" className="secondary-button" onClick={() => setNaming(false)}>Cancel</button>
+            <button type="button" className="secondary-button" onClick={() => setNaming(false)} disabled={libraryBusy}>Cancel</button>
           </div>
         )}
 
@@ -669,7 +834,7 @@ function PresetLibrary({
                   type="button"
                   className="preset-library-apply"
                   onClick={() => onApply(preset.id)}
-                  disabled={Boolean(applyingPresetId)}
+                  disabled={libraryBusy}
                   aria-busy={applyingPresetId === preset.id}
                 >
                   <Bookmark size={14} />
@@ -680,10 +845,10 @@ function PresetLibrary({
                   </span>
                 </button>
                 {active && <span className="preset-library-active-label">{activePresetDirty ? 'Edited' : 'Active'}</span>}
-                <button type="button" className="icon-button subtle" onClick={() => onEdit(preset.id)} aria-label={`Edit preset ${preset.name}`} title={`Edit ${preset.name}`} disabled={Boolean(applyingPresetId)}>
+                <button type="button" className="icon-button subtle" onClick={() => onEdit(preset.id)} aria-label={`Edit preset ${preset.name}`} title={`Edit ${preset.name}`} disabled={libraryBusy}>
                   <Pencil size={13} />
                 </button>
-                <button type="button" className="icon-button subtle danger" onClick={() => onDelete(preset.id)} aria-label={`Remove preset ${preset.name}`} title={`Remove ${preset.name}`} disabled={Boolean(applyingPresetId)}>
+                <button type="button" className="icon-button subtle danger" onClick={() => onDelete(preset.id)} aria-label={`Remove preset ${preset.name}`} title={`Remove ${preset.name}`} disabled={libraryBusy}>
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -691,6 +856,127 @@ function PresetLibrary({
           })}
           {presets.length === 0 && <p className="sidebar-hint">Save target combinations you use often.</p>}
           {presets.length > 0 && visiblePresets.length === 0 && <p className="sidebar-hint">No preset matches the search.</p>}
+        </div>
+
+        {importPreview && (
+          <PresetImportPreview
+            result={importPreview}
+            onCancel={() => setImportPreview(null)}
+            onConfirm={confirmImport}
+          />
+        )}
+        {deleteAllOpen && (
+          <PresetDeleteAllDialog
+            count={presets.length}
+            onCancel={() => setDeleteAllOpen(false)}
+            onConfirm={() => {
+              clearPresets();
+              setDeleteAllOpen(false);
+            }}
+          />
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PresetImportPreview({
+  result,
+  onCancel,
+  onConfirm,
+}: {
+  result: PresetImportResult;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="preset-dialog-layer" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onCancel();
+    }}>
+      <section className="preset-secondary-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-import-title">
+        <div className="preset-secondary-dialog-header">
+          <div>
+            <span className="eyebrow">Review file</span>
+            <h3 id="preset-import-title">Import preview</h3>
+          </div>
+          <button type="button" className="icon-button subtle" onClick={onCancel} aria-label="Close import preview">
+            <X size={15} />
+          </button>
+        </div>
+        {result.error ? (
+          <div className="preset-library-feedback is-error" role="alert">{result.error}</div>
+        ) : (
+          <>
+            <p className="preset-dialog-summary">
+              {result.accepted.length} preset(s) ready to add, {result.duplicates.length} duplicate(s) skipped, {result.invalid.length} invalid entr{result.invalid.length === 1 ? 'y' : 'ies'}.
+            </p>
+            <div className="preset-import-results">
+              {result.accepted.map((preset) => (
+                <div className="preset-import-result is-valid" key={`accepted-${preset.name}-${preset.targets.map((target) => `${target.cluster}/${target.namespace}`).join('|')}`}>
+                  <Check size={13} />
+                  <span><strong>{preset.name}</strong><small>{preset.targets.length} target(s) ready to add</small></span>
+                </div>
+              ))}
+              {result.duplicates.map((duplicate) => (
+                <div className="preset-import-result is-duplicate" key={`duplicate-${duplicate.index}`}>
+                  <AlertTriangle size={13} />
+                  <span><strong>{duplicate.name}</strong><small>Skipped: {duplicate.reason}</small></span>
+                </div>
+              ))}
+              {result.invalid.map((invalid) => (
+                <div className="preset-import-result is-invalid" key={`invalid-${invalid.index}`}>
+                  <AlertTriangle size={13} />
+                  <span><strong>{invalid.name ?? `Entry ${invalid.index + 1}`}</strong><small>{invalid.reason}</small></span>
+                </div>
+              ))}
+              {result.accepted.length === 0 && result.duplicates.length === 0 && result.invalid.length === 0 && (
+                <p className="sidebar-hint">The file contains no preset entries.</p>
+              )}
+            </div>
+          </>
+        )}
+        <div className="preset-secondary-dialog-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>
+          <button type="button" className="primary-button" onClick={onConfirm} disabled={Boolean(result.error) || result.accepted.length === 0}>
+            <FileUp size={13} /> Add ready presets
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PresetDeleteAllDialog({
+  count,
+  onCancel,
+  onConfirm,
+}: {
+  count: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="preset-dialog-layer" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onCancel();
+    }}>
+      <section className="preset-secondary-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-delete-all-title">
+        <div className="preset-secondary-dialog-header">
+          <div>
+            <span className="eyebrow">Destructive action</span>
+            <h3 id="preset-delete-all-title">Delete all presets?</h3>
+          </div>
+          <button type="button" className="icon-button subtle" onClick={onCancel} aria-label="Close delete all confirmation">
+            <X size={15} />
+          </button>
+        </div>
+        <p className="preset-dialog-summary">
+          This will remove {count} saved preset{count === 1 ? '' : 's'}. Your current targets, table, and view will remain unchanged.
+        </p>
+        <div className="preset-secondary-dialog-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>
+          <button type="button" className="primary-button danger-button" onClick={onConfirm}>
+            <Trash2 size={13} /> Delete all
+          </button>
         </div>
       </section>
     </div>
