@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Check, Loader, X } from 'lucide-react';
 import {
+  canUseManualNamespace,
   describeNamespaceReach,
   hasExactNamespaceMatch,
   suggestNamespaces,
@@ -49,6 +50,11 @@ export function NamespaceInput({
     selectedClusters.length > 0 &&
     !namespacesLoading &&
     [...selectedClusters].sort().join('|') === loadedClusterKey;
+  const manualNamespaceFallback = canUseManualNamespace(
+    namespaces,
+    namespacesReady,
+    namespacesError,
+  );
 
   // Fetch whenever the cluster selection changes; the store skips repeat work.
   useEffect(() => {
@@ -107,8 +113,9 @@ export function NamespaceInput({
   };
 
   const showPanel = open && selectedClusters.length > 0;
-  const hasExactMatch = namespacesReady && hasExactNamespaceMatch(namespaces, value);
-  const exactNamespace = hasExactMatch
+  const hasDiscoveredExactMatch = namespacesReady && hasExactNamespaceMatch(namespaces, value);
+  const hasExactMatch = hasDiscoveredExactMatch || (manualNamespaceFallback && Boolean(value.trim()));
+  const exactNamespace = hasDiscoveredExactMatch
     ? namespaces.find((item) => item.name === value.trim())
     : undefined;
   const exactCoverage = exactNamespace?.clusters.length ?? 0;
@@ -169,7 +176,7 @@ export function NamespaceInput({
         </div>
       </label>
 
-      {value.trim() && hasExactMatch && (
+      {value.trim() && hasDiscoveredExactMatch && (
         <span
           className={`namespace-valid ${exactCoverageIsPartial ? 'is-partial' : ''}`}
           title={
@@ -187,6 +194,15 @@ export function NamespaceInput({
               <Check size={11} /> exists in all selected clusters
             </>
           )}
+        </span>
+      )}
+
+      {value.trim() && manualNamespaceFallback && (
+        <span
+          className="namespace-valid is-partial"
+          title="Namespace discovery was denied; availability will be checked when pods are fetched"
+        >
+          <AlertTriangle size={11} /> not verified
         </span>
       )}
 

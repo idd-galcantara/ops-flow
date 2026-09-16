@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  canUseManualNamespace,
   describeNamespaceReach,
   hasExactNamespaceMatch,
   suggestNamespaces,
@@ -76,6 +77,13 @@ test('hasExactNamespaceMatch only accepts a known namespace', () => {
   assert.equal(hasExactNamespaceMatch(all, ' bank-overdraft '), true);
   assert.equal(hasExactNamespaceMatch(all, 'bank'), false);
   assert.equal(hasExactNamespaceMatch(all, 'unknown'), false);
+});
+
+test('canUseManualNamespace only enables fallback after empty discovery fails', () => {
+  assert.equal(canUseManualNamespace([], true, 'forbidden'), true);
+  assert.equal(canUseManualNamespace([ns('known')], true, 'forbidden'), false);
+  assert.equal(canUseManualNamespace([], true), false);
+  assert.equal(canUseManualNamespace([], false, 'forbidden'), false);
 });
 
 test('describeNamespaceReach reports coverage only for multi-cluster selections', () => {

@@ -230,9 +230,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
         // Partial failure: report it but keep whatever namespaces did come back.
         namespacesError:
           errors.length > 0
-            ? `${errors.length} cluster(s) returned no namespaces: ${errors
-                .map((e) => e.cluster)
-                .join(', ')}`
+            ? errors.map((error) => `${error.cluster}: ${error.message}`).join(' | ')
             : undefined,
       });
     } catch (err) {

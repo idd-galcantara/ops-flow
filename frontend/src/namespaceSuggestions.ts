@@ -1,5 +1,14 @@
 import type { NamespaceInfo } from './types';
 
+/** Allows a manually entered namespace when discovery is unavailable. */
+export function canUseManualNamespace(
+  namespaces: NamespaceInfo[],
+  namespacesReady: boolean,
+  namespacesError?: string,
+): boolean {
+  return namespacesReady && namespaces.length === 0 && Boolean(namespacesError);
+}
+
 /** Suggestions shown at once. Clusters here can hold ~2000 namespaces. */
 export const MAX_SUGGESTIONS = 40;
 

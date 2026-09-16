@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { hasExactNamespaceMatch } from '../namespaceSuggestions';
+import { canUseManualNamespace, hasExactNamespaceMatch } from '../namespaceSuggestions';
 import { suggestNamespaces } from '../namespaceSuggestions';
 import { applyPresetAndLoad } from '../presetFlow';
 import { describePreset, type Preset } from '../presets';
@@ -63,6 +63,7 @@ export function TargetSelector({
   const namespaces = useOpsFlowStore((s) => s.namespaces);
   const namespacesFor = useOpsFlowStore((s) => s.namespacesFor);
   const namespacesLoading = useOpsFlowStore((s) => s.namespacesLoading);
+  const namespacesError = useOpsFlowStore((s) => s.namespacesError);
 
   const [namespace, setNamespace] = useState('');
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
@@ -102,8 +103,14 @@ export function TargetSelector({
     selectedClusters.length > 0 &&
     !namespacesLoading &&
     [...selectedClusters].sort().join('|') === namespacesFor.join('|');
+  const manualNamespaceFallback = canUseManualNamespace(
+    namespaces,
+    namespacesReady,
+    namespacesError,
+  );
   const hasExactMatch =
-    namespacesReady && hasExactNamespaceMatch(namespaces, namespace);
+    (namespacesReady && hasExactNamespaceMatch(namespaces, namespace)) ||
+    (manualNamespaceFallback && Boolean(namespace.trim()));
   const namespacesToAdd = [
     ...selectedNamespaces,
     ...(hasExactMatch && namespace.trim() && !selectedNamespaces.includes(namespace.trim())
@@ -115,7 +122,8 @@ export function TargetSelector({
     [namespaces],
   );
   const isNamespaceAvailable = (cluster: string, name: string) =>
-    namespaceInfoByName.get(name)?.clusters.includes(cluster) ?? false;
+    namespaceInfoByName.get(name)?.clusters.includes(cluster) ??
+    (manualNamespaceFallback && Boolean(name.trim()));
   const unavailableClusters = selectedClusters.filter((cluster) =>
     namespacesToAdd.some((name) => !isNamespaceAvailable(cluster, name)),
   );
@@ -132,7 +140,7 @@ export function TargetSelector({
 
   const selectNamespace = (name: string) => {
     const next = name.trim();
-    if (!hasExactNamespaceMatch(namespaces, next)) return;
+    if (!hasExactNamespaceMatch(namespaces, next) && !manualNamespaceFallback) return;
     setSelectedNamespaces((current) => (current.includes(next) ? current : [...current, next]));
     setNamespace('');
   };
