@@ -117,6 +117,11 @@ export default function App() {
     void hydratePresets();
   }, [hydratePresets]);
 
+  // A normal query can replace the target set, so never keep stale pod details open.
+  useEffect(() => {
+    if (podsLoading) setSelected(null);
+  }, [podsLoading]);
+
   // Auto-refresh: silent so the table keeps its content between ticks. Only runs
   // while there are targets, and is torn down on interval change or unmount.
   useEffect(() => {
