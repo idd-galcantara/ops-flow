@@ -8,6 +8,7 @@ import type {
   Target,
   LogSource,
   LogSubscription,
+  HistoryQueryFilters,
   HistoryWindowEvent,
 } from './types';
 
@@ -153,6 +154,14 @@ export function serializeHistoryWindow(input: {
 
 export function serializeHistoryCancel(input: { sessionId: string; generation: number; reason?: string }): string {
   return JSON.stringify({ type: 'history.cancel', ...input });
+}
+
+export function serializeHistoryQueryStart(input: { sessionId: string; generation: number; filters: HistoryQueryFilters }): string {
+  return JSON.stringify({ type: 'history.query.start', ...input });
+}
+
+export function serializeHistoryQueryWindow(input: { sessionId: string; generation: number; queryId: string; offset: number; direction?: 'forward' | 'backward'; limit?: number }): string {
+  return JSON.stringify({ type: 'history.query.window', ...input, direction: input.direction ?? 'forward', limit: input.limit ?? 500 });
 }
 
 export function isHistoryWindowEvent(event: { type: string }): event is HistoryWindowEvent {

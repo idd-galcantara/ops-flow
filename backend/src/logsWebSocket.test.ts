@@ -64,9 +64,72 @@ test('aggregate WebSocket carries one validated history lifecycle and rejects st
   socket.send(JSON.stringify({ type: 'history.window', sessionId: accepted.sessionId, generation: accepted.generation, limit: 10 }));
   const window = await waitFor((event) => event.type === 'history.window') as Extract<AggregateLogEvent, { type: 'history.window' }>;
   assert.equal(window.records[0].message, 'history line');
+  socket.send(JSON.stringify({ type: 'history.query.start', sessionId: accepted.sessionId, generation: accepted.generation, filters: { pod: 'pod', container: '', cluster: '', namespace: '', text: 'history' } }));
+  const queryReady = await waitFor((event) => event.type === 'history.query.ready') as Extract<AggregateLogEvent, { type: 'history.query.ready' }>;
+  assert.equal(queryReady.totalMatches, 1);
+  socket.send(JSON.stringify({ type: 'history.query.window', sessionId: accepted.sessionId, generation: accepted.generation, queryId: queryReady.queryId, offset: 0, limit: 10 }));
+  const queryWindow = await waitFor((event) => event.type === 'history.query.window') as Extract<AggregateLogEvent, { type: 'history.query.window' }>;
+  assert.equal(queryWindow.records[0].message, 'history line');
   socket.send(JSON.stringify({ type: 'history.window', sessionId: accepted.sessionId, generation: accepted.generation + 1, limit: 10 }));
   const stale = await waitFor((event) => event.type === 'error') as Extract<AggregateLogEvent, { type: 'error' }>;
   assert.equal(stale.message, 'History generation is stale.');
+
+  socket.close();
+  await new Promise<void>((resolve) => socket.once('close', () => resolve()));
+  wss.close();
+  manager.close();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+});
+
+test('aggregate WebSocket splits oversized filtered history windows to fit the frame limit', async () => {
+  const manager = new HistorySessionManager({
+    limits: { maxFrameBytes: 1024 },
+    streamFactory: (_options, callbacks) => {
+      callbacks.onLine({ timestamp: '2026-09-16T10:00:00.000Z', message: 'x'.repeat(250), bytes: 250 });
+      callbacks.onLine({ timestamp: '2026-09-16T10:01:00.000Z', message: 'x'.repeat(250), bytes: 250 });
+      callbacks.onEnd('eof');
+      return { stop: () => undefined };
+    },
+  });
+  const server = createServer();
+  const wss = attachLogsWebSocket(server, { historyManager: manager });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+
+  const messages: AggregateLogEvent[] = [];
+  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/api/logs`);
+  socket.on('message', (data) => messages.push(JSON.parse(data.toString()) as AggregateLogEvent));
+  await new Promise<void>((resolve, reject) => {
+    socket.once('open', resolve);
+    socket.once('error', reject);
+  });
+  const waitFor = (predicate: (event: AggregateLogEvent) => boolean): Promise<AggregateLogEvent> => new Promise((resolve, reject) => {
+    const existing = messages.find(predicate);
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+    const timeout = setTimeout(() => reject(new Error('Timed out waiting for WebSocket event.')), 1_000);
+    const onMessage = (data: WebSocket.RawData) => {
+      const event = JSON.parse(data.toString()) as AggregateLogEvent;
+      if (!predicate(event)) return;
+      clearTimeout(timeout);
+      socket.off('message', onMessage);
+      resolve(event);
+    };
+    socket.on('message', onMessage);
+  });
+
+  socket.send(JSON.stringify({ type: 'history.start', requestId: 'request-1', generation: 1, sources: [source] }));
+  const accepted = await waitFor((event) => event.type === 'history.accepted') as Extract<AggregateLogEvent, { type: 'history.accepted' }>;
+  await waitFor((event) => event.type === 'history.terminal');
+  socket.send(JSON.stringify({ type: 'history.query.start', sessionId: accepted.sessionId, generation: accepted.generation, filters: { pod: 'pod', container: '', cluster: '', namespace: '', text: 'x' } }));
+  const ready = await waitFor((event) => event.type === 'history.query.ready') as Extract<AggregateLogEvent, { type: 'history.query.ready' }>;
+  socket.send(JSON.stringify({ type: 'history.query.window', sessionId: accepted.sessionId, generation: accepted.generation, queryId: ready.queryId, offset: 0, limit: 10 }));
+  const window = await waitFor((event) => event.type === 'history.query.window') as Extract<AggregateLogEvent, { type: 'history.query.window' }>;
+  assert.ok(window.records.length < 2);
+  assert.ok(Buffer.byteLength(JSON.stringify(window), 'utf8') <= 1024);
 
   socket.close();
   await new Promise<void>((resolve) => socket.once('close', () => resolve()));

@@ -24,9 +24,9 @@ by the finite source read before a documented limit, failure, cancellation, or s
   It must preserve the existing live message contract for clients that do not request History mode.
 - `frontend/src` owns applied/draft mode state, history status, virtualized window requests, window
   cache eviction, historical/live presentation, grouping, wrapping, and accessible feedback.
-- Existing Search/filter/session/presentation/range helpers remain authoritative where their current
-  contract applies. v1.3.1 extends the history owner for server-side search; it does not move live
-  filtering into the backend.
+- Existing Search/session/presentation/range helpers remain authoritative where their current
+  contract applies. Confirmed History filters are evaluated by a backend query over the immutable
+  snapshot; Live filtering remains local and unchanged.
 - `desktop/src/preload.ts` and the desktop bridge remain the only renderer boundary for any new
   history messages. The renderer never receives filesystem paths or reads snapshot files.
 - `@ops-union-backend` owns protocol, acquisition, storage, limits, cleanup, and backend tests.
@@ -189,12 +189,38 @@ client -> server: history.window { sessionId, generation, cursor, direction, lim
 server -> client: history.window { sessionId, generation, cursor, records[], hasMore }
 client -> server: history.cancel { sessionId, generation, reason }
 server -> client: history.terminal { sessionId, generation, status, limits, sources[] }
+client -> server: history.query.start { sessionId, generation, filters }
+server -> client: history.query.ready { sessionId, snapshotId, generation, queryId, totalMatches }
+client -> server: history.query.window { sessionId, generation, queryId, offset, limit }
+server -> client: history.query.window { sessionId, snapshotId, generation, queryId, startIndex, endIndex, records[], hasMore }
 ```
 
 All inbound values are schema-validated and bounded. A window response contains no local path and
 is rejected when the session/generation/cursor does not match. Records are normalized through the
 existing safe log event contract; raw Kubernetes response text is never used as a protocol error.
 A protocol frame is capped independently from snapshot caps.
+
+### Backend-filtered History queries
+
+History filtering is a query over the completed immutable snapshot. The query start request carries
+the applied Pod, Container, Cluster, Namespace, and message-text filters together with the current
+session generation. The backend scans each source's existing NDJSON/index once, stores only
+`(sourceKey, line)` references for matching records, and returns a server-issued `queryId` plus
+the global `totalMatches`. It does not reread Kubernetes and does not create a second copy of the
+matching payloads.
+
+Query windows use a logical result offset rather than a source cursor. The backend resolves the
+references for the requested bounded range against the immutable source files, applies the same
+record and transport limits as ordinary windows, and returns exact `startIndex`/`endIndex` and
+`hasMoreBefore`/`hasMoreAfter` values. A query replaces the previous query for the session; query
+ID, snapshot ID, and generation are required on every response so stale Search results cannot
+overwrite a newer filter generation.
+
+The frontend keeps a bounded sparse query-window cache keyed by logical result range. The
+virtualizer count is `totalMatches`, not the number of retained records. Visible positions whose
+window was evicted are rendered as loading placeholders and requested again over the same socket.
+This preserves global scroll height and filter counts while allowing old windows to leave browser
+memory.
 
 ### Corrective adaptive-window and source contract
 

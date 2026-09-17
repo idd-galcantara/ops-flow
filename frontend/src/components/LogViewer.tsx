@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Pause, Play, Search, Trash2, X } from 'lucide-react';
-import { aggregateLogsUrl, serializeHistoryCancel, serializeHistoryStart, serializeHistoryWindow, serializeLogSubscription } from '../api';
+import { aggregateLogsUrl, serializeHistoryCancel, serializeHistoryQueryStart, serializeHistoryQueryWindow, serializeHistoryStart, serializeHistoryWindow, serializeLogSubscription } from '../api';
 import { LOG_PERIODS, resolveLogRange } from '../logsRange';
 import { cloneLogSearchValues, DEFAULT_LOG_SEARCH_VALUES, searchHasPendingChanges, transportSearchValuesEqual, type LogSearchState } from '../logsSearch';
 import { DEFAULT_LOG_DISPLAY_STATE, logRecordKey, setWrapLines, type LogGrouping } from '../logsPresentation';
-import { addHistoryWindow, appendBoundedEvent, CLIENT_LOG_BUFFER, createHistoryWindowCache, filterLogRecords, historyInitialWindowRequest, HISTORY_WINDOW_LIMIT, historyRecordsFromCache, logFilterValues, sourceLabel, sourceStateForEvent, sourcesForPods, type HistoryWindowCache, type HistoryWindowRequest, type LogRecordFilters } from '../logsSession';
+import { addHistoryQueryWindow, addHistoryWindow, appendBoundedEvent, CLIENT_LOG_BUFFER, createHistoryQueryWindowCache, createHistoryWindowCache, filterLogRecords, historyQueryRecordAt, historyRecordToEvent, HISTORY_WINDOW_LIMIT, historyRecordsFromCache, logFilterValues, sourceLabel, sourceStateForEvent, sourcesForPods, type HistoryQueryWindowCache, type HistoryQueryWindowRequest, type HistoryWindowCache, type HistoryWindowRequest, type LogRecordFilters } from '../logsSession';
 import { ErrorState } from './Feedback';
-import type { AggregateLogEvent, HistoryAggregateProgress, HistorySessionIdentity, HistorySourceProgress, HistoryTerminalStatus, LogEventRecord, LogLimits, LogSource, LogSourceState, NormalizedPod, PodRef, SummaryReason, Target } from '../types';
+import type { AggregateLogEvent, HistoryAggregateProgress, HistoryQueryFilters, HistorySessionIdentity, HistorySourceProgress, HistoryTerminalStatus, LogEventRecord, LogLimits, LogSource, LogSourceState, NormalizedPod, PodRef, SummaryReason, Target } from '../types';
 
 const DEFAULT_LIMITS: LogLimits = { maxLinesPerSource: 2_000, maxBytesPerSource: 2 * 1024 * 1024, maxLinesTotal: 10_000, maxBytesTotal: 10 * 1024 * 1024 };
 type ConnectionState = 'validating' | 'connecting' | 'streaming' | 'paused' | 'ended' | 'partial' | 'error' | 'history-starting' | 'history-reading' | 'history-ready' | 'history-partial' | 'history-cancelled' | 'history-expired' | 'transitioning';
@@ -28,6 +28,19 @@ interface HistoryRuntime {
   terminal: boolean;
 }
 
+interface HistoryQueryState {
+  identity: HistorySessionIdentity;
+  queryId: string;
+  totalMatches: number;
+}
+
+interface HistoryQueryRuntime {
+  queryId?: string;
+  retiredQueryIds: Set<string>;
+  requested: Set<string>;
+  pending: Map<string, HistoryQueryWindowRequest>;
+}
+
 interface LogViewerProps {
   pod: PodRef;
   pods?: PodRef[];
@@ -37,8 +50,10 @@ interface LogViewerProps {
   onClose?: () => void;
 }
 
-export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onChangeSources, onClose }: LogViewerProps) {
-  const availableSources = useMemo(() => sources ?? sourcesForPods(pods.map((item): NormalizedPod => ({ cluster: item.cluster, namespace: item.namespace, name: item.name, status: '', ready: '', restarts: 0, node: '', ageSeconds: 0, containers: item.containers, application: item.application ?? { key: `pod:${item.name}`, name: item.name, source: 'pod' } }))), [pods, sources]);
+export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSources, onClose }: LogViewerProps) {
+  const fallbackPods = useMemo(() => [pod], [pod]);
+  const logPods = pods ?? fallbackPods;
+  const availableSources = useMemo(() => sources ?? sourcesForPods(logPods.map((item): NormalizedPod => ({ cluster: item.cluster, namespace: item.namespace, name: item.name, status: '', ready: '', restarts: 0, node: '', ageSeconds: 0, containers: item.containers, application: item.application ?? { key: `pod:${item.name}`, name: item.name, source: 'pod' } }))), [logPods, sources]);
   const [search, setSearch] = useState<LogSearchState>(() => ({ draft: cloneLogSearchValues(DEFAULT_LOG_SEARCH_VALUES), applied: cloneLogSearchValues(DEFAULT_LOG_SEARCH_VALUES) }));
   const [display, setDisplay] = useState(DEFAULT_LOG_DISPLAY_STATE);
   const [events, setEvents] = useState<LogEventRecord[]>([]);
@@ -51,9 +66,12 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
   const [acceptedLimits, setAcceptedLimits] = useState(DEFAULT_LIMITS);
   const [historyState, setHistoryState] = useState<HistoryViewState>();
   const [historyWindows, setHistoryWindows] = useState<HistoryWindowCache>(() => createHistoryWindowCache());
+  const [historyQuery, setHistoryQuery] = useState<HistoryQueryState>();
+  const [historyQueryCache, setHistoryQueryCache] = useState<HistoryQueryWindowCache>(() => createHistoryQueryWindowCache());
   const [historyWindowLoading, setHistoryWindowLoading] = useState(false);
   const [historyWindowError, setHistoryWindowError] = useState<string>();
   const [historyWindowRetryRequests, setHistoryWindowRetryRequests] = useState<HistoryWindowRequest[]>([]);
+  const [historyQueryRetryRequests, setHistoryQueryRetryRequests] = useState<HistoryQueryWindowRequest[]>([]);
   const [sessionAttempt, setSessionAttempt] = useState(0);
   const [paused, setPaused] = useState(false);
   const [receivedWhilePaused, setReceivedWhilePaused] = useState(0);
@@ -67,8 +85,12 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
   const sourceStatesRef = useRef(sourceStates);
   sourceStatesRef.current = sourceStates;
   const historyRuntimeRef = useRef<HistoryRuntime>({ requested: new Set(), pending: new Map(), sourceProgress: [], terminal: false });
+  const historyQueryRuntimeRef = useRef<HistoryQueryRuntime>({ retiredQueryIds: new Set(), requested: new Set(), pending: new Map() });
   const historySocketRef = useRef<WebSocket | undefined>(undefined);
   const historyRequestRef = useRef<((sourceKey: string, line: number, direction?: 'forward' | 'backward') => void) | undefined>(undefined);
+  const historyQueryRequestRef = useRef<((request: HistoryQueryWindowRequest) => void) | undefined>(undefined);
+  const historyQueryStartRef = useRef<((filters: HistoryQueryFilters) => void) | undefined>(undefined);
+  const historyQueryVisibleRangeRef = useRef<{ firstIndex: number; lastIndex: number } | undefined>(undefined);
   const requestGenerationRef = useRef(0);
   const requestIdRef = useRef(0);
   const transitioningFromHistoryRef = useRef(false);
@@ -81,12 +103,21 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
   const appliedCustomRange = useMemo(() => ({ from: applied.customFrom, to: applied.customTo }), [applied.customFrom, applied.customTo]);
   const appliedRangeResult = useMemo(() => resolveLogRange(applied.period, new Date(), appliedCustomRange), [applied.period, appliedCustomRange]);
   const visibleEvents = useMemo(() => filterLogRecords(events, applied.filters), [events, applied.filters]);
+  const queryHistoryActive = applied.mode === 'history' && Boolean(historyQuery);
+  const virtualCount = queryHistoryActive ? historyQuery!.totalMatches : visibleEvents.length;
   const virtualizer = useVirtualizer({
-    count: visibleEvents.length,
+    count: virtualCount,
     getScrollElement: () => outputRef.current,
     estimateSize: () => 34,
     measureElement: (element) => element.getBoundingClientRect().height,
-    getItemKey: (index) => visibleEvents[index] ? logRecordKey(visibleEvents[index]) : index,
+    getItemKey: (index) => {
+      if (queryHistoryActive) {
+        const record = historyQueryRecordAt(historyQueryCache, index);
+        return record ? logRecordKey(historyRecordToEvent(record)) : `history-query-${index}`;
+      }
+      const record = visibleEvents[index];
+      return record ? logRecordKey(record) : index;
+    },
     overscan: 10,
   });
 
@@ -96,9 +127,12 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
       setEvents([]);
       setHistoryState(undefined);
       setHistoryWindows(createHistoryWindowCache());
+      setHistoryQuery(undefined);
+      setHistoryQueryCache(createHistoryQueryWindowCache());
       setHistoryWindowLoading(false);
       setHistoryWindowError(undefined);
       setHistoryWindowRetryRequests([]);
+      setHistoryQueryRetryRequests([]);
     }
     setSourceStates(new Map());
     setSummaryReason(undefined);
@@ -108,7 +142,11 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
     setAutoScroll(applied.mode !== 'history' && !preserveHistoryBoundary);
     setAcceptedLimits(DEFAULT_LIMITS);
     historyRuntimeRef.current = { requested: new Set(), pending: new Map(), sourceProgress: [], terminal: false };
+    historyQueryRuntimeRef.current = { retiredQueryIds: new Set(), requested: new Set(), pending: new Map() };
+    historyQueryVisibleRangeRef.current = undefined;
     historyRequestRef.current = undefined;
+    historyQueryRequestRef.current = undefined;
+    historyQueryStartRef.current = undefined;
     historyTailPendingRef.current = false;
     historyTailRevealRef.current = false;
     if (appliedRangeResult.error) {
@@ -139,6 +177,32 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
       historyRuntimeRef.current.pending.set(key, { sourceKey, line, direction });
       socket.send(serializeHistoryWindow({ sessionId: identity.sessionId, generation: identity.generation, sourceKey, line, direction, limit: HISTORY_WINDOW_LIMIT }));
     };
+    const requestHistoryQueryWindow = (request: HistoryQueryWindowRequest) => {
+      const identity = historyRuntimeRef.current.identity;
+      const queryId = historyQueryRuntimeRef.current.queryId;
+      if (!identity || !queryId || socket.readyState !== WebSocket.OPEN) return;
+      const key = `${queryId}:${request.offset}:${request.direction}`;
+      if (historyQueryRuntimeRef.current.requested.has(key)) return;
+      historyQueryRuntimeRef.current.requested.add(key);
+      historyQueryRuntimeRef.current.pending.set(key, request);
+      socket.send(serializeHistoryQueryWindow({ sessionId: identity.sessionId, generation: identity.generation, queryId, offset: request.offset, direction: request.direction, limit: HISTORY_WINDOW_LIMIT }));
+      setHistoryWindowLoading(true);
+    };
+    const startHistoryQuery = (filters: HistoryQueryFilters) => {
+      const identity = historyRuntimeRef.current.identity;
+      if (!identity || !historyRuntimeRef.current.terminal || socket.readyState !== WebSocket.OPEN) return;
+      const previousQueryId = historyQueryRuntimeRef.current.queryId;
+      if (previousQueryId) historyQueryRuntimeRef.current.retiredQueryIds.add(previousQueryId);
+      historyQueryRuntimeRef.current.queryId = undefined;
+      historyQueryRuntimeRef.current.requested.clear();
+      historyQueryRuntimeRef.current.pending.clear();
+      setHistoryQuery(undefined);
+      setHistoryQueryCache(createHistoryQueryWindowCache());
+      setHistoryQueryRetryRequests([]);
+      setHistoryWindowError(undefined);
+      setHistoryWindowLoading(true);
+      socket.send(serializeHistoryQueryStart({ sessionId: identity.sessionId, generation: identity.generation, filters }));
+    };
     const failPendingHistoryWindows = (message: string): boolean => {
       if (historyRuntimeRef.current.pending.size === 0) return false;
       const retryRequests = [...historyRuntimeRef.current.pending.values()];
@@ -149,7 +213,19 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
       setHistoryWindowLoading(false);
       return true;
     };
+    const failPendingHistoryQueryWindows = (message: string): boolean => {
+      if (historyQueryRuntimeRef.current.pending.size === 0) return false;
+      const retryRequests = [...historyQueryRuntimeRef.current.pending.values()];
+      historyQueryRuntimeRef.current.pending.clear();
+      historyQueryRuntimeRef.current.requested.clear();
+      setHistoryQueryRetryRequests(retryRequests);
+      setHistoryWindowError(message);
+      setHistoryWindowLoading(false);
+      return true;
+    };
     historyRequestRef.current = requestHistoryWindow;
+    historyQueryRequestRef.current = requestHistoryQueryWindow;
+    historyQueryStartRef.current = startHistoryQuery;
     socket.onopen = () => {
       if (!active) return;
       if (applied.mode === 'history') {
@@ -215,6 +291,49 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
           });
           return;
         }
+        if (event.type === 'history.query.ready') {
+          if (!isCurrentHistoryEvent(event) || historyQueryRuntimeRef.current.retiredQueryIds.has(event.queryId)) return;
+          if (historyQueryRuntimeRef.current.queryId && historyQueryRuntimeRef.current.queryId !== event.queryId) return;
+          historyQueryRuntimeRef.current.queryId = event.queryId;
+          historyQueryRuntimeRef.current.requested.clear();
+          historyQueryRuntimeRef.current.pending.clear();
+          setHistoryQuery({ identity: historyRuntimeRef.current.identity!, queryId: event.queryId, totalMatches: event.totalMatches });
+          setHistoryQueryCache(createHistoryQueryWindowCache());
+          setHistoryQueryRetryRequests([]);
+          setHistoryWindowError(undefined);
+          setHistoryWindowLoading(event.totalMatches > 0);
+          return;
+        }
+        if (event.type === 'history.query.window') {
+          if (!isCurrentHistoryEvent(event) || historyQueryRuntimeRef.current.queryId !== event.queryId) return;
+          const pendingEntry = [...historyQueryRuntimeRef.current.pending.entries()].find(([, request]) => request.offset === event.startIndex && request.direction === 'forward')
+            ?? [...historyQueryRuntimeRef.current.pending.entries()].find(([, request]) => request.direction === 'forward' && request.offset < event.endIndex && request.offset >= event.startIndex);
+          const responseKey = pendingEntry?.[0];
+          const responseRequest = pendingEntry?.[1];
+          if (responseKey) historyQueryRuntimeRef.current.pending.delete(responseKey);
+          setHistoryQueryRetryRequests([]);
+          setHistoryWindowError(undefined);
+          setHistoryQueryCache((current) => {
+            const update = addHistoryQueryWindow(current, event, historyRuntimeRef.current.identity ? { ...historyRuntimeRef.current.identity, queryId: event.queryId } : event);
+            if (!update) return current;
+            for (const evictedKey of update.evictedKeys) {
+              for (const requestedKey of historyQueryRuntimeRef.current.requested) {
+                if (requestedKey.startsWith(`${event.queryId}:${evictedKey.split(':')[0]}:`)) historyQueryRuntimeRef.current.requested.delete(requestedKey);
+              }
+            }
+            setHistoryWindowLoading(historyQueryRuntimeRef.current.pending.size > 0);
+            return update.cache;
+          });
+          const visibleRange = historyQueryVisibleRangeRef.current;
+          const requestedPageEnd = (responseRequest?.offset ?? event.startIndex) + HISTORY_WINDOW_LIMIT;
+          if (event.hasMoreAfter && event.endIndex < requestedPageEnd && event.endIndex <= (visibleRange?.lastIndex ?? -1)) {
+            requestHistoryQueryWindow({ offset: event.endIndex, direction: 'forward' });
+          }
+          if (event.hasMoreAfter && event.endIndex < (visibleRange?.lastIndex ?? -1) && !historyQueryRuntimeRef.current.requested.has(`${event.queryId}:${event.endIndex}:forward`)) {
+            requestHistoryQueryWindow({ offset: event.endIndex, direction: 'forward' });
+          }
+          return;
+        }
         if (event.type === 'history.terminal') {
           if (!isCurrentHistoryEvent(event)) return;
           historyRuntimeRef.current.sourceProgress = event.sources;
@@ -223,16 +342,12 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
           setHistoryWindowRetryRequests([]);
           setHistoryState((current) => current ? { ...current, status: event.status, aggregate: event.aggregate, sources: event.sources, limitReasons: event.limitReasons } : current);
           setState(event.status === 'complete' ? 'history-ready' : event.status === 'cancelled' ? 'history-cancelled' : event.status === 'expired' ? 'history-expired' : 'history-partial');
-          setHistoryWindowLoading(event.sources.some((source) => source.counters.emittedLines > 0));
-          for (const source of event.sources) {
-            if (source.counters.emittedLines === 0) continue;
-            const initialWindow = historyInitialWindowRequest(source.sourceKey);
-            requestHistoryWindow(initialWindow.sourceKey, initialWindow.line, initialWindow.direction);
-          }
+          startHistoryQuery(applied.filters);
           return;
         }
         if (event.type === 'error') {
           if (failPendingHistoryWindows(event.message)) return;
+          if (failPendingHistoryQueryWindows(event.message)) return;
           setError(event.message);
           setIsSearchApplying(false);
           setState('error');
@@ -284,6 +399,7 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
     socket.onerror = () => {
       if (active) {
         if (failPendingHistoryWindows('Could not load the historical window.')) return;
+        if (failPendingHistoryQueryWindows('Could not load the historical query window.')) return;
         setError('Could not connect to the aggregate log stream.');
         setIsSearchApplying(false);
         if (transitioningFromHistoryRef.current) setHistoryState((current) => current ? { ...current, status: 'transition-failed' } : current);
@@ -293,6 +409,7 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
     socket.onclose = () => {
       if (active) {
         if (failPendingHistoryWindows('The history connection closed while loading a window.')) return;
+        if (failPendingHistoryQueryWindows('The history connection closed while loading a query window.')) return;
         setIsSearchApplying(false);
         if (transitioningFromHistoryRef.current) setHistoryState((current) => current ? { ...current, status: 'transition-failed' } : current);
         setState((current) => current === 'error' || current === 'partial' || summaryRef.current ? current : 'ended');
@@ -305,6 +422,8 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
         if (identity && socket.readyState === WebSocket.OPEN) socket.send(serializeHistoryCancel({ ...identity, reason: 'session-replaced' }));
       }
       socket.close();
+      historyQueryRequestRef.current = undefined;
+      historyQueryStartRef.current = undefined;
       if (historySocketRef.current === socket) historySocketRef.current = undefined;
     };
   }, [applied.follow, applied.mode, applied.period, appliedRangeResult, selectedSources, sessionAttempt]);
@@ -314,12 +433,30 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
   }, [display.wrapLines, virtualizer]);
 
   useEffect(() => {
+    if (applied.mode === 'history' && historyRuntimeRef.current.terminal) historyQueryStartRef.current?.(applied.filters);
+  }, [applied.filters, applied.mode]);
+
+  const requestHistoryQueryRange = () => {
+    if (!queryHistoryActive || historyQuery!.totalMatches === 0) return;
+    const items = virtualizer.getVirtualItems();
+    const firstIndex = items[0]?.index ?? 0;
+    const lastIndex = items[items.length - 1]?.index ?? Math.min(historyQuery!.totalMatches - 1, firstIndex + HISTORY_WINDOW_LIMIT - 1);
+    historyQueryVisibleRangeRef.current = { firstIndex, lastIndex };
+    const firstMissing = items.find((item) => !historyQueryRecordAt(historyQueryCache, item.index))?.index ?? (historyQueryRecordAt(historyQueryCache, firstIndex) ? undefined : firstIndex);
+    if (firstMissing !== undefined) historyQueryRequestRef.current?.({ offset: firstMissing, direction: 'forward' });
+  };
+
+  useEffect(() => {
+    requestHistoryQueryRange();
+  }, [historyQuery?.queryId, historyQuery?.totalMatches, historyQueryCache.windows.length, queryHistoryActive, virtualizer]);
+
+  useEffect(() => {
     const shouldRevealTail = applied.mode === 'live' || historyTailRevealRef.current;
-    if (shouldRevealTail && autoScroll && !paused && visibleEvents.length > 0) {
-      virtualizer.scrollToIndex(visibleEvents.length - 1, { align: 'end' });
+    if (shouldRevealTail && autoScroll && !paused && virtualCount > 0) {
+      virtualizer.scrollToIndex(virtualCount - 1, { align: 'end' });
       historyTailRevealRef.current = false;
     }
-  }, [applied.mode, autoScroll, paused, visibleEvents.length, virtualizer]);
+  }, [applied.mode, autoScroll, paused, virtualCount, virtualizer]);
 
   const sourceErrors = [...sourceStates.values()].filter((item) => item.status === 'error');
   const historySourceErrors = historyState?.sources.filter((item) => item.status === 'failed' || Boolean(item.error)) ?? [];
@@ -360,6 +497,13 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
     }
   };
   const retryHistoryWindows = () => {
+    if (queryHistoryActive && historyQueryRetryRequests.length > 0 && historyQueryRequestRef.current) {
+      const requests = historyQueryRetryRequests;
+      setHistoryWindowError(undefined);
+      setHistoryQueryRetryRequests([]);
+      for (const request of requests) historyQueryRequestRef.current(request);
+      return;
+    }
     if (historyWindowRetryRequests.length === 0 || !historyRequestRef.current) return;
     const requests = historyWindowRetryRequests;
     setHistoryWindowError(undefined);
@@ -373,11 +517,17 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
       const nearEnd = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
       if (applied.mode === 'live') setAutoScroll(nearEnd);
       else setAutoScroll(false);
-      if (nearEnd) requestHistoryEdge('after');
+      if (queryHistoryActive) requestHistoryQueryRange();
+      else if (nearEnd) requestHistoryEdge('after');
       else if (element.scrollTop < 80) requestHistoryEdge('before');
     }
   };
   const jumpToLatest = () => {
+    if (queryHistoryActive) {
+      setAutoScroll(true);
+      if (virtualCount > 0) virtualizer.scrollToIndex(virtualCount - 1, { align: 'end' });
+      return;
+    }
     if (applied.mode === 'history' && historyState && ['complete', 'partial', 'failed'].includes(historyState.status)) {
       let waitingForTail = false;
       for (const source of historyState.sources) {
@@ -394,7 +544,7 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
       if (waitingForTail) return;
     }
     setAutoScroll(true);
-    if (visibleEvents.length > 0) virtualizer.scrollToIndex(visibleEvents.length - 1, { align: 'end' });
+    if (virtualCount > 0) virtualizer.scrollToIndex(virtualCount - 1, { align: 'end' });
   };
   const canTransitionToLive = applied.mode === 'history' && historyState && ['complete', 'partial'].includes(historyState.status);
   const transitionToLive = () => {
@@ -484,8 +634,8 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
     {error && <ErrorState message={error} />}
     {validationError && <div className="log-validation-error" role="alert"><strong>Search was not applied.</strong> {validationError}</div>}
     {(sourceErrors.length > 0 || historySourceErrors.length > 0) && <div className="log-partial-summary" role="status" aria-live="polite"><strong>{sourceErrors.length + historySourceErrors.length} source(s) failed</strong>{sourceErrors.map((item) => <span key={item.source.sourceId}>{sourceLabel(item.source)}: {item.error}</span>)}{historySourceErrors.map((item) => <span key={item.sourceKey}>{sourceLabel(item.source)}: {item.error ?? 'Source failed while preparing history.'}</span>)}</div>}
-    <div className="log-output" ref={outputRef} onScroll={onScroll} tabIndex={0} role="log" aria-label="Structured log output" aria-live="polite"><div className={`log-output-inner ${display.wrapLines ? 'is-wrapped' : 'is-nowrap'}`} style={{ height: virtualizer.getTotalSize() }}>{visibleEvents.length === 0 ? <p className="log-empty">{emptyMessage(state, applied.mode, historyState, historyWindowLoading, historyWindowError, events.length, activeFilterCount)}</p> : virtualizer.getVirtualItems().map((item) => { const record = visibleEvents[item.index]; return record ? <LogRow key={item.key} record={record} grouping={display.grouping} query={applied.filters.text} start={item.start} wrapLines={display.wrapLines} measureElement={virtualizer.measureElement} index={item.index} /> : null; })}</div></div>
-    <div className="log-footer"><span aria-live="polite">{activeFilterCount > 0 ? `${visibleEvents.length} of ${events.length}` : `${events.length}`} retained / {totalLines.toLocaleString()} emitted{totalDropped > 0 ? ` / ${totalDropped} dropped` : ''}{applied.mode === 'live' && events.length >= CLIENT_LOG_BUFFER ? ' · client buffer full' : ''}{receivedWhilePaused > 0 ? ` · ${receivedWhilePaused} received while paused` : ''}</span>{summaryReason && <span>ended: {summaryReason}</span>}{applied.mode === 'history' && historyState?.status === 'transitioned' && <span>History boundary closed · live acknowledged</span>}{!autoScroll && <button type="button" className="text-button" onClick={jumpToLatest}>Jump to latest</button>}</div>
+    <div className="log-output" ref={outputRef} onScroll={onScroll} tabIndex={0} role="log" aria-label="Structured log output" aria-live="polite"><div className={`log-output-inner ${display.wrapLines ? 'is-wrapped' : 'is-nowrap'}`} style={{ height: virtualizer.getTotalSize() }}>{virtualCount === 0 ? <p className="log-empty">{emptyMessage(state, applied.mode, historyState, historyWindowLoading, historyWindowError, events.length, activeFilterCount)}</p> : virtualizer.getVirtualItems().map((item) => { const cachedRecord = queryHistoryActive ? historyQueryRecordAt(historyQueryCache, item.index) : undefined; const record = queryHistoryActive ? cachedRecord ? historyRecordToEvent(cachedRecord) : undefined : visibleEvents[item.index]; return record ? <LogRow key={item.key} record={record} grouping={display.grouping} query={applied.filters.text} start={item.start} wrapLines={display.wrapLines} measureElement={virtualizer.measureElement} index={item.index} /> : <LogRowPlaceholder key={item.key} start={item.start} wrapLines={display.wrapLines} index={item.index} measureElement={virtualizer.measureElement} />; })}</div></div>
+    <div className="log-footer"><span aria-live="polite">{queryHistoryActive ? `${historyQuery!.totalMatches.toLocaleString()} matching` : activeFilterCount > 0 ? `${visibleEvents.length} of ${events.length}` : `${events.length}`} retained / {totalLines.toLocaleString()} emitted{totalDropped > 0 ? ` / ${totalDropped} dropped` : ''}{applied.mode === 'live' && events.length >= CLIENT_LOG_BUFFER ? ' · client buffer full' : ''}{receivedWhilePaused > 0 ? ` · ${receivedWhilePaused} received while paused` : ''}</span>{summaryReason && <span>ended: {summaryReason}</span>}{applied.mode === 'history' && historyState?.status === 'transitioned' && <span>History boundary closed · live acknowledged</span>}{!autoScroll && <button type="button" className="text-button" onClick={jumpToLatest}>Jump to latest</button>}</div>
   </div>;
 }
 
@@ -506,6 +656,10 @@ function LogRow({ record, grouping, query, start, wrapLines, measureElement, ind
     <span className="log-source-cell" title={`${record.source.pod} / ${record.source.container}`}><strong>{group}</strong><small>{record.source.pod} / {record.source.container}</small></span>
     <span className="log-message" aria-label={message}>{highlightSegments(message, query).map((segment, index) => segment.match ? <mark className="log-mark" key={index}>{segment.text}</mark> : <span key={index}>{segment.text}</span>)}</span>
   </div>;
+}
+
+function LogRowPlaceholder({ start, wrapLines, measureElement, index }: { start: number; wrapLines: boolean; measureElement: (element: HTMLElement) => void; index: number }) {
+  return <div ref={(element) => { if (element) measureElement(element); }} data-index={index} className={`log-line structured-log-line log-query-placeholder ${wrapLines ? 'is-wrapped' : 'is-nowrap'}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${start}px)` }} aria-label="Loading historical record"><span className="log-source-cell" aria-hidden="true"><strong>...</strong><small>loading</small></span><span className="log-message" aria-hidden="true">Loading historical record...</span></div>;
 }
 
 function highlightSegments(value: string, query: string): Array<{ text: string; match: boolean }> { const needle = query.trim(); if (!needle) return [{ text: value, match: false }]; const lower = value.toLowerCase(); const lowerNeedle = needle.toLowerCase(); const segments: Array<{ text: string; match: boolean }> = []; let cursor = 0; let index = lower.indexOf(lowerNeedle); while (index >= 0) { if (index > cursor) segments.push({ text: value.slice(cursor, index), match: false }); segments.push({ text: value.slice(index, index + needle.length), match: true }); cursor = index + needle.length; index = lower.indexOf(lowerNeedle, cursor); } if (cursor < value.length) segments.push({ text: value.slice(cursor), match: false }); return segments.length > 0 ? segments : [{ text: value, match: false }]; }

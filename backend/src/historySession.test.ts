@@ -207,6 +207,41 @@ test('page reads scan a large on-disk index without requiring an in-memory index
   rmSync(root, { recursive: true, force: true });
 });
 
+test('filtered history queries count and reload matches outside the first result window', () => {
+  const root = tempRoot();
+  const manager = new HistorySessionManager({ rootDir: root, streamFactory: finiteFactory({ pod: [
+    { timestamp: null, message: 'ordinary', bytes: 9 },
+    { timestamp: null, message: 'ordinary', bytes: 9 },
+    { timestamp: null, message: 'needle first', bytes: 13 },
+    { timestamp: null, message: 'ordinary', bytes: 9 },
+    { timestamp: null, message: 'needle second', bytes: 14 },
+  ] }, []) });
+  const started = manager.start(input([source('cluster-a')]), () => undefined);
+  assert.ok(started.session);
+  started.session.start();
+  const query = started.session.startQuery({ pod: 'pod', container: '', cluster: 'cluster-a', namespace: '', text: 'needle' });
+  assert.ok(!('error' in query));
+  if ('error' in query) return;
+  assert.equal(query.totalMatches, 2);
+  const first = started.session.readQueryWindow(query.queryId, 0, 'forward', 1);
+  assert.ok(!('error' in first));
+  if ('error' in first) return;
+  assert.deepEqual(first.records.map((record) => record.message), ['needle first']);
+  assert.equal(first.hasMoreAfter, true);
+  const second = started.session.readQueryWindow(query.queryId, first.endIndex, 'forward', 1);
+  assert.ok(!('error' in second));
+  if ('error' in second) return;
+  assert.deepEqual(second.records.map((record) => record.message), ['needle second']);
+  assert.equal(second.hasMoreAfter, false);
+  const backward = started.session.readQueryWindow(query.queryId, 1, 'backward', 1);
+  assert.ok(!('error' in backward));
+  if ('error' in backward) return;
+  assert.deepEqual(backward.records.map((record) => record.message), ['needle first']);
+  assert.deepEqual({ startIndex: backward.startIndex, endIndex: backward.endIndex }, { startIndex: 0, endIndex: 1 });
+  manager.close();
+  rmSync(root, { recursive: true, force: true });
+});
+
 test('aggregate byte limits report bytes-total rather than lines-total', () => {
   const root = tempRoot();
   const events: AggregateLogEvent[] = [];
@@ -289,7 +324,6 @@ test('multi-source history requires explicit source cursors and returns every so
   assert.ok(started.session);
   started.session.start();
   assert.deepEqual(started.session.readWindow(undefined, 'forward', 10), { error: 'History source cursor is required for multiple sources.' });
-
   const windows = sources.map((item) => {
     const key = Buffer.from(JSON.stringify([item.cluster, item.namespace, item.pod, item.container])).toString('base64url');
     const window = started.session!.readWindow({ sourceKey: key, line: 0 }, 'forward', 10);

@@ -7,9 +7,9 @@ session remains the default compatibility path. A historical session obtains a b
 from each selected source with `follow=false`, stores the snapshot temporarily on the backend,
 and serves progress plus bounded windows to the frontend for virtualized navigation.
 
-This release defines the snapshot/session contract and the storage lifecycle. Server-side search
-is specified in v1.3.1 and explicit export is specified in v1.4.0; both consume the immutable
-snapshot contract defined here. This release does not change Kubernetes permissions, add resource
+This release defines the snapshot/session contract and the storage lifecycle. Backend-filtered
+History search consumes the immutable snapshot contract defined here, and explicit export is
+specified in v1.4.0. This release does not change Kubernetes permissions, add resource
 mutation, or claim that Kubernetes provides native pagination for pod logs.
 
 Kubernetes pod logs do not provide native page/offset pagination. History therefore means every
@@ -27,8 +27,10 @@ Kubernetes pagination.
   safe limit reasons while a historical session is being prepared.
 - As a logs user, I can navigate historical output through virtualized pages/windows and move from
   the historical tail into Follow/live without silently losing the session boundary.
-- As a logs user, I can keep Search confirmation, local filters, grouping, wrapping, and existing
-  live behavior unchanged.
+- As a logs user, I can apply confirmed History filters against the complete finite snapshot and
+   navigate all matching records without results disappearing when UI windows are evicted.
+- As a logs user, I can keep Search confirmation, grouping, wrapping, and existing live behavior
+   unchanged.
 - As a platform operator, I can rely on read-only Kubernetes access, temporary cleanup, safe errors,
   and explicit resource limits for multi-source history.
 
@@ -46,6 +48,9 @@ Kubernetes pagination.
 - **Source tuple:** Exact `(cluster, namespace, pod, container)` identity from the confirmed scope.
 - **Historical tail:** The newest available snapshot window. It is finite until an explicit live
   transition creates or attaches to a live session.
+- **History query:** A backend-owned filtered view over one immutable snapshot, identified by a
+   query ID and generation. It stores matching source/line references and exposes logical result
+   offsets, not a second mutable snapshot.
 
 ## Requirements
 
@@ -159,6 +164,15 @@ Kubernetes pagination.
 13. Receiving or merging a History window SHALL not activate Live auto-scroll or reposition the
    user at the historical tail. The explicit latest action MAY load and reveal the final window;
    ordinary History scrolling SHALL preserve the user's current direction and position.
+14. Confirmed History filters SHALL be evaluated against the immutable backend snapshot, not only
+   against records retained in the renderer. The backend SHALL return a query identity and global
+   `totalMatches`, and SHALL serve bounded windows by logical result offset.
+15. Query windows SHALL remain reloadable after frontend cache eviction. A stale query ID,
+   generation, snapshot identity, or out-of-order response SHALL be ignored without changing the
+   current logical result set.
+16. The frontend virtualizer SHALL use the backend `totalMatches` as its logical count, retain only
+   a bounded sparse window cache, render an explicit loading placeholder for an unloaded position,
+   and request that position again when it returns to the visible range.
 
 ### HS-6 - Historical-to-live transition
 
@@ -179,9 +193,9 @@ Kubernetes pagination.
 1. Live mode SHALL preserve Search confirmation, draft/applied state, local Pod/Container/
    Cluster/Namespace/Message filters, Group, Wrap lines, Pause, Clear, Jump to latest, bounded
    retention, partial failures, timestamps, virtualization, and legacy per-pod compatibility.
-2. In History mode, local display filters MAY be applied to delivered historical records, but they
-   SHALL not cause the backend to reread Kubernetes or change the immutable snapshot. The 1.3.1
-   server-side search contract is the authority for historical filtering/search once implemented.
+2. In History mode, confirmed structured and text filters SHALL create a backend query over the
+   immutable snapshot. Querying SHALL never reread Kubernetes or change the snapshot. Live mode
+   SHALL retain its current local filter behavior.
 3. The aggregate WebSocket SHALL remain the transport authority. History messages MAY extend its
    versioned protocol, but the implementation SHALL not open one socket per source or per page.
 4. Source scope SHALL remain the confirmed exact tuple set from v1.2.2. Mode selection SHALL not

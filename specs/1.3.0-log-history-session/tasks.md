@@ -45,7 +45,7 @@ open and are not claims that unsupported environment checks passed.
   only. Browser/Electron interaction, rotation/restart, cleanup-retry failure, desktop restart
   cleanup, and RSS profiling remain unverified.
 - **1.3.0-HS-8 - checked; handoff reconciliation complete.** The stable snapshot identifiers,
-  limits, statuses, transition choice, v1.3.1 boundary, evidence counts, and residual limitations
+  limits, statuses, transition choice, query contract, evidence counts, and residual limitations
   are now recorded. This is a specification handoff, not release approval.
 
 ### Validation record
@@ -316,6 +316,34 @@ these follow-up tasks remain unchecked until the focused implementation and vali
   - _Definition of done: the UI exposes only Session mode for Live/History, the transport has no
     policy dimension, and the spec describes the same behavior as the implementation.
 
+- [x] 1.3.0-HS-FU-8 Implement backend-filtered logical History queries and reloadable frontend windows.
+  - Evaluate confirmed History filters over the immutable backend snapshot and index matching
+    `(sourceKey, line)` references rather than retaining a second full payload set.
+  - Add validated query start/ready/window messages with query ID, session generation, snapshot
+    identity, logical offsets, and global `totalMatches`; stale query responses SHALL be ignored.
+  - Use `totalMatches` as the frontend virtualizer count, retain a bounded sparse query-window cache,
+    render unloaded positions as loading rows, and re-request evicted ranges when they return to the
+    visible viewport. Live filtering and the explicit History-to-Live transition remain unchanged.
+  - _Owner: @ops-union-backend, @ops-union-frontend
+  - _Copilot agents: @ops-union-backend, @ops-union-frontend
+  - _Requirements: HS-5.14-HS-5.16, HS-7.2, RA-1.1-RA-1.3
+  - _Dependencies: 1.3.0-HS-FU-1, 1.3.0-HS-FU-3
+  - _Validation: backend query/index/protocol/WebSocket tests; frontend query cache, global-count,
+    stale-response, placeholder, reload, and live-regression tests; full typecheck/build and diff
+    validation.
+  - _Definition of done: filtered records outside the first window remain addressable after any
+    bounded-cache eviction, and the rendered logical count never collapses to retained-cache size.
+
+### Definitive follow-up evidence
+
+- **1.3.0-HS-FU-8 - implemented; automated evidence recorded.** Backend queries scan immutable
+  snapshots, store source/line references, return global match counts, and serve reloadable logical
+  windows with generation/query identity. Frontend History uses the backend query count, sparse
+  bounded windows, loading placeholders, stale-response guards, and viewport re-requests. Backend
+  focused query/protocol tests passed 87/87; frontend tests passed 96/96 before final validation.
+  Full validation and browser/Electron interaction limitations remain recorded by the final
+  convergence pass; no Kubernetes mutation, package, release, commit, or push was performed.
+
 ## Phase 4 - Integration, security, and handoff
 
 - [x] 1.3.0-HS-7 Run read-only integration, limits, cleanup, and security validation.
@@ -334,10 +362,10 @@ these follow-up tasks remain unchecked until the focused implementation and vali
   - _Definition of done: all stated limits and safety boundaries have executable or explicitly
     limited evidence.
 
-- [x] 1.3.0-HS-8 Complete specification handoff for v1.3.1 and implementation readiness.
+- [x] 1.3.0-HS-8 Complete specification handoff for the immutable snapshot/query contract.
   - Review the requirements/design/tasks against implementation evidence, preserve all unchecked
-    tasks that lack evidence, and identify the exact snapshot APIs, IDs, limits, and status fields
-    that v1.3.1 server-side search may consume.
+    tasks that lack evidence, and identify the exact snapshot APIs, IDs, limits, and query status
+    fields consumed by filtered History search.
   - Record residual risks for Kubernetes finite reads, rotation/restart, timestamp gaps, `--previous`,
     disk cleanup, and desktop restart. This is a specs handoff, not release approval.
   - _Owner: @ops-union-integration-qa
@@ -346,8 +374,8 @@ these follow-up tasks remain unchecked until the focused implementation and vali
   - _Dependencies: 1.3.0-HS-7
   - _Validation: read-only spec/evidence audit and `git diff --check`; no commit, packaging, release,
     or Kubernetes mutation.
-  - _Definition of done: v1.3.1 has a stable, evidenced snapshot contract and all open questions are
-    named for the implementation owners.
+  - _Definition of done: the filtered History implementation has a stable, evidenced snapshot and
+    query contract and all open questions are named for the implementation owners.
 
 ## Definition of done
 

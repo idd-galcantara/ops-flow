@@ -1,6 +1,7 @@
 import type {
   AggregateLogEvent,
   HistoryRecord,
+  HistoryQueryWindowEvent,
   HistoryWindowEvent,
   LogEventRecord,
   LogSource,
@@ -11,6 +12,8 @@ import type {
 export const HISTORY_WINDOW_LIMIT = 500;
 export const HISTORY_CACHE_WINDOW_LIMIT = 8;
 export const HISTORY_CACHE_BYTES_LIMIT = 2 * 1024 * 1024;
+export const HISTORY_QUERY_CACHE_WINDOW_LIMIT = 8;
+export const HISTORY_QUERY_CACHE_BYTES_LIMIT = 2 * 1024 * 1024;
 
 export interface HistoryWindowCache {
   windows: HistoryWindowEvent[];
@@ -30,8 +33,62 @@ export interface HistoryWindowRequest {
   direction: 'forward' | 'backward';
 }
 
+export interface HistoryQueryWindowRequest {
+  offset: number;
+  direction: 'forward' | 'backward';
+}
+
+export interface HistoryQueryWindowCache {
+  windows: HistoryQueryWindowEvent[];
+  bytes: number;
+  maxWindows: number;
+  maxBytes: number;
+}
+
+export interface HistoryQueryWindowCacheUpdate {
+  cache: HistoryQueryWindowCache;
+  evictedKeys: string[];
+}
+
 export function historyInitialWindowRequest(sourceKey: string): HistoryWindowRequest {
   return { sourceKey, line: 0, direction: 'forward' };
+}
+
+export function createHistoryQueryWindowCache(maxWindows = HISTORY_QUERY_CACHE_WINDOW_LIMIT, maxBytes = HISTORY_QUERY_CACHE_BYTES_LIMIT): HistoryQueryWindowCache {
+  return { windows: [], bytes: 0, maxWindows, maxBytes };
+}
+
+export function historyQueryWindowKey(window: Pick<HistoryQueryWindowEvent, 'startIndex' | 'endIndex'>): string {
+  return `${window.startIndex}:${window.endIndex}`;
+}
+
+export function addHistoryQueryWindow(
+  cache: HistoryQueryWindowCache,
+  window: HistoryQueryWindowEvent,
+  identity: Pick<HistoryQueryWindowEvent, 'sessionId' | 'snapshotId' | 'generation' | 'queryId'>,
+): HistoryQueryWindowCacheUpdate | undefined {
+  if (window.sessionId !== identity.sessionId || window.snapshotId !== identity.snapshotId || window.generation !== identity.generation || window.queryId !== identity.queryId) return undefined;
+  const key = historyQueryWindowKey(window);
+  const existing = cache.windows.find((item) => historyQueryWindowKey(item) === key);
+  const nextWindows = cache.windows.filter((item) => historyQueryWindowKey(item) !== key);
+  let nextBytes = cache.bytes - (existing ? historyQueryWindowBytes(existing) : 0) + historyQueryWindowBytes(window);
+  nextWindows.push(window);
+  const evictedKeys: string[] = [];
+  while (nextWindows.length > cache.maxWindows || nextBytes > cache.maxBytes) {
+    const evicted = nextWindows.shift();
+    if (!evicted) break;
+    nextBytes -= historyQueryWindowBytes(evicted);
+    evictedKeys.push(historyQueryWindowKey(evicted));
+  }
+  return { cache: { ...cache, windows: nextWindows, bytes: nextBytes }, evictedKeys };
+}
+
+export function historyQueryRecordAt(cache: HistoryQueryWindowCache, index: number): HistoryRecord | undefined {
+  for (let windowIndex = cache.windows.length - 1; windowIndex >= 0; windowIndex -= 1) {
+    const window = cache.windows[windowIndex];
+    if (index >= window.startIndex && index < window.endIndex) return window.records[index - window.startIndex];
+  }
+  return undefined;
 }
 
 export function createHistoryWindowCache(maxWindows = HISTORY_CACHE_WINDOW_LIMIT, maxBytes = HISTORY_CACHE_BYTES_LIMIT): HistoryWindowCache {
@@ -93,6 +150,10 @@ export function historyRecordToEvent(record: HistoryRecord): LogEventRecord {
 }
 
 function historyWindowBytes(window: HistoryWindowEvent): number {
+  return window.records.reduce((total, record) => total + record.bytes, 0);
+}
+
+function historyQueryWindowBytes(window: HistoryQueryWindowEvent): number {
   return window.records.reduce((total, record) => total + record.bytes, 0);
 }
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_LOG_LIMITS, MAX_LOG_SOURCES, MAX_LOG_LIMITS, validateHistoryCancel, validateHistoryStart, validateHistoryWindow, validateSubscription } from './logsProtocol.js';
+import { DEFAULT_LOG_LIMITS, MAX_LOG_SOURCES, MAX_LOG_LIMITS, validateHistoryCancel, validateHistoryQueryStart, validateHistoryQueryWindow, validateHistoryStart, validateHistoryWindow, validateSubscription } from './logsProtocol.js';
 
 const source = { sourceId: 'one', cluster: 'c', namespace: 'n', pod: 'p', container: 'app' };
 
@@ -69,4 +69,12 @@ test('history validators reject unsafe generations, cursors, and cancel reasons'
   assert.match(('error' in validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, sources: [source] }) ? validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, sources: [source] }).error : ''), /positive integer/);
   assert.match(('error' in validateHistoryWindow({ type: 'history.window', sessionId: 'not-a-uuid', generation: 1, cursor: { sourceKey: 'x', line: -1 } }) ? validateHistoryWindow({ type: 'history.window', sessionId: 'not-a-uuid', generation: 1, cursor: { sourceKey: 'x', line: -1 } }).error : ''), /sessionId is invalid/);
   assert.match(('error' in validateHistoryCancel({ type: 'history.cancel', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, reason: 'x'.repeat(129) }) ? validateHistoryCancel({ type: 'history.cancel', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, reason: 'x'.repeat(129) }).error : ''), /reason is invalid/);
+});
+
+test('history query validators normalize filters and require logical offsets', () => {
+  const start = validateHistoryQueryStart({ type: 'history.query.start', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, filters: { text: '  needle  ', pod: 'api' } });
+  assert.ok(!('error' in start));
+  if (!('error' in start)) assert.deepEqual(start.request.filters, { pod: 'api', container: '', cluster: '', namespace: '', text: 'needle' });
+  assert.ok('error' in validateHistoryQueryWindow({ type: 'history.query.window', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, queryId: 'not-a-uuid', offset: 0 }));
+  assert.ok('error' in validateHistoryQueryWindow({ type: 'history.query.window', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, queryId: '00000000-0000-0000-0000-000000000000', offset: -1 }));
 });

@@ -147,6 +147,14 @@ export interface HistoryRecord {
   application?: ApplicationIdentity;
 }
 
+export interface HistoryQueryFilters {
+  pod: string;
+  container: string;
+  cluster: string;
+  namespace: string;
+  text: string;
+}
+
 export interface HistoryWindowEvent {
   type: 'history.window';
   sessionId: string;
@@ -156,6 +164,19 @@ export interface HistoryWindowEvent {
   source: LogSource;
   startLine: number;
   endLine: number;
+  records: HistoryRecord[];
+  hasMoreBefore: boolean;
+  hasMoreAfter: boolean;
+}
+
+export interface HistoryQueryWindowEvent {
+  type: 'history.query.window';
+  sessionId: string;
+  snapshotId: string;
+  generation: number;
+  queryId: string;
+  startIndex: number;
+  endIndex: number;
   records: HistoryRecord[];
   hasMoreBefore: boolean;
   hasMoreAfter: boolean;
@@ -203,6 +224,8 @@ export type AggregateLogEvent =
   | { type: 'history.progress'; sessionId: string; snapshotId: string; generation: number; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[] }
   | HistoryWindowEvent
   | { type: 'history.terminal'; sessionId: string; snapshotId: string; generation: number; status: HistoryTerminalStatus; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[]; limitReasons: string[] }
+  | { type: 'history.query.ready'; sessionId: string; snapshotId: string; generation: number; queryId: string; totalMatches: number }
+  | HistoryQueryWindowEvent
   | { type: 'error'; message: string };
 
 export interface LogSourceState {

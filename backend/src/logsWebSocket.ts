@@ -3,7 +3,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { normalizeTailLines, streamPodLogs } from './kube/logsService.js';
 import { startLogSubscription, type RunningLogSubscription } from './logsSubscription.js';
 import type { AggregateLogEvent, LegacyLogEvent } from './logsTypes.js';
-import { validateHistoryCancel, validateHistoryStart, validateHistoryWindow, validateSubscription } from './logsProtocol.js';
+import { validateHistoryCancel, validateHistoryQueryStart, validateHistoryQueryWindow, validateHistoryStart, validateHistoryWindow, validateSubscription } from './logsProtocol.js';
 import { safeErrorMessage } from './kube/podsService.js';
 import { HistorySessionManager } from './historySession.js';
 
@@ -120,6 +120,41 @@ function handleAggregateLogSocket(ws: WebSocket, historyManager: HistorySessionM
       if ('error' in window) { send({ type: 'error', message: window.error }); return; }
       send({ type: 'history.window', sessionId: session.sessionId, snapshotId: session.snapshotId, generation: session.generation, ...window });
       return;
+    }
+
+    if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'history.query.start') {
+      const validated = validateHistoryQueryStart(raw);
+      if ('error' in validated) { send({ type: 'error', message: validated.error }); return; }
+      if (!historySessionId || validated.request.sessionId !== historySessionId || validated.request.generation !== historyGeneration) { send({ type: 'error', message: 'History generation is stale.' }); return; }
+      const session = historyManager.get(validated.request.sessionId, validated.request.generation);
+      if ('error' in session) { send({ type: 'error', message: session.error }); return; }
+      const query = session.startQuery(validated.request.filters);
+      if ('error' in query) { send({ type: 'error', message: query.error }); return; }
+      send({ type: 'history.query.ready', sessionId: session.sessionId, snapshotId: session.snapshotId, generation: session.generation, ...query });
+      return;
+    }
+
+    if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'history.query.window') {
+      const validated = validateHistoryQueryWindow(raw);
+      if ('error' in validated) { send({ type: 'error', message: validated.error }); return; }
+      if (!historySessionId || validated.request.sessionId !== historySessionId || validated.request.generation !== historyGeneration) { send({ type: 'error', message: 'History generation is stale.' }); return; }
+      const session = historyManager.get(validated.request.sessionId, validated.request.generation);
+      if ('error' in session) { send({ type: 'error', message: session.error }); return; }
+      let limit = validated.request.limit;
+      while (true) {
+        const window = session.readQueryWindow(validated.request.queryId, validated.request.offset, validated.request.direction, limit);
+        if ('error' in window) { send({ type: 'error', message: window.error }); return; }
+        const response = { type: 'history.query.window' as const, sessionId: session.sessionId, snapshotId: session.snapshotId, generation: session.generation, ...window };
+        if (Buffer.byteLength(JSON.stringify(response), 'utf8') <= maxFrameBytes) {
+          send(response);
+          return;
+        }
+        if (window.records.length <= 1) {
+          send({ type: 'error', message: 'The history response exceeds the transport limit.' });
+          return;
+        }
+        limit = Math.max(1, Math.floor(window.records.length / 2));
+      }
     }
 
     if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'history.cancel') {

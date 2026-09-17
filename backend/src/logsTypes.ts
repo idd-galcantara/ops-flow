@@ -79,6 +79,14 @@ export interface HistoryRecord {
   application?: ApplicationIdentity;
 }
 
+export interface HistoryQueryFilters {
+  pod: string;
+  container: string;
+  cluster: string;
+  namespace: string;
+  text: string;
+}
+
 export interface LogCounters {
   emittedLines: number;
   emittedBytes: number;
@@ -110,6 +118,8 @@ export type AggregateLogEvent =
   | { type: 'history.progress'; sessionId: string; snapshotId: string; generation: number; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[] }
   | { type: 'history.window'; sessionId: string; snapshotId: string; generation: number; sourceKey: string; source: LogSource; startLine: number; endLine: number; records: HistoryRecord[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
   | { type: 'history.terminal'; sessionId: string; snapshotId: string; generation: number; status: HistoryTerminalStatus; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[]; limitReasons: string[] }
+  | { type: 'history.query.ready'; sessionId: string; snapshotId: string; generation: number; queryId: string; totalMatches: number }
+  | { type: 'history.query.window'; sessionId: string; snapshotId: string; generation: number; queryId: string; startIndex: number; endIndex: number; records: HistoryRecord[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
   | { type: 'error'; message: string };
 
 export type LegacyLogEvent =

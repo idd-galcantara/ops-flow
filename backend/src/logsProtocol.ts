@@ -1,5 +1,5 @@
 import type { ApplicationIdentity } from './kube/types.js';
-import type { EffectiveLogSubscription, LogLimits, LogRange, LogSource, SubscribeMessage } from './logsTypes.js';
+import type { EffectiveLogSubscription, HistoryQueryFilters, LogLimits, LogRange, LogSource, SubscribeMessage } from './logsTypes.js';
 
 export const DEFAULT_LOG_LIMITS: LogLimits = {
   maxLinesPerSource: 2_000,
@@ -37,6 +37,23 @@ export interface HistoryWindowRequest {
   limit?: number;
 }
 
+export interface HistoryQueryStartRequest {
+  type: 'history.query.start';
+  sessionId: string;
+  generation: number;
+  filters: HistoryQueryFilters;
+}
+
+export interface HistoryQueryWindowRequest {
+  type: 'history.query.window';
+  sessionId: string;
+  generation: number;
+  queryId: string;
+  offset: number;
+  direction?: 'forward' | 'backward';
+  limit?: number;
+}
+
 export interface HistoryCancelRequest {
   type: 'history.cancel';
   sessionId: string;
@@ -46,6 +63,8 @@ export interface HistoryCancelRequest {
 
 export type HistoryStartValidation = { request: HistoryStartRequest } | { error: string };
 export type HistoryWindowValidation = { request: Required<Pick<HistoryWindowRequest, 'type' | 'sessionId' | 'generation' | 'direction' | 'limit'>> & Pick<HistoryWindowRequest, 'cursor'> } | { error: string };
+export type HistoryQueryStartValidation = { request: HistoryQueryStartRequest } | { error: string };
+export type HistoryQueryWindowValidation = { request: Required<Pick<HistoryQueryWindowRequest, 'type' | 'sessionId' | 'generation' | 'queryId' | 'offset' | 'direction' | 'limit'>> } | { error: string };
 export type HistoryCancelValidation = { request: HistoryCancelRequest } | { error: string };
 
 function requiredText(value: unknown, field: string): string | undefined {
@@ -132,6 +151,19 @@ function validateHistorySessionId(value: unknown): string | undefined {
   return undefined;
 }
 
+function validateHistoryQueryFilters(value: unknown): { filters: HistoryQueryFilters } | { error: string } {
+  if (!value || typeof value !== 'object') return { error: 'filters must be an object.' };
+  const input = value as Partial<HistoryQueryFilters>;
+  const filters: HistoryQueryFilters = { pod: '', container: '', cluster: '', namespace: '', text: '' };
+  for (const field of Object.keys(filters) as Array<keyof HistoryQueryFilters>) {
+    const candidate = input[field];
+    if (candidate === undefined) continue;
+    if (typeof candidate !== 'string' || candidate.length > (field === 'text' ? 512 : 256)) return { error: `filters.${field} is invalid.` };
+    filters[field] = candidate.trim();
+  }
+  return { filters };
+}
+
 export function validateHistoryStart(raw: unknown): HistoryStartValidation {
   if (!raw || typeof raw !== 'object' || (raw as { type?: unknown }).type !== 'history.start') return { error: 'The first message must start a history session.' };
   const value = raw as Partial<HistoryStartRequest>;
@@ -157,6 +189,32 @@ export function validateHistoryWindow(raw: unknown): HistoryWindowValidation {
   if (value.direction !== undefined && value.direction !== 'forward' && value.direction !== 'backward') return { error: 'direction must be forward or backward.' };
   if (value.limit !== undefined && (!Number.isInteger(value.limit) || value.limit <= 0)) return { error: 'limit must be a positive integer.' };
   return { request: { type: 'history.window', sessionId: value.sessionId!, generation: value.generation!, cursor, direction: value.direction ?? 'forward', limit: value.limit ?? 500 } };
+}
+
+export function validateHistoryQueryStart(raw: unknown): HistoryQueryStartValidation {
+  if (!raw || typeof raw !== 'object' || (raw as { type?: unknown }).type !== 'history.query.start') return { error: 'Invalid history query start request.' };
+  const value = raw as Partial<HistoryQueryStartRequest>;
+  const sessionError = validateHistorySessionId(value.sessionId);
+  if (sessionError) return { error: sessionError };
+  const generationError = validateGeneration(value.generation);
+  if (generationError) return { error: generationError };
+  const filters = validateHistoryQueryFilters(value.filters);
+  if ('error' in filters) return filters;
+  return { request: { type: 'history.query.start', sessionId: value.sessionId!, generation: value.generation!, filters: filters.filters } };
+}
+
+export function validateHistoryQueryWindow(raw: unknown): HistoryQueryWindowValidation {
+  if (!raw || typeof raw !== 'object' || (raw as { type?: unknown }).type !== 'history.query.window') return { error: 'Invalid history query window request.' };
+  const value = raw as Partial<HistoryQueryWindowRequest>;
+  const sessionError = validateHistorySessionId(value.sessionId);
+  if (sessionError) return { error: sessionError };
+  const generationError = validateGeneration(value.generation);
+  if (generationError) return { error: generationError };
+  if (typeof value.queryId !== 'string' || !/^[0-9a-f-]{36}$/i.test(value.queryId)) return { error: 'queryId is invalid.' };
+  if (typeof value.offset !== 'number' || !Number.isInteger(value.offset) || value.offset < 0) return { error: 'offset must be a non-negative integer.' };
+  if (value.direction !== undefined && value.direction !== 'forward' && value.direction !== 'backward') return { error: 'direction must be forward or backward.' };
+  if (value.limit !== undefined && (!Number.isInteger(value.limit) || value.limit <= 0)) return { error: 'limit must be a positive integer.' };
+  return { request: { type: 'history.query.window', sessionId: value.sessionId!, generation: value.generation!, queryId: value.queryId!, offset: value.offset!, direction: value.direction ?? 'forward', limit: value.limit ?? 500 } };
 }
 
 export function validateHistoryCancel(raw: unknown): HistoryCancelValidation {

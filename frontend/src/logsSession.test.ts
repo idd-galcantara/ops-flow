@@ -2,18 +2,21 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   appendBoundedEvent,
+  addHistoryQueryWindow,
   addHistoryWindow,
+  createHistoryQueryWindowCache,
   createHistoryWindowCache,
   dedupeSources,
   filterLogRecords,
   historyRecordsFromCache,
   historyInitialWindowRequest,
+  historyQueryRecordAt,
   logRecordMatches,
   logFilterValues,
   sourceIdFor,
   sourcesForPods,
 } from './logsSession';
-import type { HistoryWindowEvent, LogEventRecord, LogSource, NormalizedPod } from './types';
+import type { HistoryQueryWindowEvent, HistoryWindowEvent, LogEventRecord, LogSource, NormalizedPod } from './types';
 
 const application = { key: 'label:billing', name: 'billing', source: 'label' as const, labelKey: 'app' as const };
 const pod = (name: string, cluster = 'qa'): NormalizedPod => ({
@@ -134,4 +137,31 @@ test('history cache merges short windows from duplicate source IDs by exact sour
   assert.deepEqual(records.map((record) => record.event.sourceId), ['prod-key', 'qa-key']);
   assert.equal(records[0].event.sequence, 1);
   assert.equal(records[1].event.sequence, 1);
+});
+
+test('history query cache indexes global positions, rejects stale queries, and reopens evicted ranges', () => {
+  const source: LogSource = { sourceId: 'history-source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7, queryId: 'query-1' };
+  const window = (startIndex: number, queryId = identity.queryId): HistoryQueryWindowEvent => ({
+    type: 'history.query.window',
+    ...identity,
+    queryId,
+    startIndex,
+    endIndex: startIndex + 2,
+    records: [
+      { sourceKey: 'source-key', source, sequence: startIndex, timestamp: null, message: `line ${startIndex}`, bytes: 7 },
+      { sourceKey: 'source-key', source, sequence: startIndex + 1, timestamp: null, message: `line ${startIndex + 1}`, bytes: 7 },
+    ],
+    hasMoreBefore: startIndex > 0,
+    hasMoreAfter: true,
+  });
+  let cache = createHistoryQueryWindowCache(2, 1024);
+  assert.equal(addHistoryQueryWindow(cache, window(0, 'old-query'), identity), undefined);
+  cache = addHistoryQueryWindow(cache, window(0), identity)!.cache;
+  cache = addHistoryQueryWindow(cache, window(2), identity)!.cache;
+  const update = addHistoryQueryWindow(cache, window(4), identity)!;
+  assert.deepEqual(update.evictedKeys, ['0:2']);
+  assert.equal(historyQueryRecordAt(update.cache, 0), undefined);
+  assert.equal(historyQueryRecordAt(update.cache, 2)?.message, 'line 2');
+  assert.equal(historyQueryRecordAt(update.cache, 5)?.message, 'line 5');
 });

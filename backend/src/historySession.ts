@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { streamStructuredPodLogs, type LogStreamHandle, type StructuredLogCallbacks, type StructuredLogLine, type StructuredLogOptions } from './kube/logsService.js';
 import { safeErrorMessage } from './kube/podsService.js';
 import { historyLimits, type HistoryLimits } from './historyLimits.js';
-import type { AggregateLogEvent, HistoryAggregateProgress, HistoryCursor, HistoryRecord, HistorySourceProgress, HistoryTerminalStatus, LogCounters, LogSource } from './logsTypes.js';
+import type { AggregateLogEvent, HistoryAggregateProgress, HistoryCursor, HistoryQueryFilters, HistoryRecord, HistorySourceProgress, HistoryTerminalStatus, LogCounters, LogSource } from './logsTypes.js';
 
 export type HistoryStreamFactory = (options: StructuredLogOptions, callbacks: StructuredLogCallbacks) => LogStreamHandle;
 
@@ -60,6 +60,11 @@ interface SourceState {
   error?: string;
   limitReason?: string;
   stopReason?: 'limit' | 'cancelled';
+}
+
+interface HistoryQuery {
+  queryId: string;
+  references: Array<{ sourceKey: string; line: number }>;
 }
 
 class HistoryLimitError extends Error {
@@ -185,6 +190,7 @@ export class HistorySession {
   private cancelRequested = false;
   private terminalAt?: number;
   private requestTimes: number[] = [];
+  private queries = new Map<string, HistoryQuery>();
   private status: HistoryTerminalStatus | 'starting' | 'reading' = 'starting';
 
   constructor(private readonly input: HistoryStartInput, options: Required<Pick<HistorySessionManagerOptions, 'rootDir' | 'streamFactory' | 'now'>> & { limits: HistoryLimits }, emit: (event: AggregateLogEvent) => void) {
@@ -285,6 +291,82 @@ export class HistorySession {
     if ('error' in result) return result;
     const records = result.records;
     return { sourceKey: state.sourceKey, source: state.source, startLine: result.start, endLine: result.end, records, hasMoreBefore: result.start > 0, hasMoreAfter: result.end < total };
+  }
+
+  startQuery(filters: HistoryQueryFilters): { queryId: string; totalMatches: number } | { error: string } {
+    if (!this.finalized) return { error: 'History snapshot is still being prepared.' };
+    if (this.status === 'cancelled') return { error: 'History session was cancelled.' };
+    if (this.status === 'expired' || this.cleaned) return { error: 'History session expired.' };
+    const references: Array<{ sourceKey: string; line: number }> = [];
+    for (const state of this.states) {
+      if (!state.writer) return { error: 'History snapshot storage is unavailable.' };
+      let line = 0;
+      while (line < state.writer.lines) {
+        const result = this.readRecords(state, line, Math.min(state.writer.lines, line + this.limits.maxWindowRecords), 'forward');
+        if ('error' in result) return result;
+        if (result.end <= line) return { error: 'History snapshot index is invalid.' };
+        result.records.forEach((record, index) => {
+          if (historyRecordMatches(record, filters)) references.push({ sourceKey: state.sourceKey, line: result.start + index });
+        });
+        line = result.end;
+      }
+    }
+    const queryId = randomUUID();
+    this.queries.clear();
+    this.queries.set(queryId, { queryId, references });
+    return { queryId, totalMatches: references.length };
+  }
+
+  readQueryWindow(queryId: string, offset: number, direction: 'forward' | 'backward', requestedLimit: number): { queryId: string; startIndex: number; endIndex: number; records: HistoryRecord[]; hasMoreBefore: boolean; hasMoreAfter: boolean } | { error: string } {
+    if (!this.finalized) return { error: 'History snapshot is still being prepared.' };
+    if (this.status === 'cancelled') return { error: 'History session was cancelled.' };
+    if (this.status === 'expired' || this.cleaned) return { error: 'History session expired.' };
+    const now = this.now();
+    this.requestTimes = this.requestTimes.filter((time) => now - time < 60_000);
+    if (this.requestTimes.length >= this.limits.maxWindowRequestsPerMinute) return { error: 'History window request rate exceeded.' };
+    this.requestTimes.push(now);
+    const query = this.queries.get(queryId);
+    if (!query) return { error: 'History query is invalid or expired.' };
+    if (!Number.isInteger(offset) || offset < 0 || offset > query.references.length) return { error: 'History query offset is invalid.' };
+    const limit = Math.min(requestedLimit, this.limits.maxWindowRecords);
+    if (!Number.isInteger(limit) || limit <= 0) return { error: 'History window limit is invalid.' };
+    if (direction === 'forward') {
+      let endIndex = Math.min(query.references.length, offset + limit);
+      let bytes = 0;
+      const records: HistoryRecord[] = [];
+      for (const reference of query.references.slice(offset, endIndex)) {
+        const result = this.readQueryRecord(reference);
+        if ('error' in result) return result;
+        if (result.record.bytes > this.limits.maxWindowBytes && records.length === 0) return { error: HISTORY_RECORD_TOO_LARGE_ERROR };
+        if (bytes + result.record.bytes > this.limits.maxWindowBytes) break;
+        bytes += result.record.bytes;
+        records.push(result.record);
+      }
+      endIndex = offset + records.length;
+      return { queryId, startIndex: offset, endIndex, records, hasMoreBefore: offset > 0, hasMoreAfter: endIndex < query.references.length };
+    }
+    let startIndex = offset;
+    let bytes = 0;
+    const records: HistoryRecord[] = [];
+    for (let index = offset - 1; index >= 0 && records.length < limit; index -= 1) {
+      const result = this.readQueryRecord(query.references[index]);
+      if ('error' in result) return result;
+      if (result.record.bytes > this.limits.maxWindowBytes && records.length === 0) return { error: HISTORY_RECORD_TOO_LARGE_ERROR };
+      if (bytes + result.record.bytes > this.limits.maxWindowBytes) break;
+      bytes += result.record.bytes;
+      records.unshift(result.record);
+      startIndex = index;
+    }
+    return { queryId, startIndex, endIndex: offset, records, hasMoreBefore: startIndex > 0, hasMoreAfter: offset < query.references.length };
+  }
+
+  private readQueryRecord(reference: { sourceKey: string; line: number }): { record: HistoryRecord } | { error: string } {
+    const state = this.states.find((candidate) => candidate.sourceKey === reference.sourceKey);
+    if (!state) return { error: 'History query index is invalid.' };
+    const result = this.readRecords(state, reference.line, reference.line + 1, 'forward');
+    if ('error' in result) return result;
+    if (result.records.length !== 1) return { error: 'History query index is invalid.' };
+    return { record: result.records[0] };
   }
 
   private readRecords(state: SourceState, start: number, end: number, direction: 'forward' | 'backward'): { start: number; end: number; records: HistoryRecord[] } | { error: string } {
@@ -574,6 +656,16 @@ export class HistorySession {
       }
     }
   }
+}
+
+function historyRecordMatches(record: HistoryRecord, filters: HistoryQueryFilters): boolean {
+  return (
+    (!filters.pod || record.source.pod === filters.pod) &&
+    (!filters.container || record.source.container === filters.container) &&
+    (!filters.cluster || record.source.cluster === filters.cluster) &&
+    (!filters.namespace || record.source.namespace === filters.namespace) &&
+    (!filters.text || record.message.toLowerCase().includes(filters.text.toLowerCase()))
+  );
 }
 
 export class HistorySessionManager {

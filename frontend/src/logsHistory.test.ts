@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { serializeHistoryCancel, serializeHistoryStart, serializeHistoryWindow } from './api';
+import { serializeHistoryCancel, serializeHistoryQueryStart, serializeHistoryQueryWindow, serializeHistoryStart, serializeHistoryWindow } from './api';
 import type { LogSource } from './types';
 
 const source: LogSource = {
@@ -42,5 +42,27 @@ test('history window and cancellation messages carry the session generation', ()
     sessionId: 'session',
     generation: 9,
     reason: 'user-cancelled',
+  });
+});
+
+test('history query messages use session identity, filters, and global offsets', () => {
+  assert.deepEqual(JSON.parse(serializeHistoryQueryStart({
+    sessionId: 'session',
+    generation: 9,
+    filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' },
+  })), {
+    type: 'history.query.start',
+    sessionId: 'session',
+    generation: 9,
+    filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' },
+  });
+  assert.deepEqual(JSON.parse(serializeHistoryQueryWindow({ sessionId: 'session', generation: 9, queryId: 'query-1', offset: 1_000, limit: 500 })), {
+    type: 'history.query.window',
+    sessionId: 'session',
+    generation: 9,
+    queryId: 'query-1',
+    offset: 1_000,
+    direction: 'forward',
+    limit: 500,
   });
 });
