@@ -105,7 +105,7 @@ function handleAggregateLogSocket(ws: WebSocket, historyManager: HistorySessionM
       if (started.error || !started.session) { failProtocol(started.error ?? 'Could not start history.'); return; }
       historySessionId = started.session.sessionId;
       historyGeneration = started.session.generation;
-      send({ type: 'history.accepted', requestId: validated.request.requestId, sessionId: started.session.sessionId, snapshotId: started.session.snapshotId, generation: started.session.generation, policy: validated.request.policy, sourceCount: validated.request.sources.length });
+      send({ type: 'history.accepted', requestId: validated.request.requestId, sessionId: started.session.sessionId, snapshotId: started.session.snapshotId, generation: started.session.generation, sourceCount: validated.request.sources.length });
       started.session.start();
       return;
     }

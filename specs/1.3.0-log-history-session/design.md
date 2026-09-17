@@ -39,13 +39,12 @@ by the finite source read before a documented limit, failure, cancellation, or s
 
 ## Applied session model
 
-The existing draft/applied Search model gains explicit history fields without changing the meaning
-of existing fields:
+The existing draft/applied Search model gains an explicit History mode without changing the
+meaning of existing fields:
 
 ```ts
 interface AppliedLogMode {
   mode: 'live' | 'history';
-  historyPolicy?: 'complete-when-available' | 'bounded';
   range: AppliedRange;
   follow: boolean; // live contract; history is finite until explicit transition
   sources: SourceTuple[];
@@ -59,8 +58,8 @@ interface SourceTuple {
 }
 ```
 
-History policy is applied atomically with the rest of Search. Draft edits remain inert. The initial
-Live state preserves the current behavior. A History session is identified by a server-issued
+Draft edits remain inert and are applied atomically with the rest of Search. The initial Live state
+preserves the current behavior. A History session is identified by a server-issued
 `sessionId`, a `snapshotId`, and a monotonically increasing `generation`; all frontend state and
 responses carry the generation so stale windows cannot cross sessions.
 
@@ -85,13 +84,13 @@ history-reading -> history-failed-partial-or-terminal
 A source can be `queued`, `reading`, `indexing`, `ready`, `partial`, `failed`, or `cancelled`
 independently of the aggregate session. Aggregate status is derived from source statuses and the
 storage lifecycle. A finite snapshot never uses `streaming` as its terminal state; the UI uses
-`history ready`, `partial`, or `bounded` labels instead.
+`history ready` or `partial` labels instead.
 
 ## Snapshot storage and index
 
 The implementation uses one application-owned temporary directory per history session and one
-NDJSON file per source. A session manifest records source tuple, snapshot version,
-policy, applied range, byte/line counts, statuses, limit reasons, timestamps, and TTL metadata.
+NDJSON file per source. A session manifest records source tuple, snapshot version, applied range,
+byte/line counts, statuses, limit reasons, timestamps, and TTL metadata.
 The manifest contains no credentials, request headers, raw response bodies, or filesystem paths in
 renderer-facing payloads.
 
@@ -99,14 +98,14 @@ renderer-facing payloads.
 
 - **Mode and generation:** `history.start` is the applied History-mode boundary. The server issues
   the session generation and the session carries immutable `sessionId` and `snapshotId` values.
-  Draft mode and policy remain frontend concerns until Search confirmation.
+  Draft mode remains a frontend concern until Search confirmation.
 - **History-to-live transition:** close the finite history session and start one new aggregate Live
   session after explicit confirmation. There is no same-socket attach and no per-source socket.
   This preserves the historical boundary and avoids presenting a finite snapshot as streaming.
 - **Limits:** the implementation uses the named baseline table below plus a 512 KiB protocol frame,
   a 2,000-record/256 KiB window, two process-wide active sessions, eight concurrent source reads,
   120 window requests per minute, a 15-minute terminal TTL, and a one-hour orphan grace period.
-  Both policies fail closed at these caps; cap hits always produce a partial/limit reason.
+  History fails closed at these caps; cap hits always produce a partial/limit reason.
 - **Timestamp and continuity:** timestamps are normalized when valid; missing or malformed values
   remain `null` and file/line order is authoritative. Each source is read exactly once with
   `follow=false`; no implicit reread or synthetic pagination occurs. Continuity is reported as
@@ -183,7 +182,7 @@ The existing aggregate WebSocket remains the single transport. Message names are
 must be versioned consistently with the existing protocol implementation:
 
 ```text
-client -> server: history.start { requestId, generation, policy, range, sources }
+client -> server: history.start { requestId, generation, range, sources }
 server -> client: history.accepted { requestId, sessionId, generation }
 server -> client: history.progress { sessionId, generation, aggregate, sources[] }
 client -> server: history.window { sessionId, generation, cursor, direction, limit }
@@ -197,20 +196,46 @@ is rejected when the session/generation/cursor does not match. Records are norma
 existing safe log event contract; raw Kubernetes response text is never used as a protocol error.
 A protocol frame is capped independently from snapshot caps.
 
+### Corrective adaptive-window and source contract
+
+The `limit` field is a maximum record count, not a promise that the requested count will be
+returned. For the requested forward or backward span, the backend scans the immutable on-disk
+index and chooses the largest contiguous prefix or suffix that fits `maxWindowBytes` before it
+opens the NDJSON data file or decodes records. It returns that smaller range with exact
+`startLine`/`endLine` and `hasMoreBefore`/`hasMoreAfter` values. If the boundary record itself is
+larger than `maxWindowBytes`, it returns the sanitized error `History record exceeds the storage
+read limit.`; this is distinct from storage corruption and does not attempt an oversized read.
+
+Windows are per-source. A cursorless request is shorthand for the first source only when the
+session contains exactly one source. For multiple sources, a cursorless request returns
+`History source cursor is required for multiple sources.` rather than selecting the first source
+implicitly. The frontend sends explicit source-key cursors for every selected source over the one
+aggregate socket and merges the resulting windows by stable `(sourceKey, sequence)` identity.
+Receiving a smaller valid window is normal; the frontend keeps loading adjacent windows as edge
+scrolling requires. A window error clears loading and exposes retry while the snapshot remains
+valid, and the error state is mutually exclusive with the loading state.
+
 The frontend requests an initial window around the first visible range, prefetches only a small
 adjacent window, and requests older/newer windows as the virtualizer approaches an edge. Window
 cache eviction is bounded by bytes and count. A failed window request is retryable only while the
 snapshot is valid; a cancelled/expired session is terminal.
 
+History edge requests are directional. A scroll near the top requests only the previous window;
+a scroll near the bottom requests only the next window. Pending cursor keys deduplicate repeated
+scroll events, while keys for windows that were actually evicted may become eligible again when
+the user reverses direction. Cache eviction follows the active direction: backward loads evict
+newer windows first and forward loads evict older windows first. Merging a historical window does
+not enable Live auto-scroll or jump to the snapshot tail; only the explicit latest action may load
+and reveal that final window.
+
 ## Historical-to-live transition
 
-The recommended decision is **close history and start one new live session** when the user confirms
-Follow/live at the historical tail. This keeps source and range semantics explicit, prevents a
-finite snapshot from being presented as a stream, and uses the existing one aggregate WebSocket
-replacement boundary. The UI retains the history session summary while the new live session is
-connecting. If the implementation instead supports a server-side attach, it must prove that it
-uses one socket, one source scope, and an explicit boundary marker; attach is not assumed by this
-specification.
+The decision is **close history and start one new live session** when the user activates the
+explicit transition at the historical tail. This keeps source and range semantics explicit,
+prevents a finite snapshot from being presented as a stream, and uses the existing one aggregate
+WebSocket replacement boundary. The UI retains the history session summary while the new live
+session is connecting. The new Live session starts with `follow=true`; there is no separate
+"Follow after history" option. A server-side attach is not part of this specification.
 
 A transition that changes range, source scope, or Follow semantics uses the existing Search
 confirmation. Duplicate transitions are disabled while connecting. A failed transition leaves the
@@ -256,7 +281,7 @@ left to v1.4.0 and must use a user-selected destination with a separate security
 
 ### Frontend checks
 
-- Test draft/applied mode and policy, Search confirmation, history status progression, page/window
+- Test draft/applied mode and Search confirmation, history status progression, page/window
   requests, stale generation rejection, bounded cache, virtualization, empty/partial/cancelled/
   expired states, transition to live, filters, grouping, wrapping, and keyboard/accessibility.
 - Assert Live mode produces the existing payload and socket behavior and History mode uses one

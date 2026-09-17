@@ -12,17 +12,17 @@ is specified in v1.3.1 and explicit export is specified in v1.4.0; both consume 
 snapshot contract defined here. This release does not change Kubernetes permissions, add resource
 mutation, or claim that Kubernetes provides native pagination for pod logs.
 
-Kubernetes pod logs do not provide native page/offset pagination. In this specification, **complete**
-means every line made available by the requested `follow=false` read for the selected source,
-subject to the configured byte, line, disk, time, concurrency, and transport limits. A bounded
-session is an explicitly limited snapshot, not an incomplete implementation of Kubernetes
-pagination.
+Kubernetes pod logs do not provide native page/offset pagination. History therefore means every
+line made available by the requested finite `follow=false` read for the selected source, subject
+to the configured byte, line, disk, time, concurrency, and transport limits. A cap or source
+failure produces a partial History result with a visible reason; it is not an implementation of
+Kubernetes pagination.
 
 ## User stories
 
 - As a logs user, I can explicitly choose Live or History mode and understand which mode is active.
-- As a logs user, I can request a complete-when-available or bounded historical snapshot without
-  loading the entire snapshot into browser memory.
+- As a logs user, I can request a finite historical snapshot without loading the entire snapshot
+   into browser memory.
 - As a logs user, I can see per-source and aggregate progress, partial failures, cancellation, and
   safe limit reasons while a historical session is being prepared.
 - As a logs user, I can navigate historical output through virtualized pages/windows and move from
@@ -37,10 +37,8 @@ pagination.
 - **Live mode:** The existing aggregate log session with its current Follow/live behavior, bounded
   client retention, local filters, grouping, wrapping, and one WebSocket contract.
 - **History mode:** A session that reads a finite `follow=false` snapshot for each selected source.
-- **Complete snapshot:** All lines returned by the source read before configured limits, subject to
-  the availability caveat above; it does not mean all historical data in Kubernetes.
-- **Bounded snapshot:** A snapshot deliberately limited by bytes, lines, time, disk, or another
-  documented session cap. The limit reason is visible and machine-readable.
+- **History snapshot:** All lines returned by the source read before configured limits, subject to
+   the availability caveat above; it does not mean all historical data in Kubernetes.
 - **Snapshot:** Immutable temporary NDJSON records plus an index and metadata for one session/source
   set. It is not a durable log archive.
 - **Window/page:** A bounded range of snapshot records requested by the frontend for rendering.
@@ -55,14 +53,13 @@ pagination.
 
 1. The workspace SHALL expose an explicit mode choice between the existing Live mode and History
    mode. The selected mode SHALL be visible in the header and accessible state announcements.
-2. History mode SHALL expose an explicit completeness policy: `complete when available` and
-   `bounded` (or equivalent labels approved by UX). The active policy SHALL be part of the applied
-   search/session state, not an implicit timeout or UI default.
-3. Draft mode, policy, range, Follow, and filters SHALL remain unapplied until the existing
+2. History mode SHALL use one explicit finite-snapshot contract. It SHALL not expose a selectable
+   completeness policy because the configured resource caps already apply to every History session.
+3. Draft mode, range, Follow, and filters SHALL remain unapplied until the existing
    `Search` confirmation is activated, except for existing immediate controls such as Pause,
    retained-event Clear, and presentation-only Group/Wrap lines.
-4. A mode or policy change before Search SHALL not open a session, read Kubernetes, create a
-   snapshot, or replace retained output.
+4. A mode change before Search SHALL not open a session, read Kubernetes, create a snapshot, or
+   replace retained output.
 5. A confirmed Live search SHALL preserve the current live transport and rendering behavior. A
    confirmed History search SHALL create exactly one history session generation for the selected
    sources and applied range.
@@ -73,12 +70,11 @@ pagination.
    operation with `follow=false` and the applied source/range parameters.
 2. The backend SHALL NOT represent Kubernetes pod logs as natively paginated. It SHALL read the
    available finite response/stream, record it incrementally, and apply local snapshot limits.
-3. `complete when available` SHALL mean all lines received from the `follow=false` read until EOF,
-   source failure, cancellation, or a configured cap. If a cap or source failure stops capture,
-   the session SHALL be marked bounded/partial with a reason rather than reported as complete.
-4. A bounded policy SHALL stop or truncate according to the documented byte/line/time/disk caps,
-   preserve the records already captured, and expose the exact cap category without leaking raw
-   Kubernetes output.
+3. History SHALL mean all lines received from the `follow=false` read until EOF, source failure,
+   cancellation, or a configured cap. If a cap or source failure stops capture, the session SHALL
+   be marked partial with a reason rather than reported as complete.
+4. History SHALL preserve the records already captured when a cap is reached and expose the exact
+   cap category without leaking raw Kubernetes output.
 5. Multiple sources SHALL retain exact cluster, namespace, pod, and container identity even when
    names repeat across contexts. A source failure SHALL not hide successfully captured sources.
 6. Backend acquisition SHALL remain read-only list/get/log or equivalent existing read paths. No
@@ -113,7 +109,8 @@ pagination.
    close owned streams, prevent further page delivery, and schedule immediate temporary cleanup.
 4. A cancelled or expired session SHALL reject new windows/search/export consumers with a safe,
    stable status and SHALL not resume Kubernetes reads implicitly.
-5. TTL SHALL begin at the terminal snapshot state (or last activity according to the chosen policy)
+5. TTL SHALL begin at the terminal snapshot state (or last activity according to the configured
+   lifecycle rule)
    and SHALL be configurable. Cleanup SHALL cover normal completion and orphaned sessions after
    desktop/backend restart.
 6. The backend SHALL bound concurrent history sessions and concurrent source reads. Excess work
@@ -135,6 +132,33 @@ pagination.
    or rejected safely and SHALL not append records to a different history session.
 6. The UI SHALL distinguish loading a window, an empty snapshot, a partial snapshot, a source
    failure, a cancelled session, an expired session, and a no-results state.
+7. The requested record count SHALL be a maximum. The backend SHALL use the on-disk index to
+   return the largest contiguous range in the requested direction that fits the configured
+   window-byte limit, with accurate boundaries and `hasMore` flags. A valid smaller window SHALL
+   not be reported as an error.
+8. If one encoded record cannot fit the configured window-byte limit, the backend SHALL return a
+   specific sanitized record-too-large error for that window; it SHALL not allocate or decode an
+   unbounded record.
+9. History windows SHALL be explicitly scoped per exact source tuple. A cursorless request is
+   allowed only when the session has one source; a multi-source cursorless request SHALL return a
+   safe cursor-required error. The frontend SHALL request and merge one source window per selected
+   source over the single aggregate WebSocket and SHALL never silently display only the first
+   source.
+10. A window request error SHALL clear the frontend loading state and expose a safe retry action
+    while the session is valid. Loading SHALL not be shown at the same time as a terminal window
+    error. Smaller windows SHALL drive adjacent requests normally as scrolling/virtualization
+    reaches their boundaries.
+11. When the user approaches the beginning or end of the retained History output, the frontend
+   SHALL request only the corresponding adjacent direction. Repeated scroll events SHALL remain
+   deduplicated while a cursor request is pending and SHALL not issue simultaneous requests for
+   both edges.
+12. History cache eviction SHALL be direction-aware: loading older records SHALL evict newer
+   windows first, while loading newer records SHALL evict older windows first. A cursor SHALL
+   become eligible for re-request only after its window was actually evicted, so reversing
+   direction remains possible without repeated requests caused by ordinary scrolling.
+13. Receiving or merging a History window SHALL not activate Live auto-scroll or reposition the
+   user at the historical tail. The explicit latest action MAY load and reveal the final window;
+   ordinary History scrolling SHALL preserve the user's current direction and position.
 
 ### HS-6 - Historical-to-live transition
 
@@ -201,7 +225,7 @@ pagination.
 1. Focused backend tests SHALL cover one and multiple sources, duplicate names across contexts,
    follow=false acquisition, NDJSON/index reads, page cursors, missing timestamps, limits,
    cancellation, TTL cleanup, restart/orphan cleanup, and safe errors.
-2. Focused frontend tests SHALL cover mode/policy draft and Search confirmation, progress/status
+2. Focused frontend tests SHALL cover mode draft and Search confirmation, progress/status
    transitions, window requests, stale generation handling, virtualization, historical tail to
    live transition, filters, grouping, wrapping, and accessibility states.
 3. Existing live session, Search confirmation, source scope, logs presentation/range, aggregate
@@ -215,8 +239,8 @@ pagination.
 ## Definition of done
 
 - Live mode remains behaviorally compatible and History mode is an explicit Search-applied choice.
-- Each historical source is read with `follow=false`, with complete-when-available versus bounded
-  semantics visible and no false claim of Kubernetes-native pagination.
+- Each historical source is read with `follow=false`, with finite History semantics visible and no
+   false claim of Kubernetes-native pagination.
 - Temporary NDJSON storage, offset/line/timestamp indexing, limits, progress, cancellation, TTL,
   cleanup, safe errors, and desktop isolation are implemented and tested.
 - Frontend delivery is paged/windowed and virtualized; stale responses cannot cross session

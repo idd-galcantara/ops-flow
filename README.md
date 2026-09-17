@@ -383,7 +383,7 @@ Ao fechar a conexao do navegador, o backend interrompe a requisicao de logs no c
 
 O workspace de logs usa o WebSocket agregado `WS /api/logs` para manter um unico transporte para
 as fontes confirmadas. O modo inicial e Live. O modo History precisa ser escolhido e aplicado pelo
-botao **Search**; ele oferece as politicas **Complete when available** e **Bounded snapshot**.
+botao **Search**; ele usa uma unica captura finita com os limites tecnicos configurados.
 
 No modo History, o backend faz uma leitura finita `follow=false` por tupla exata
 `(cluster, namespace, pod, container)`, grava um snapshot temporario NDJSON com indice de linha,

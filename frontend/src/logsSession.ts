@@ -24,6 +24,16 @@ export interface HistoryWindowCacheUpdate {
   evictedKeys: string[];
 }
 
+export interface HistoryWindowRequest {
+  sourceKey: string;
+  line: number;
+  direction: 'forward' | 'backward';
+}
+
+export function historyInitialWindowRequest(sourceKey: string): HistoryWindowRequest {
+  return { sourceKey, line: 0, direction: 'forward' };
+}
+
 export function createHistoryWindowCache(maxWindows = HISTORY_CACHE_WINDOW_LIMIT, maxBytes = HISTORY_CACHE_BYTES_LIMIT): HistoryWindowCache {
   return { windows: [], bytes: 0, maxWindows, maxBytes };
 }
@@ -36,6 +46,7 @@ export function addHistoryWindow(
   cache: HistoryWindowCache,
   window: HistoryWindowEvent,
   identity: Pick<HistoryWindowEvent, 'sessionId' | 'snapshotId' | 'generation'>,
+  direction: 'forward' | 'backward' = 'forward',
 ): HistoryWindowCacheUpdate | undefined {
   if (window.sessionId !== identity.sessionId || window.snapshotId !== identity.snapshotId || window.generation !== identity.generation) return undefined;
   const key = historyWindowKey(window);
@@ -45,8 +56,11 @@ export function addHistoryWindow(
   nextWindows.push(window);
   const evictedKeys: string[] = [];
   while (nextWindows.length > cache.maxWindows || nextBytes > cache.maxBytes) {
-    const evicted = nextWindows.shift();
+    const evicted = direction === 'backward'
+      ? nextWindows.reduce<HistoryWindowEvent | undefined>((candidate, item) => !candidate || item.startLine > candidate.startLine ? item : candidate, undefined)
+      : nextWindows.reduce<HistoryWindowEvent | undefined>((candidate, item) => !candidate || item.startLine < candidate.startLine ? item : candidate, undefined);
     if (!evicted) break;
+    nextWindows.splice(nextWindows.indexOf(evicted), 1);
     nextBytes -= historyWindowBytes(evicted);
     evictedKeys.push(historyWindowKey(evicted));
   }
@@ -60,7 +74,7 @@ export function historyRecordsFromCache(cache: HistoryWindowCache): LogEventReco
       records.set(`${record.sourceKey}:${record.sequence}`, historyRecordToEvent(record));
     }
   }
-  return [...records.values()].sort((left, right) => left.source.sourceId.localeCompare(right.source.sourceId) || left.event.sequence - right.event.sequence);
+  return [...records.values()].sort((left, right) => left.event.sourceId.localeCompare(right.event.sourceId) || left.event.sequence - right.event.sequence);
 }
 
 export function historyRecordToEvent(record: HistoryRecord): LogEventRecord {
@@ -68,7 +82,7 @@ export function historyRecordToEvent(record: HistoryRecord): LogEventRecord {
     source: record.source,
     event: {
       type: 'line',
-      sourceId: record.source.sourceId,
+      sourceId: record.sourceKey,
       sequence: record.sequence,
       timestamp: record.timestamp,
       message: record.message,

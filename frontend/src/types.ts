@@ -108,7 +108,6 @@ export interface LogSubscription extends LogRange {
 }
 
 export type LogMode = 'live' | 'history';
-export type HistoryPolicy = 'complete-when-available' | 'bounded';
 export type HistorySourceStatus = 'queued' | 'reading' | 'indexing' | 'ready' | 'partial' | 'failed' | 'cancelled';
 export type HistoryTerminalStatus = 'complete' | 'partial' | 'failed' | 'cancelled' | 'expired';
 
@@ -200,10 +199,10 @@ export type AggregateLogEvent =
   | { type: 'sourceError'; source: LogSource; message: string; counters: LogCounters; status: 'error' }
   | { type: 'sourceEnded'; source: LogSource; counters: LogCounters; reason: SourceEndReason }
   | { type: 'summary'; sources: Array<{ source: LogSource; counters: LogCounters; status: 'ended' | 'error' }>; limits: LogLimits; reason: SummaryReason }
-  | { type: 'history.accepted'; requestId: string; sessionId: string; snapshotId: string; generation: number; policy: HistoryPolicy; sourceCount: number }
+  | { type: 'history.accepted'; requestId: string; sessionId: string; snapshotId: string; generation: number; sourceCount: number }
   | { type: 'history.progress'; sessionId: string; snapshotId: string; generation: number; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[] }
   | HistoryWindowEvent
-  | { type: 'history.terminal'; sessionId: string; snapshotId: string; generation: number; status: HistoryTerminalStatus; policy: HistoryPolicy; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[]; limitReasons: string[] }
+  | { type: 'history.terminal'; sessionId: string; snapshotId: string; generation: number; status: HistoryTerminalStatus; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[]; limitReasons: string[] }
   | { type: 'error'; message: string };
 
 export interface LogSourceState {

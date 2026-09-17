@@ -69,11 +69,147 @@ open and are not claims that unsupported environment checks passed.
   unverified.
 - No Kubernetes mutation, packaging, publishing, commit, or release action was performed.
 
+## Corrective follow-up - adaptive history windows
+
+The following tasks were added after the UI exposed a contract gap: a valid history capture could
+finish while its initial requested byte span exceeded the 256 KiB storage-read page limit, leaving
+the frontend in `Loading historical window...`. Existing checked task evidence above is preserved;
+these follow-up tasks remain unchecked until the focused implementation and validation below pass.
+
+- [x] 1.3.0-HS-FU-1 Implement adaptive byte-aware per-source windows.
+  - Treat requested record count as a maximum and use the on-disk index to select the largest
+    contiguous forward prefix or backward suffix within `maxWindowBytes` before decoding.
+  - Return exact boundaries and `hasMore` flags; preserve cursor exclusivity, stale/session checks,
+    decoded-memory reservations, and frame limits. Return a sanitized record-too-large error when
+    one encoded record cannot fit.
+  - _Owner: @ops-union-backend
+  - _Copilot agent: @ops-union-backend
+  - _Requirements: HS-5.1-HS-5.2, HS-5.7-HS-5.8, HS-8.1-HS-8.2
+  - _Dependencies: 1.3.0-HS-3, 1.3.0-HS-4
+  - _Validation: focused backend tests for adaptive forward/backward windows, exact byte boundary,
+    oversized single record, cursor boundaries, and decoded-memory/frame preservation.
+  - _Definition of done: every valid requested span returns the largest fitting range or the
+    specific single-record error, never the old whole-span byte-limit error.
+
+- [x] 1.3.0-HS-FU-2 Define and implement deterministic multi-source window semantics.
+  - Keep windows explicitly scoped by exact tuple-derived `sourceKey`. Permit cursorless requests
+    only for one source; reject cursorless multi-source requests safely instead of defaulting to
+    the first source. Ensure the frontend requests and merges every selected source over one socket.
+  - _Owner: @ops-union-backend, @ops-union-frontend
+  - _Copilot agents: @ops-union-backend, @ops-union-frontend
+  - _Requirements: HS-2.5, HS-5.2, HS-5.9, HS-7.3
+  - _Dependencies: 1.3.0-HS-FU-1
+  - _Validation: backend tests for two and multiple sources, duplicate tuple identity, and
+    cursorless behavior; frontend tests for per-source initial requests and merged display.
+  - _Definition of done: no history request or response can silently reduce a selected multi-source
+    session to the first source.
+
+- [x] 1.3.0-HS-FU-3 Repair frontend history loading, paging, and retry states.
+  - Treat smaller windows as normal, continue edge paging from returned boundaries, clear loading on
+    window errors, expose a safe retry action, and keep loading and terminal window error mutually
+    exclusive. Preserve stale-generation handling, cache bounds, local presentation behavior,
+    Search confirmation, and Live mode.
+  - _Owner: @ops-union-frontend
+  - _Copilot agent: @ops-union-frontend
+  - _Requirements: HS-5.3-HS-5.6, HS-5.10, HS-7.1-HS-7.3
+  - _Dependencies: 1.3.0-HS-FU-2
+  - _Validation: frontend tests for short windows, paging/cache, retry/error/loading state, stale
+    generation, and live regression.
+  - _Definition of done: a failed window cannot leave the UI indefinitely loading, and valid partial
+    windows remain navigable.
+
+- [x] 1.3.0-HS-FU-4 Run corrective acceptance validation and converge evidence.
+  - Run focused backend/frontend tests first, then full backend/frontend tests, typechecks/builds,
+    and `git diff --check`. Record exact outcomes and limitations without changing prior task
+    evidence or release/package state.
+  - _Owner: @ops-union-integration-qa, @ops-union-docs-convergence
+  - _Copilot agents: @ops-union-integration-qa, @ops-union-docs-convergence
+  - _Requirements: RA-1.1-RA-1.5, Definition of done
+  - _Dependencies: 1.3.0-HS-FU-1, 1.3.0-HS-FU-2, 1.3.0-HS-FU-3
+  - _Validation: commands and results recorded below after implementation.
+  - _Definition of done: corrective behavior is evidenced and documentation convergence reports
+    ready or names an unresolved limitation.
+
+### Corrective follow-up evidence
+
+- **1.3.0-HS-FU-1 - checked; focused backend evidence recorded.** Indexed forward and backward
+  reads select the largest contiguous range within `maxWindowBytes`, return exact boundaries and
+  `hasMore` flags, preserve cursor and decoded-memory checks, and return the sanitized
+  `History record exceeds the storage read limit.` error for an oversized single record.
+- **1.3.0-HS-FU-2 - checked; backend/frontend evidence recorded.** Multi-source cursorless reads
+  return `History source cursor is required for multiple sources.`; explicit source-key requests
+  return every source, and frontend cache identity uses the exact source key so duplicate source IDs
+  remain visible over one aggregate socket.
+- **1.3.0-HS-FU-3 - checked; focused frontend evidence recorded.** Smaller windows are accepted,
+  edge paging continues from returned boundaries, stale generations remain rejected, cache bounds
+  remain active, and protocol or transport window errors clear loading and expose retry without
+  changing Live, Search, filters, grouping, wrapping, selection, or scroll ownership.
+- **1.3.0-HS-FU-4 - checked; validation and local documentation-convergence evidence recorded.**
+  Focused adaptive/protocol backend invocation passed; full backend suite: 85/85 passed. Focused
+  history/cache frontend invocation passed; full frontend suite: 92/92 passed. Backend, frontend,
+  and desktop typechecks passed;
+  backend, frontend, and desktop builds passed; `git diff --check` passed. The normative
+  requirements/design/tasks text now records adaptive byte-aware windows, explicit per-source
+  multi-source semantics, and retryable loading/error behavior. No package, release, commit, push,
+  or Kubernetes mutation was performed.
+
+## Corrective follow-up - initial History position
+
+- [x] 1.3.0-HS-FU-5 Open History at the first captured records.
+  - The terminal History event SHALL request the initial window from `line: 0` in the `forward`
+    direction for every source with captured records. It SHALL NOT reuse Live's automatic
+    scroll-to-tail behavior while the initial History window is being delivered.
+  - An explicit `Jump to latest` action SHALL request the actual final window when the snapshot
+    exceeds one window, then reveal that tail. It SHALL not merely scroll to the end of the first
+    loaded window.
+  - _Owner: @ops-union-frontend
+  - _Copilot agent: @ops-union-frontend
+  - _Requirements: HS-5.3-HS-5.6, HS-7.1
+  - _Dependencies: 1.3.0-HS-FU-3
+  - _Validation: frontend suite, initial-window request regression, frontend typecheck/build, and
+    read-only validation against a source whose `kubectl logs` output begins with initialization.
+  - _Definition of done: History opens at the first captured record, Live retains its existing
+    tail-follow behavior, and explicit tail navigation remains available.
+
+### Initial History position evidence
+
+- **1.3.0-HS-FU-5 - implemented; focused validation recorded.** History now requests each source
+  from line zero forward, disables initial History auto-scroll, and loads the actual final window
+  for explicit `Jump to latest`. The initial-window helper regression and frontend suite passed
+  (93/93 after the new assertion). Browser/Electron interaction remains to be validated by the
+  user against the real application logs; no Kubernetes mutation was performed.
+
+- [x] 1.3.0-HS-FU-6 Stabilize bidirectional History scrolling and cache navigation.
+  - Edge pagination SHALL request only the edge toward which the user is scrolling. Repeated
+    scroll events SHALL remain deduplicated while a cursor is pending and SHALL not re-request
+    the same edge merely because a bounded cache discarded its opposite-side window. A cursor
+    whose response was evicted MAY become eligible again when the user reverses direction.
+  - Cache eviction SHALL preserve the loaded side needed by the active direction: backward loads
+    evict newer windows first, while forward loads evict older windows first. Adding a historical
+    window SHALL not enable Live auto-scroll or lose the user's scroll direction.
+  - _Owner: @ops-union-frontend
+  - _Copilot agent: @ops-union-frontend
+  - _Requirements: HS-5.3-HS-5.6, HS-5.10, HS-7.1
+  - _Dependencies: 1.3.0-HS-FU-5
+  - _Validation: frontend regression for opposite-edge eviction, full frontend tests, typecheck,
+    build, and manual History navigation down then up without a rate-limit error.
+  - _Definition of done: scrolling down and then back up keeps pagination bounded, preserves the
+    current direction, and does not produce `History window request rate exceeded.`.
+
+### Bidirectional History scrolling evidence
+
+- **1.3.0-HS-FU-6 - implemented; automated validation pending manual app confirmation.** Edge
+  requests are now directional, repeated edge requests remain deduplicated, evicted cursor keys
+  become eligible only when their window is actually discarded, backward loads evict the newer
+  side, forward loads evict the older side, and historical pages cannot trigger Live auto-scroll.
+  The targeted cache regression was added; manual Electron validation remains required for the
+  down-then-up interaction.
+
 ## Phase 1 - Contract and limit decisions
 
-- [x] 1.3.0-HS-1 Confirm the applied mode, completeness policy, and compatibility contract.
-  - Define the Live/History control, `complete when available` versus `bounded` policy labels,
-    draft/applied Search behavior, session generation, and the historical-to-live transition.
+- [x] 1.3.0-HS-1 Confirm the applied mode and compatibility contract.
+  - Define the Live/History control, single finite History semantics, draft/applied Search behavior,
+    session generation, and the historical-to-live transition.
   - Decide whether transition closes history and starts one live session (recommended) or supports a
     proven same-socket attach. Document the decision and rejected alternatives.
   - _Owner: @ops-union-backend
@@ -82,8 +218,8 @@ open and are not claims that unsupported environment checks passed.
   - _Dependencies: none
   - _Validation: protocol/state contract review against v1.2.0-v1.2.6 Search, source, and aggregate
     WebSocket behavior; no source or Kubernetes mutation.
-  - _Definition of done: mode, policy, generation, and transition semantics are unambiguous and
-    compatible with the existing live path.
+  - _Definition of done: mode, finite History semantics, generation, and transition behavior are
+    unambiguous and compatible with the existing live path.
 
 - [x] 1.3.0-HS-2 Establish resource, concurrency, timestamp, restart, and `--previous` decisions.
   - Reconcile the implemented per-source/session byte and line caps, disk and memory budgets, window
@@ -135,7 +271,7 @@ open and are not claims that unsupported environment checks passed.
 ## Phase 3 - Frontend history workspace
 
 - [x] 1.3.0-HS-5 Implement explicit History mode, progress states, and windowed virtualization.
-  - Add draft/applied mode and policy controls behind the existing Search confirmation boundary.
+  - Add the draft/applied mode control behind the existing Search confirmation boundary.
   - Render progress, source statuses, limit reasons, empty/partial/cancelled/expired states, and
     bounded page/window requests with generation-safe cache and eviction.
   - Preserve current filters, grouping, Wrap lines, selection, output scroll ownership, stable
@@ -163,6 +299,22 @@ open and are not claims that unsupported environment checks passed.
     exactly one aggregate replacement/attach path is used.
   - _Definition of done: transition is explicit, accessible, generation-safe, and does not lose or
     duplicate source scope or sockets.
+
+- [x] 1.3.0-HS-FU-7 Remove the unused History policy and Follow-after-history controls.
+  - Keep only the Live/History session mode selector. History uses one finite `follow=false`
+    snapshot contract with the existing technical limits; it no longer exposes Complete/Bounded
+    policy choices or a misleading Follow-after-history checkbox.
+  - Keep Follow available for Live sessions and keep the explicit historical-tail transition,
+    which starts one new Live session with `follow=true`.
+  - Remove the policy field from frontend/backend state, protocol validation, lifecycle events,
+    manifests, tests, and the v1.3.0 design/requirements language.
+  - _Owner: repository maintainer (spec convergence)
+  - _Requirements: HS-1.1-HS-1.5, HS-2.1-HS-2.5, HS-6.1-HS-6.5, HS-7.1-HS-7.4
+  - _Dependencies: 1.3.0-HS-1, 1.3.0-HS-4, 1.3.0-HS-5, 1.3.0-HS-6
+  - _Validation: frontend 94/94 tests and typecheck; backend 85/85 focused History/protocol tests;
+    residual-reference search for HistoryPolicy, historyPolicy, and selectable Bounded policy.
+  - _Definition of done: the UI exposes only Session mode for Live/History, the transport has no
+    policy dimension, and the spec describes the same behavior as the implementation.
 
 ## Phase 4 - Integration, security, and handoff
 

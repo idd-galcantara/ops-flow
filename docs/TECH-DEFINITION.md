@@ -591,16 +591,15 @@ conjunto exato de fontes confirmado pelo Search e nao abre um socket por pod, fo
 
 - **Live:** preserva a assinatura agregada, o follow, a retencao limitada no cliente e os filtros
   locais existentes.
-- **History:** o Search aplicado envia `history.start` com a politica `complete-when-available` ou
-  `bounded`, intervalo e fontes. O backend faz uma unica leitura finita `follow=false` por fonte,
-  grava um snapshot NDJSON temporario com indice de linha/offset/timestamp e responde com progresso,
-  estados por fonte, limites e janelas `history.window`.
+- **History:** o Search aplicado envia `history.start` com intervalo e fontes. O backend faz uma
+  unica leitura finita `follow=false` por fonte, grava um snapshot NDJSON temporario com indice de
+  linha/offset/timestamp e responde com progresso, estados por fonte, limites e janelas
+  `history.window`.
 - Uma janela carrega `sessionId`, `snapshotId`, `generation`, fonte, cursores e indicacao de mais
   dados. Geracoes, cursores, tamanho de frame e taxa de requisicoes sao validados; respostas de
   geracao obsoleta sao rejeitadas ou ignoradas.
-- `complete-when-available` significa tudo que a leitura finita entregar ate EOF, falha,
-  cancelamento ou limite. Um limite ou falha produz estado parcial, nunca uma alegacao de paginacao
-  nativa do Kubernetes.
+- History significa tudo que a leitura finita entregar ate EOF, falha, cancelamento ou limite. Um
+  limite ou falha produz estado parcial, nunca uma alegacao de paginacao nativa do Kubernetes.
 - A transicao no fim historico e explicita: a sessao finita e fechada e uma nova sessao Live
   agregada e iniciada. Nao ha reread implicito, e logs `--previous` nao fazem parte da solicitacao
   padrao.

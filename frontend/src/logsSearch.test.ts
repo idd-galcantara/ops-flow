@@ -10,7 +10,7 @@ import {
   transportSearchValuesEqual,
 } from './logsSearch';
 
-const fields = ['mode', 'historyPolicy', 'period', 'customFrom', 'customTo', 'follow', 'filters'] as const;
+const fields = ['mode', 'period', 'customFrom', 'customTo', 'follow', 'filters'] as const;
 const filterFields = ['pod', 'container', 'cluster', 'namespace', 'text'] as const;
 
 test('search state keeps every editable value pending until an atomic commit', () => {
@@ -18,7 +18,6 @@ test('search state keeps every editable value pending until an atomic commit', (
   for (const field of fields) {
     const draft = { ...state.draft, filters: { ...state.draft.filters } };
     if (field === 'mode') draft.mode = 'history';
-    if (field === 'historyPolicy') draft.historyPolicy = 'bounded';
     if (field === 'period') draft.period = '15m';
     if (field === 'customFrom') draft.customFrom = '2026-09-16T10:00';
     if (field === 'customTo') draft.customTo = '2026-09-16T11:00';
@@ -37,9 +36,9 @@ test('search state keeps every editable value pending until an atomic commit', (
 
 test('transport projection excludes local filters and filter projection excludes transport values', () => {
   const values = { ...DEFAULT_LOG_SEARCH_VALUES, period: 'custom' as const, customFrom: '2026-09-16T10:00', follow: false, filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'ready' } };
-  assert.deepEqual(transportSearchValues(values), { mode: 'live', historyPolicy: 'complete-when-available', period: 'custom', customFrom: '2026-09-16T10:00', customTo: '', follow: false });
+  assert.deepEqual(transportSearchValues(values), { mode: 'live', period: 'custom', customFrom: '2026-09-16T10:00', customTo: '', follow: false });
   assert.deepEqual(localFilterSearchValues(values), values.filters);
-  assert.deepEqual(Object.keys(transportSearchValues(values)).sort(), ['customFrom', 'customTo', 'follow', 'historyPolicy', 'mode', 'period']);
+  assert.deepEqual(Object.keys(transportSearchValues(values)).sort(), ['customFrom', 'customTo', 'follow', 'mode', 'period']);
   assert.equal(transportSearchValuesEqual(values, { ...values, filters: { ...values.filters, text: 'other' } }), true);
   for (const field of filterFields) {
     const changed = { ...values, filters: { ...values.filters, [field]: field === 'text' ? 'other' : 'different' } };

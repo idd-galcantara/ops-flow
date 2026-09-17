@@ -45,12 +45,11 @@ test('validateSubscription rejects malformed protocol option types', () => {
   assert.deepEqual(validateSubscription({ type: 'subscribe', sources: [source], follow: 'false' }), { error: 'follow must be a boolean.' });
 });
 
-test('validateHistoryStart keeps the applied policy, range, application, and distinct source tuples', () => {
+test('validateHistoryStart keeps the range, application, and distinct source tuples', () => {
   const result = validateHistoryStart({
     type: 'history.start',
     requestId: 'history-1',
     generation: 7,
-    policy: 'complete-when-available',
     from: '2026-09-16T01:00:00Z',
     to: '2026-09-16T02:00:00Z',
     sources: [
@@ -60,7 +59,6 @@ test('validateHistoryStart keeps the applied policy, range, application, and dis
   });
   assert.ok('request' in result);
   if ('request' in result) {
-    assert.equal(result.request.policy, 'complete-when-available');
     assert.equal(result.request.sources.length, 2);
     assert.equal(result.request.sources[0].application?.name, 'one');
     assert.equal(result.request.from, '2026-09-16T01:00:00.000Z');
@@ -68,7 +66,7 @@ test('validateHistoryStart keeps the applied policy, range, application, and dis
 });
 
 test('history validators reject unsafe generations, cursors, and cancel reasons', () => {
-  assert.match(('error' in validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, policy: 'bounded', sources: [source] }) ? validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, policy: 'bounded', sources: [source] }).error : ''), /positive integer/);
+  assert.match(('error' in validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, sources: [source] }) ? validateHistoryStart({ type: 'history.start', requestId: 'x', generation: 0, sources: [source] }).error : ''), /positive integer/);
   assert.match(('error' in validateHistoryWindow({ type: 'history.window', sessionId: 'not-a-uuid', generation: 1, cursor: { sourceKey: 'x', line: -1 } }) ? validateHistoryWindow({ type: 'history.window', sessionId: 'not-a-uuid', generation: 1, cursor: { sourceKey: 'x', line: -1 } }).error : ''), /sessionId is invalid/);
   assert.match(('error' in validateHistoryCancel({ type: 'history.cancel', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, reason: 'x'.repeat(129) }) ? validateHistoryCancel({ type: 'history.cancel', sessionId: '00000000-0000-0000-0000-000000000000', generation: 1, reason: 'x'.repeat(129) }).error : ''), /reason is invalid/);
 });

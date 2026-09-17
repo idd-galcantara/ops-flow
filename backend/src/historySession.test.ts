@@ -13,8 +13,8 @@ function tempRoot(): string {
   return mkdtempSync(path.join(os.tmpdir(), 'ops-union-history-test-'));
 }
 
-function input(sources: LogSource[], policy: 'complete-when-available' | 'bounded' = 'complete-when-available'): { requestId: string; generation: number; policy: 'complete-when-available' | 'bounded'; sources: LogSource[] } {
-  return { requestId: 'test-request', generation: 1, policy, sources };
+function input(sources: LogSource[]): { requestId: string; generation: number; sources: LogSource[] } {
+  return { requestId: 'test-request', generation: 1, sources };
 }
 
 function finiteFactory(linesByPod: Record<string, StructuredLogLine[]>, calls: StructuredLogOptionsCapture[], failures: Record<string, string> = {}): HistoryStreamFactory {
@@ -229,7 +229,7 @@ test('oversized windows and malformed stored records return safe errors', () => 
   const started = manager.start(input([source('cluster-a')]), () => undefined);
   assert.ok(started.session);
   started.session.start();
-  assert.deepEqual(started.session.readWindow(undefined, 'forward', 1), { error: 'History window exceeds the storage read limit.' });
+  assert.deepEqual(started.session.readWindow(undefined, 'forward', 1), { error: 'History record exceeds the storage read limit.' });
   manager.close();
   rmSync(root, { recursive: true, force: true });
 
@@ -246,6 +246,60 @@ test('oversized windows and malformed stored records return safe errors', () => 
   assert.deepEqual(malformed.session.readWindow(undefined, 'forward', 1), { error: 'History snapshot storage is invalid.' });
   malformedManager.close();
   rmSync(malformedRoot, { recursive: true, force: true });
+});
+
+test('adaptive windows return the largest fitting forward and backward ranges with exact boundaries', () => {
+  const pageSource = source('cluster-a');
+  const sourceKey = Buffer.from(JSON.stringify([pageSource.cluster, pageSource.namespace, pageSource.pod, pageSource.container])).toString('base64url');
+  const firstRecordBytes = Buffer.byteLength(`${JSON.stringify({ sourceKey, source: pageSource, sequence: 1, timestamp: null, message: 'same-size', bytes: 9 })}\n`, 'utf8');
+  const root = tempRoot();
+  const manager = new HistorySessionManager({
+    rootDir: root,
+    limits: { maxWindowBytes: firstRecordBytes },
+    streamFactory: finiteFactory({ pod: [
+      { timestamp: null, message: 'same-size', bytes: 9 },
+      { timestamp: null, message: 'same-size', bytes: 9 },
+      { timestamp: null, message: 'same-size', bytes: 9 },
+    ] }, []),
+  });
+  const started = manager.start(input([pageSource]), () => undefined);
+  assert.ok(started.session);
+  started.session.start();
+
+  const forward = started.session.readWindow(undefined, 'forward', 3);
+  assert.ok(!('error' in forward));
+  if ('error' in forward) return;
+  assert.deepEqual(forward.records.map((record) => record.sequence), [1]);
+  assert.deepEqual({ startLine: forward.startLine, endLine: forward.endLine, hasMoreBefore: forward.hasMoreBefore, hasMoreAfter: forward.hasMoreAfter }, { startLine: 0, endLine: 1, hasMoreBefore: false, hasMoreAfter: true });
+
+  const backward = started.session.readWindow({ sourceKey: forward.sourceKey, line: 3 }, 'backward', 3);
+  assert.ok(!('error' in backward));
+  if ('error' in backward) return;
+  assert.deepEqual(backward.records.map((record) => record.sequence), [3]);
+  assert.deepEqual({ startLine: backward.startLine, endLine: backward.endLine, hasMoreBefore: backward.hasMoreBefore, hasMoreAfter: backward.hasMoreAfter }, { startLine: 2, endLine: 3, hasMoreBefore: true, hasMoreAfter: false });
+  manager.close();
+  rmSync(root, { recursive: true, force: true });
+});
+
+test('multi-source history requires explicit source cursors and returns every source window', () => {
+  const root = tempRoot();
+  const sources = [source('cluster-a', 'pod-a'), source('cluster-b', 'pod-b')];
+  const manager = new HistorySessionManager({ rootDir: root, streamFactory: finiteFactory({ 'pod-a': [{ timestamp: null, message: 'a', bytes: 1 }], 'pod-b': [{ timestamp: null, message: 'b', bytes: 1 }] }, []) });
+  const started = manager.start(input(sources), () => undefined);
+  assert.ok(started.session);
+  started.session.start();
+  assert.deepEqual(started.session.readWindow(undefined, 'forward', 10), { error: 'History source cursor is required for multiple sources.' });
+
+  const windows = sources.map((item) => {
+    const key = Buffer.from(JSON.stringify([item.cluster, item.namespace, item.pod, item.container])).toString('base64url');
+    const window = started.session!.readWindow({ sourceKey: key, line: 0 }, 'forward', 10);
+    assert.ok(!('error' in window));
+    return window;
+  });
+  if (windows.some((window) => 'error' in window)) return;
+  assert.deepEqual(windows.map((window) => window.records[0].message), ['a', 'b']);
+  manager.close();
+  rmSync(root, { recursive: true, force: true });
 });
 
 test('decoded page memory limits accept the exact envelope, release after each read, and reject overages safely', () => {

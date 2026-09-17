@@ -54,7 +54,7 @@ test('aggregate WebSocket carries one validated history lifecycle and rejects st
     socket.once('error', reject);
   });
 
-  socket.send(JSON.stringify({ type: 'history.start', requestId: 'request-1', generation: 42, policy: 'bounded', sources: [source] }));
+  socket.send(JSON.stringify({ type: 'history.start', requestId: 'request-1', generation: 42, sources: [source] }));
   const accepted = await waitFor((event) => event.type === 'history.accepted') as Extract<AggregateLogEvent, { type: 'history.accepted' }>;
   const terminal = await waitFor((event) => event.type === 'history.terminal') as Extract<AggregateLogEvent, { type: 'history.terminal' }>;
   assert.equal(accepted.sourceCount, 1);
@@ -139,7 +139,7 @@ test('aggregate WebSocket applies the manager frame limit when sending history e
     socket.once('open', resolve);
     socket.once('error', reject);
   });
-  socket.send(JSON.stringify({ type: 'history.start', requestId: 'request-1', generation: 1, policy: 'bounded', sources: [source] }));
+  socket.send(JSON.stringify({ type: 'history.start', requestId: 'request-1', generation: 1, sources: [source] }));
 
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Timed out waiting for history frame error.')), 1_000);
@@ -168,7 +168,7 @@ test('closing the HTTP server cleans history sessions attached to its WebSocket 
   const server = createServer();
   const wss = attachLogsWebSocket(server, { historyManager: manager });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const started = manager.start({ requestId: 'request-1', generation: 1, policy: 'bounded', sources: [source] }, () => undefined);
+  const started = manager.start({ requestId: 'request-1', generation: 1, sources: [source] }, () => undefined);
   assert.ok(started.session);
   started.session.start();
   assert.equal(started.session.isTerminal, false);

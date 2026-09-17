@@ -11,11 +11,10 @@ const source: LogSource = {
   container: 'app',
 };
 
-test('history start preserves applied policy, range, and exact source scope', () => {
+test('history start preserves range and exact source scope', () => {
   assert.deepEqual(JSON.parse(serializeHistoryStart({
     requestId: 'history-1',
     generation: 3,
-    policy: 'bounded',
     from: '2026-09-16T10:00:00.000Z',
     to: '2026-09-16T11:00:00.000Z',
     sources: [source],
@@ -23,7 +22,6 @@ test('history start preserves applied policy, range, and exact source scope', ()
     type: 'history.start',
     requestId: 'history-1',
     generation: 3,
-    policy: 'bounded',
     from: '2026-09-16T10:00:00.000Z',
     to: '2026-09-16T11:00:00.000Z',
     sources: [source],

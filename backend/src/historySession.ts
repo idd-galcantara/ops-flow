@@ -5,14 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { streamStructuredPodLogs, type LogStreamHandle, type StructuredLogCallbacks, type StructuredLogLine, type StructuredLogOptions } from './kube/logsService.js';
 import { safeErrorMessage } from './kube/podsService.js';
 import { historyLimits, type HistoryLimits } from './historyLimits.js';
-import type { AggregateLogEvent, HistoryAggregateProgress, HistoryCursor, HistoryPolicy, HistoryRecord, HistorySourceProgress, HistoryTerminalStatus, LogCounters, LogSource } from './logsTypes.js';
+import type { AggregateLogEvent, HistoryAggregateProgress, HistoryCursor, HistoryRecord, HistorySourceProgress, HistoryTerminalStatus, LogCounters, LogSource } from './logsTypes.js';
 
 export type HistoryStreamFactory = (options: StructuredLogOptions, callbacks: StructuredLogCallbacks) => LogStreamHandle;
 
 export interface HistoryStartInput {
   requestId: string;
   generation: number;
-  policy: HistoryPolicy;
   from?: string;
   to?: string;
   sources: LogSource[];
@@ -39,6 +38,8 @@ const HISTORY_ROOT_PREFIX = 'ops-union-history-';
 const SESSION_DIR_PREFIX = 'session-';
 const CLEANUP_RETRIES = 2;
 const HISTORY_PAGE_MEMORY_ERROR = 'History page exceeds the in-flight decoded memory limit.';
+const HISTORY_RECORD_TOO_LARGE_ERROR = 'History record exceeds the storage read limit.';
+const HISTORY_MULTI_SOURCE_CURSOR_ERROR = 'History source cursor is required for multiple sources.';
 const DECODED_RECORD_OVERHEAD_BYTES = 256;
 
 interface IndexEntry {
@@ -203,7 +204,6 @@ export class HistorySession {
     this.states = input.sources.map((source) => ({ source, sourceKey: Buffer.from(JSON.stringify([source.cluster, source.namespace, source.pod, source.container])).toString('base64url'), status: 'queued', counters: emptyCounters(), sequence: 0, continuity: 'single-read' }));
   }
 
-  get policy(): HistoryPolicy { return this.input.policy; }
   get isTerminal(): boolean { return this.finalized; }
   get isCleaned(): boolean { return this.cleaned; }
   get terminalStatus(): HistoryTerminalStatus | undefined { return this.finalized ? this.status as HistoryTerminalStatus : undefined; }
@@ -266,32 +266,36 @@ export class HistorySession {
     this.requestTimes = this.requestTimes.filter((time) => now - time < 60_000);
     if (this.requestTimes.length >= this.limits.maxWindowRequestsPerMinute) return { error: 'History window request rate exceeded.' };
     this.requestTimes.push(now);
-    const state = cursor ? this.states.find((candidate) => candidate.sourceKey === cursor.sourceKey) : this.states[0];
+    const state = cursor
+      ? this.states.find((candidate) => candidate.sourceKey === cursor.sourceKey)
+      : this.states.length === 1 ? this.states[0] : undefined;
+    if (!cursor && this.states.length > 1) return { error: HISTORY_MULTI_SOURCE_CURSOR_ERROR };
     if (!state || !state.writer) return { error: 'History cursor is invalid.' };
     const limit = Math.min(requestedLimit, this.limits.maxWindowRecords);
     if (!Number.isInteger(limit) || limit <= 0) return { error: 'History window limit is invalid.' };
     const total = state.writer!.lines;
-    if (cursor && cursor.line > total) return { error: 'History cursor is invalid.' };
+    if (cursor && (cursor.line < 0 || cursor.line > total)) return { error: 'History cursor is invalid.' };
     let start = cursor?.line ?? 0;
     let end = Math.min(total, start + limit);
     if (direction === 'backward') {
       end = cursor?.line ?? total;
       start = Math.max(0, end - limit);
     }
-    const result = this.readRecords(state, start, end);
+    const result = this.readRecords(state, start, end, direction);
     if ('error' in result) return result;
     const records = result.records;
-    return { sourceKey: state.sourceKey, source: state.source, startLine: start, endLine: end, records, hasMoreBefore: start > 0, hasMoreAfter: end < total };
+    return { sourceKey: state.sourceKey, source: state.source, startLine: result.start, endLine: result.end, records, hasMoreBefore: result.start > 0, hasMoreAfter: result.end < total };
   }
 
-  private readRecords(state: SourceState, start: number, end: number): { records: HistoryRecord[] } | { error: string } {
-    if (start === end) return { records: [] };
+  private readRecords(state: SourceState, start: number, end: number, direction: 'forward' | 'backward'): { start: number; end: number; records: HistoryRecord[] } | { error: string } {
+    if (start === end) return { start, end, records: [] };
     const writer = state.writer!;
     const offsets = this.readIndexOffsets(writer, start, end);
     if ('error' in offsets) return offsets;
-    const bytes = offsets.endOffset - offsets.startOffset;
-    if (bytes < 0 || bytes > this.limits.maxWindowBytes) return { error: 'History window exceeds the storage read limit.' };
-    const memoryBytes = decodedPageMemoryBytes(bytes, end - start);
+    const selected = this.selectFittingRange(offsets.offsets, start, end, direction);
+    if ('error' in selected) return selected;
+    const bytes = selected.endOffset - selected.startOffset;
+    const memoryBytes = decodedPageMemoryBytes(bytes, selected.end - selected.start);
     const sourceInFlightBytes = this.inFlightDecodedBytesBySource.get(state.sourceKey) ?? 0;
     if (sourceInFlightBytes + memoryBytes > this.limits.maxInFlightDecodedBytesPerSource || this.inFlightDecodedBytes + memoryBytes > this.limits.maxInFlightDecodedBytesPerSession) {
       return { error: HISTORY_PAGE_MEMORY_ERROR };
@@ -302,12 +306,12 @@ export class HistorySession {
       const fd = openSync(writer.dataPath, 'r');
       try {
         const buffer = Buffer.alloc(bytes);
-        readFully(fd, buffer, offsets.startOffset);
+        readFully(fd, buffer, selected.startOffset);
         const lines = buffer.toString('utf8').split('\n');
         if (lines[lines.length - 1] === '') lines.pop();
-        if (lines.length !== end - start || lines.some((line) => line.length === 0)) return { error: 'History snapshot storage is invalid.' };
+        if (lines.length !== selected.end - selected.start || lines.some((line) => line.length === 0)) return { error: 'History snapshot storage is invalid.' };
         const records = lines.map((line) => this.parseStoredRecord(line, state.sourceKey));
-        return { records };
+        return { start: selected.start, end: selected.end, records };
       } finally {
         closeSync(fd);
       }
@@ -322,7 +326,33 @@ export class HistorySession {
     }
   }
 
-  private readIndexOffsets(writer: SourceWriter, start: number, end: number): { startOffset: number; endOffset: number } | { error: string } {
+  private selectFittingRange(offsets: number[], start: number, end: number, direction: 'forward' | 'backward'): { start: number; end: number; startOffset: number; endOffset: number } | { error: string } {
+    let selectedStart = direction === 'backward' ? end : start;
+    let selectedEnd = direction === 'backward' ? end : start;
+    let bytes = 0;
+    if (direction === 'forward') {
+      for (let line = start; line < end; line += 1) {
+        const recordBytes = offsets[line - start + 1] - offsets[line - start];
+        if (recordBytes < 0) return { error: 'History snapshot index is invalid.' };
+        if (recordBytes > this.limits.maxWindowBytes && selectedEnd === start) return { error: HISTORY_RECORD_TOO_LARGE_ERROR };
+        if (recordBytes > this.limits.maxWindowBytes || bytes + recordBytes > this.limits.maxWindowBytes) break;
+        bytes += recordBytes;
+        selectedEnd = line + 1;
+      }
+    } else {
+      for (let line = end - 1; line >= start; line -= 1) {
+        const recordBytes = offsets[line - start + 1] - offsets[line - start];
+        if (recordBytes < 0) return { error: 'History snapshot index is invalid.' };
+        if (recordBytes > this.limits.maxWindowBytes && selectedStart === end) return { error: HISTORY_RECORD_TOO_LARGE_ERROR };
+        if (recordBytes > this.limits.maxWindowBytes || bytes + recordBytes > this.limits.maxWindowBytes) break;
+        bytes += recordBytes;
+        selectedStart = line;
+      }
+    }
+    return { start: selectedStart, end: selectedEnd, startOffset: offsets[selectedStart - start], endOffset: offsets[selectedEnd - start] };
+  }
+
+  private readIndexOffsets(writer: SourceWriter, start: number, end: number): { offsets: number[] } | { error: string } {
     try {
       const fd = openSync(writer.indexPath, 'r');
       try {
@@ -330,10 +360,10 @@ export class HistorySession {
         let pending = '';
         let position = 0;
         let expectedLine = 0;
-        let startOffset: number | undefined;
-        let endOffset: number | undefined;
+        const offsets: number[] = [];
         let bytesRead = 0;
-        while ((bytesRead = readSync(fd, chunk, 0, chunk.length, position)) > 0 && endOffset === undefined) {
+        let endFound = false;
+        while ((bytesRead = readSync(fd, chunk, 0, chunk.length, position)) > 0 && !endFound) {
           position += bytesRead;
           pending += chunk.subarray(0, bytesRead).toString('utf8');
           const lines = pending.split('\n');
@@ -344,25 +374,25 @@ export class HistorySession {
             const entry = JSON.parse(line) as Partial<IndexEntry>;
             const byteOffset = entry.byteOffset;
             if (entry.lineNumber !== expectedLine || !isInteger(byteOffset) || byteOffset < 0) return { error: 'History snapshot index is invalid.' };
-            if (entry.lineNumber === start) startOffset = byteOffset;
-            if (entry.lineNumber === end) endOffset = byteOffset;
+            if (entry.lineNumber >= start && entry.lineNumber <= end) offsets.push(byteOffset);
+            if (entry.lineNumber === end) endFound = true;
             expectedLine += 1;
           }
         }
-        if (endOffset === undefined && pending) {
+        if (!endFound && pending) {
           const entry = JSON.parse(pending) as Partial<IndexEntry>;
           const byteOffset = entry.byteOffset;
           if (entry.lineNumber !== expectedLine || !isInteger(byteOffset) || byteOffset < 0) return { error: 'History snapshot index is invalid.' };
-          if (entry.lineNumber === start) startOffset = byteOffset;
-          if (entry.lineNumber === end) endOffset = byteOffset;
+          if (entry.lineNumber >= start && entry.lineNumber <= end) offsets.push(byteOffset);
           expectedLine += 1;
         }
-        if (startOffset === undefined) return { error: 'History snapshot index is invalid.' };
-        if (endOffset === undefined) {
+        if (offsets.length === 0 || offsets[0] === undefined) return { error: 'History snapshot index is invalid.' };
+        if (offsets.length === end - start) {
           if (end !== writer.lines || expectedLine !== writer.lines) return { error: 'History snapshot index is invalid.' };
-          endOffset = statSync(writer.dataPath).size;
+          offsets.push(statSync(writer.dataPath).size);
         }
-        return { startOffset, endOffset };
+        if (offsets.length !== end - start + 1) return { error: 'History snapshot index is invalid.' };
+        return { offsets };
       } finally {
         closeSync(fd);
       }
@@ -517,12 +547,12 @@ export class HistorySession {
   private emitTerminal(): void {
     const progress = this.progress();
     const reasons = [...new Set(this.states.map((state) => state.limitReason).filter((reason): reason is string => Boolean(reason)))];
-    this.emit({ type: 'history.terminal', sessionId: this.sessionId, snapshotId: this.snapshotId, generation: this.generation, status: this.status as HistoryTerminalStatus, policy: this.input.policy, ...progress, limitReasons: reasons });
+    this.emit({ type: 'history.terminal', sessionId: this.sessionId, snapshotId: this.snapshotId, generation: this.generation, status: this.status as HistoryTerminalStatus, ...progress, limitReasons: reasons });
   }
 
   private writeManifest(): void {
     try {
-      const manifest = { version: 1, sessionId: this.sessionId, snapshotId: this.snapshotId, generation: this.generation, policy: this.input.policy, range: { from: this.input.from ?? null, to: this.input.to ?? null }, sources: this.states.map(sourceProgress), status: this.status, terminalAt: this.terminalAt ?? null };
+      const manifest = { version: 1, sessionId: this.sessionId, snapshotId: this.snapshotId, generation: this.generation, range: { from: this.input.from ?? null, to: this.input.to ?? null }, sources: this.states.map(sourceProgress), status: this.status, terminalAt: this.terminalAt ?? null };
       const manifestPath = path.join(this.directory, 'manifest.json');
       const fd = openSync(manifestPath, 'w', 0o600);
       writeAll(fd, Buffer.from(JSON.stringify(manifest), 'utf8'));

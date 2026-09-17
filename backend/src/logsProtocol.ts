@@ -1,5 +1,5 @@
 import type { ApplicationIdentity } from './kube/types.js';
-import type { EffectiveLogSubscription, HistoryPolicy, LogLimits, LogRange, LogSource, SubscribeMessage } from './logsTypes.js';
+import type { EffectiveLogSubscription, LogLimits, LogRange, LogSource, SubscribeMessage } from './logsTypes.js';
 
 export const DEFAULT_LOG_LIMITS: LogLimits = {
   maxLinesPerSource: 2_000,
@@ -25,7 +25,6 @@ export interface HistoryStartRequest extends LogRange {
   type: 'history.start';
   requestId: string;
   generation: number;
-  policy: HistoryPolicy;
   sources: LogSource[];
 }
 
@@ -139,12 +138,11 @@ export function validateHistoryStart(raw: unknown): HistoryStartValidation {
   if (typeof value.requestId !== 'string' || !value.requestId.trim() || value.requestId.length > MAX_HISTORY_REQUEST_ID_LENGTH) return { error: 'requestId must be a bounded non-empty string.' };
   const generationError = validateGeneration(value.generation);
   if (generationError) return { error: generationError };
-  if (value.policy !== 'complete-when-available' && value.policy !== 'bounded') return { error: 'policy must be complete-when-available or bounded.' };
   const normalizedRange = normalizeRange(value.from, value.to);
   if ('error' in normalizedRange) return normalizedRange;
   const sources = normalizeSources(value.sources);
   if ('error' in sources) return sources;
-  return { request: { type: 'history.start', requestId: value.requestId.trim(), generation: value.generation!, policy: value.policy, ...normalizedRange, sources: sources.sources } };
+  return { request: { type: 'history.start', requestId: value.requestId.trim(), generation: value.generation!, ...normalizedRange, sources: sources.sources } };
 }
 
 export function validateHistoryWindow(raw: unknown): HistoryWindowValidation {

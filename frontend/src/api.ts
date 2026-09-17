@@ -8,7 +8,6 @@ import type {
   Target,
   LogSource,
   LogSubscription,
-  HistoryPolicy,
   HistoryWindowEvent,
 } from './types';
 
@@ -127,7 +126,6 @@ export function serializeLogSubscription(subscription: LogSubscription): string 
 export function serializeHistoryStart(input: {
   requestId: string;
   generation: number;
-  policy: HistoryPolicy;
   from?: string;
   to?: string;
   sources: LogSource[];
