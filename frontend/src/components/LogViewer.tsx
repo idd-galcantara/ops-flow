@@ -261,7 +261,7 @@ export function LogViewer({ pod, pods = [pod], sources, consultedContexts, onCha
 }
 
 function FilterSelect({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange: (value: string) => void }) {
-  return <label className="log-control log-filter-select"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} aria-label={`Filter by ${label.toLowerCase()}`}><option value="">All {label.toLowerCase()}s</option>{values.map((option) => <option value={option} key={option}>{option}</option>)}</select>{value && <button type="button" className="filter-clear" onClick={() => onChange('')} aria-label={`Clear ${label.toLowerCase()} filter`}><X size={11} aria-hidden="true" /></button>}</label>;
+  return <label className={`log-control log-filter-select ${value ? 'is-selected' : 'is-empty'}`} data-state={value ? 'selected' : 'empty'}><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} aria-label={`Filter by ${label.toLowerCase()}`}><option value="">All {label.toLowerCase()}s</option>{values.map((option) => <option value={option} key={option}>{option}</option>)}</select>{value && <button type="button" className="filter-clear" onClick={() => onChange('')} aria-label={`Clear ${label.toLowerCase()} filter`}><X size={11} aria-hidden="true" /></button>}</label>;
 }
 
 function stateLabel(state: ConnectionState): string { if (state === 'validating') return 'validating'; if (state === 'connecting') return 'connecting'; if (state === 'streaming') return 'live'; if (state === 'paused') return 'paused'; if (state === 'partial') return 'partial'; if (state === 'error') return 'error'; return 'ended'; }
@@ -272,8 +272,6 @@ function LogRow({ record, grouping, query, start, wrapLines, measureElement, ind
   const group = grouping === 'application' ? record.source.application?.name ?? record.source.pod : record.source.container;
   const message = record.event.message || '(empty message)';
   return <div ref={(element) => { if (element) measureElement(element); }} data-index={index} className={`log-line structured-log-line ${wrapLines ? 'is-wrapped' : 'is-nowrap'}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${start}px)` }}>
-    <time className="log-timestamp" dateTime={record.event.timestamp ?? undefined}>{record.event.timestamp ?? 'no timestamp'}</time>
-    <span className="log-context-cell" title={`${record.source.cluster} / ${record.source.namespace}`}>{record.source.cluster} / {record.source.namespace}</span>
     <span className="log-source-cell" title={`${record.source.pod} / ${record.source.container}`}><strong>{group}</strong><small>{record.source.pod} / {record.source.container}</small></span>
     <span className="log-message" aria-label={message}>{highlightSegments(message, query).map((segment, index) => segment.match ? <mark className="log-mark" key={index}>{segment.text}</mark> : <span key={index}>{segment.text}</span>)}</span>
   </div>;
