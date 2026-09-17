@@ -2,11 +2,16 @@
 
 ## Overview
 
-Version 1.3.1 adds a query execution layer above the immutable snapshot/session boundary from
-v1.3.0. The backend owns filter evaluation, text matching, scan/index strategy, result cursors,
-progress, cancellation, and safe result metadata. The frontend owns draft/applied controls,
-virtualized result presentation, highlight rendering, and the existing local filter path for Live
-mode.
+Version 1.3.1 extends the query execution layer already delivered with the v1.3.0 History session.
+The snapshot registry, query identity, logical result windows, `totalMatches`, bounded sparse cache,
+and aggregate transport remain authoritative from v1.3.0. This release adds the missing search
+semantics: filter matching, wildcard text normalization, bounded scanning, highlights, search
+lifecycle, search limits, and the frontend treatment of search-specific states. It does not create a
+second snapshot reader, result cache, or WebSocket protocol.
+
+The backend owns search matching, scan/index strategy, progress, cancellation, and safe result
+metadata. The frontend owns draft/applied controls, search-window presentation, highlight rendering,
+and the existing local filter path for Live mode.
 
 The query is bound to one snapshot version. A new source read, snapshot replacement, or implicit
 Kubernetes request is never used to satisfy an existing query. This makes a result set explainable
@@ -14,15 +19,16 @@ even when the underlying cluster changes after the snapshot was captured.
 
 ## Dependencies and ownership boundaries
 
-- v1.3.0 history storage is authoritative for snapshot identity, source metadata, NDJSON records,
-  line/offset/timestamp indexes, TTL, cleanup, limits, and session generation.
-- A backend history-search owner reads snapshots through a bounded reader abstraction. It does not
-  read arbitrary paths and does not call Kubernetes.
-- The existing aggregate WebSocket/session owner carries versioned search start, progress, result
-  window, cancel, and terminal messages on the same authenticated desktop connection used by
-  history sessions. No socket is opened per query or source.
+- v1.3.0 history storage and query infrastructure are authoritative for snapshot identity, source
+  metadata, NDJSON records, line/offset/timestamp indexes, query IDs, logical offsets, `totalMatches`,
+  TTL, cleanup, limits, and session generation.
+- A backend history-search owner extends the existing bounded snapshot/query reader. It does not
+  read arbitrary paths, duplicate the query index, or call Kubernetes.
+- The existing aggregate WebSocket/session owner carries the v1.3.0 `history.query.*` lifecycle and
+  window messages. v1.3.1 may extend their validated metadata for search progress, highlights, and
+  terminal states; no parallel `history.search.*` transport is introduced.
 - `frontend/src` owns search draft/applied state, explicit Search, optional debounce before Search,
-  result-window cache, virtualized rows, highlight rendering, and History/Live labeling.
+  the existing query-window cache and virtualizer, highlight rendering, and History/Live labeling.
 - Existing Live filter helpers remain authoritative for retained live records. They are not reused
   by passing live buffers to the backend and are not replaced by History search.
 - `desktop/src/preload.ts` forwards validated messages only; the renderer never receives a path or
@@ -45,7 +51,7 @@ interface HistoryQuery {
   container?: string;
   cluster?: string;
   namespace?: string;
-  message?: string; // plain text, Unicode case-folded by contract
+  message?: string; // wildcard alternatives separated by |; Unicode case-folded by contract
   order: 'snapshot-line';
 }
 
@@ -60,10 +66,37 @@ interface HistoryResult {
 }
 ```
 
+The query/session and result-window envelope comes from v1.3.0. The fields below are the
+search-specific extension carried inside that envelope; they do not replace the existing query
+identity, snapshot identity, logical offset, or cache contract.
+
 Values are validated and bounded before execution. The initial query searches `message` only;
 source fields have their own exact filters. Empty/whitespace-only message behavior is specified as
 no message predicate after trimming according to the final contract, and that behavior must be
-covered by tests. Regex, fuzzy matching, shell syntax, and HTML are not part of this release.
+covered by tests. Regex, fuzzy matching, shell syntax, AND expressions, and HTML are not part of
+this release.
+
+### Wildcard message matching
+
+The message field accepts a bounded, glob-like pattern without exposing regex or shell syntax:
+
+- `*` matches zero or more characters.
+- `|` separates alternatives with OR semantics.
+- Spaces around alternatives are trimmed; empty alternatives are discarded.
+- Every character other than `*` and `|` is matched literally after Unicode normalization and
+  case-folding.
+
+Examples:
+
+```text
+*CUSTOMER:AAA*
+ERROR|INFO|TEST
+*timeout*|*connection refused*
+CUSTOMER:*|ORDER:*
+```
+
+The stored message is returned unchanged. The matcher produces validated ranges against the
+original message for highlights; it does not return or execute a translated regex.
 
 Search ordering is snapshot line order within a deterministic source order. This avoids inventing a
 time order for null timestamps or interleaving sources with incompatible timestamp quality. If a
@@ -90,8 +123,9 @@ query-* -> query-superseded | query-expired | query-error
 ```
 
 A new confirmed query increments the frontend query generation and cancels/supersedes the previous
-scan. Every result frame carries query generation, snapshot version, request ID, cursor, and order.
-The frontend discards frames that do not match the current applied query and history session.
+scan. Every result frame retains the v1.3.0 query/session identity and adds search order/status
+metadata where needed. The frontend discards frames that do not match the current applied query and
+history session.
 
 A partial v1.3.0 snapshot is searchable only after the UI makes its bounded/partial status clear.
 Search terminal metadata repeats that status so a result list cannot be interpreted as a complete
@@ -100,10 +134,12 @@ cluster history.
 ## Matching and normalization
 
 Structured filter matching uses exact normalized field values from the stored source tuple. Display
-labels are not split or reparsed. The text matcher uses the approved Unicode case-folding and
-normalization function consistently for query and message text, while highlight offsets are mapped
-back to the original message string. The implementation must test ASCII, mixed case, composed and
-decomposed Unicode, empty input, whitespace, and multi-byte characters.
+labels are not split or reparsed. The wildcard matcher splits alternatives on `|`, trims them,
+converts only `*` to its internal wildcard operation, and treats every other character literally.
+It uses the approved Unicode case-folding and normalization function consistently for query and
+message text, while highlight offsets are mapped back to the original message string. The
+implementation must test ASCII, mixed case, composed and decomposed Unicode, empty input,
+whitespace, wildcard-only input, alternatives, and multi-byte characters.
 
 The matcher returns original message text plus offsets. The backend never sends markup. The frontend
 escapes text by construction and wraps only validated ranges in the existing accessible mark/highlight
@@ -115,8 +151,9 @@ without highlights rather than falling back to unsafe HTML.
 The first implementation should use a two-stage bounded plan:
 
 1. Apply source metadata filters before opening records, using manifest/source indexes.
-2. For each eligible source, use line/offset entries to seek the scan start and read NDJSON in
-   bounded chunks. Apply message matching, construct result metadata/highlights, and emit windows.
+  2. For each eligible source, use line/offset entries to seek the scan start and read NDJSON in
+    bounded chunks. Apply wildcard alternatives to the message, construct result
+    metadata/highlights, and emit windows.
 
 A sequential scan is an accepted fallback because Kubernetes is not involved and the snapshot is
 finite. An auxiliary text index is optional and must earn its disk/memory cost. If added, its key
@@ -131,30 +168,17 @@ metadata, not silent truncation.
 
 ## Protocol and pagination
 
-The history WebSocket remains the single transport. A versioned contract can use messages equivalent
-to:
+The history WebSocket remains the single transport and the v1.3.0 `history.query.start`,
+`history.query.ready`, `history.query.window`, and cancellation lifecycle remain the message family.
+The v1.3.1 extension carries the validated query semantics and may add bounded search progress,
+highlight ranges, search status, and limit metadata to those messages. It SHALL not introduce a
+parallel `history.search.*` protocol or a second result-window cache.
 
-```text
-client -> server: history.search.start {
-  requestId, sessionId, generation, snapshotId, query, pageSize
-}
-server -> client: history.search.accepted { requestId, queryGeneration }
-server -> client: history.search.progress {
-  requestId, queryGeneration, scannedLines, scannedBytes, eligibleSources, status
-}
-server -> client: history.search.results {
-  requestId, queryGeneration, cursor, results[], hasMore, partial
-}
-client -> server: history.search.cancel { requestId, queryGeneration }
-server -> client: history.search.terminal {
-  requestId, queryGeneration, status, matchCount, limitReason
-}
-```
-
-The actual names must follow the existing protocol style. Every field is schema-validated and
-bounded; `pageSize` is clamped to server limits, cursor values are opaque, and a cursor is bound to
-snapshot/query/normalization version. Result frames have their own byte cap. Streaming is allowed
-only as a sequence of bounded result frames with the same consistency metadata.
+Every field remains schema-validated and bounded. The existing logical result offset/window limits,
+snapshot identity, query ID, generation checks, and frame cap remain authoritative. Search-specific
+cursor or offset data is bound to snapshot/query/normalization version, and result frames remain
+bounded. Streaming is allowed only as a sequence of those bounded query-window frames with the same
+consistency metadata.
 
 The frontend uses an applied query fingerprint for cache ownership. It keeps a small result window
 cache and virtualizes rows. Requesting the next window is a view concern and never changes the
@@ -164,10 +188,11 @@ contract.
 
 ## Search confirmation, debounce, and Live behavior
 
-The toolbar retains the v1.2.3 draft/applied distinction. Editing text or structured filters marks
-the query pending. A short debounce may validate query shape or prepare an input locally, but only
-Search applies the query. Search is disabled while the same request is applying and a confirmed new
-query supersedes the old one through generation/cancellation.
+The toolbar retains the v1.2.3 draft/applied distinction and the v1.3.0 query-window state. Editing
+text or structured filters marks the query pending. A short debounce may validate query shape or
+prepare an input locally, but only Search applies the query. Search is disabled while the same
+request is applying and a confirmed new query supersedes the old one through the existing
+generation/cancellation boundary.
 
 Live mode remains local: after Search, existing retained events are filtered by the current local
 predicate without a backend search request. Group, Wrap lines, Pause, Clear, Jump to latest, and
@@ -191,8 +216,9 @@ what the user entered.
 
 ### Backend checks
 
-- Test exact structured filters, AND semantics, message-only matching, case-fold/Unicode behavior,
-  empty/whitespace queries, missing timestamps, deterministic ordering, multi-source identity,
+- Test exact structured filters, AND semantics, message-only wildcard matching, OR alternatives,
+  case-fold/Unicode behavior, empty/whitespace queries, missing timestamps, deterministic ordering,
+  wildcard boundaries, and literal metacharacters,
   partial snapshots, and source-index pruning.
 - Test sequential fallback, optional index versioning/invalidation if implemented, UTF-8 offsets,
   bounded memory/disk, query/page/frame limits, cursors, progress, cancellation, supersession,
