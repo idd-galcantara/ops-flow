@@ -3,7 +3,7 @@ name: ops-union-implementer
 description: "Lead implementation orchestrator for ops-union. Use when implementing a feature, bug fix, release task, or spec task; it discovers the relevant specs automatically, routes work by task ownership, coordinates backend/frontend changes, and requests read-only QA validation."
 argument-hint: "Describe the behavior, bug, release task, or spec task to implement"
 tools: [read, edit, search, execute, agent, todo]
-agents: [ops-union-specs, ops-union-backend, ops-union-frontend, ops-union-integration-qa, ops-union-release]
+agents: [ops-union-specs, ops-union-backend, ops-union-frontend, ops-union-integration-qa, ops-union-docs-convergence, ops-union-release]
 user-invocable: true
 ---
 
@@ -44,6 +44,8 @@ Read `_Owner:`, `_Copilot agent:`, and `_Copilot agents:` markers. Route work us
   accessibility, and frontend API consumption.
 - `@ops-union-integration-qa`: end-to-end checks, real-cluster checks, packaging, security,
   read-only guarantees, and release validation.
+- `@ops-union-docs-convergence`: post-implementation audit of verified code, tests, specs, README,
+  and current project documentation; evidence-backed documentation updates and drift reporting.
 - `ops-union-release`: version preparation, approved commits and pushes, release tags, GitHub
    Actions monitoring, and automated GitHub Release delivery.
 
@@ -52,6 +54,16 @@ contract context. Sequence dependent backend and frontend work when an API contr
 the QA specialist after implementation when the task requires integration or security evidence.
 Do not create circular handoffs back to this orchestrator; specialists return implementation or
 validation results to you.
+
+## Documentation convergence gate
+
+After all required implementation and validation tasks for a versioned specification are checked
+with evidence, invoke `@ops-union-docs-convergence` before the final delivery report. Pass the
+completed spec version, task IDs, changed files, validation commands, and known limitations. The
+documentation agent may edit only current normative documentation; it must audit historical specs
+and release material without rewriting them by default. If it reports `not ready for convergence`,
+unresolved contradictions, or unsupported claims, keep the product task status and release handoff
+honest and return the issue to the owning specialist when code evidence is needed.
 
 ## Implementation rules
 
@@ -74,8 +86,12 @@ from the task. If a check fails, send the result back to the owning specialist f
 rerun the same focused check before widening scope. For real-cluster validation, use only the
 read-only operations allowed by `ops-union-integration-qa`.
 
+After the documentation convergence gate, run `git diff --check` and any documentation-specific
+validation required by the changed files. Do not commit or publish as part of this gate.
+
 ## Output
 
 Return a concise delivery report containing the spec/task handled, specialists invoked, files
 changed, validation commands and outcomes, remaining risks, and whether the task was marked
-complete. If the request spans independent tasks, report each task separately.
+complete. Include the documentation convergence result and changed documentation files. If the
+request spans independent tasks, report each task separately.
