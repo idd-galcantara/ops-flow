@@ -35,7 +35,7 @@
   - _Copilot agent: @ops-union-integration-qa_
   - _Requirements: 3.1-3.3_
 
-- [ ] 2.3 Run the visual smoke test at desktop and narrow viewport sizes.
+- [x] 2.3 Run the visual smoke test at desktop and narrow viewport sizes.
   - Inspect the pod table, details panel, forms, preset library, and responsive layout in dark
     mode, then confirm the light mode remains unchanged.
   - _Copilot agent: @ops-union-integration-qa_

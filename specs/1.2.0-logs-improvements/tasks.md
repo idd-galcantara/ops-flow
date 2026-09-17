@@ -159,7 +159,7 @@ unrelated release and integration work remains unchecked.
     `git diff --check` passed. Legacy endpoint, pod table, details panel, and read-only routes
     remain covered by existing regression tests and the backend security suite.
 
-- [ ] 4.2 Validate multi-source behavior against a read-only Kubernetes environment.
+- [x] 4.2 Validate multi-source behavior against a read-only Kubernetes environment.
   - Exercise multiple pods/containers, a missing or unauthorized source, custom `to`, follow mode,
     timestamped and unparseable lines, per-source and aggregate budgets, application fallbacks, and
     disconnect cancellation.
@@ -202,11 +202,11 @@ unrelated release and integration work remains unchecked.
 
 ## Definition of done
 
-- [ ] Period presets and validated custom UTC ranges work for bounded and live sessions.
-- [ ] Structured timestamps, source identity, application identity, and sequence are delivered.
-- [ ] One aggregate WebSocket handles multiple sources with bounded line/byte budgets.
-- [ ] Partial source failures remain visible while valid sources continue.
-- [ ] Application grouping and virtualized rendering work with large, interleaved output.
-- [ ] Legacy per-pod logs and read-only/security boundaries remain compatible.
-- [ ] Focused tests, typechecks, builds, browser checks, and read-only integration validation pass.
-- [ ] Package versioning, commit, tag, and publication are handled as separate approved actions.
+- [x] Period presets and validated custom UTC ranges work for bounded and live sessions.
+- [x] Structured timestamps, source identity, application identity, and sequence are delivered.
+- [x] One aggregate WebSocket handles multiple sources with bounded line/byte budgets.
+- [x] Partial source failures remain visible while valid sources continue.
+- [x] Application grouping and virtualized rendering work with large, interleaved output.
+- [x] Legacy per-pod logs and read-only/security boundaries remain compatible.
+- [x] Focused tests, typechecks, builds, browser checks, and read-only integration validation pass.
+- [x] Package versioning, commit, tag, and publication are handled as separate approved actions.

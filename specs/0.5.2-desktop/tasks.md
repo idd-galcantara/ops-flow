@@ -72,14 +72,14 @@ durante o desenvolvimento.
 
 ## Step 6 — Validação final e garantia read-only
 
-- [ ] Testar a abertura, consulta e encerramento do aplicativo em Linux.
-- [ ] Testar a instalação, abertura e encerramento do instalador em Windows.
-- [ ] Validar kubeconfig no caminho padrão, via `KUBECONFIG` e por seleção manual.
-- [ ] Validar configurações com múltiplos contexts e autenticação `exec`, documentando a
+- [x] Testar a abertura, consulta e encerramento do aplicativo em Linux.
+- [x] Testar a instalação, abertura e encerramento do instalador em Windows.
+- [x] Validar kubeconfig no caminho padrão, via `KUBECONFIG` e por seleção manual.
+- [x] Validar configurações com múltiplos contexts e autenticação `exec`, documentando a
   necessidade de executáveis externos quando aplicável.
-- [ ] Reexecutar os testes da V1 e os testes específicos da V2.
-- [ ] Auditar rotas HTTP, WebSocket, preload e processos para confirmar que nenhuma operação
+- [x] Reexecutar os testes da V1 e os testes específicos da V2.
+- [x] Auditar rotas HTTP, WebSocket, preload e processos para confirmar que nenhuma operação
   mutável foi adicionada.
-- [ ] Confirmar que logs, erros e respostas nunca expõem segredos do kubeconfig.
+- [x] Confirmar que logs, erros e respostas nunca expõem segredos do kubeconfig.
 - _Copilot agent: @ops-union-integration-qa_
 - _Requirements: 1.1-1.5, 2.1-2.5, 3.1-3.5, 4.1-4.5, 5.1-5.5, 6.1-6.5_

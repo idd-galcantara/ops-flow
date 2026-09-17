@@ -85,7 +85,7 @@ focused validation artifacts required for this behavior.
 
 ## Phase 3 - Integration validation and regression gate
 
-- [ ] 3.1 Validate edit modal layering end to end.
+- [x] 3.1 Validate edit modal layering end to end.
   - Verify edit opens above the still-visible library; cancel and save close only the editor.
   - Verify the updated name, description, target summary, and search result are reflected without
     reload.
@@ -94,7 +94,7 @@ focused validation artifacts required for this behavior.
   - _Requirements: 1.1-1.8, 3.3, 3.4_
   - _Validation: desktop/web UI smoke test using the existing preset persistence path._
 
-- [ ] 3.2 Validate selection ordering and result states.
+- [x] 3.2 Validate selection ordering and result states.
   - Verify targets and active preset change before the pod request starts.
   - Verify the library remains open during loading and closes only after the request settles.
   - Verify successful results, partial target errors, and request-level errors are visible in the

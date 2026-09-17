@@ -6,7 +6,7 @@ evidence until the named owner records focused validation results.
 
 ## Phase 1 - Source scope and sidecar defaults
 
-- [ ] 1.2.2-SS-1 Define consulted-context scope and default source reconciliation.
+- [x] 1.2.2-SS-1 Define consulted-context scope and default source reconciliation.
   - Extend the existing v1.2.1 inventory/selection model so the current explicit
     `cluster/namespace` set is represented as `consultedContexts`.
   - Select every matching pod's primary container across all consulted contexts by default; do not
@@ -28,7 +28,7 @@ evidence until the named owner records focused validation results.
   - _Definition of done: one deterministic pending source set is produced from application key,
     consulted contexts, inventory, and role metadata without broadening scope.
 
-- [ ] 1.2.2-SS-2 Implement global and contextual sidecar actions.
+- [x] 1.2.2-SS-2 Implement global and contextual sidecar actions.
   - Keep known sidecars visible and unchecked by default when a pod has a primary container.
   - Add application-scope and cluster/namespace-scope include/exclude actions without requiring
     pod-by-pod repetition.
@@ -74,7 +74,7 @@ evidence until the named owner records focused validation results.
 
 ## Phase 2 - Compact modal
 
-- [ ] 1.2.2-CM-1 Rework the modal to summary-first presentation.
+- [x] 1.2.2-CM-1 Rework the modal to summary-first presentation.
   - Put application identity, consulted contexts, counts, role totals, fallback indicators, and
     discovery status in the first visible region.
   - Move pod/container hierarchy behind secondary expansion while preserving context separation,
@@ -96,7 +96,7 @@ evidence until the named owner records focused validation results.
 
 ## Phase 3 - Dedicated logs workspace
 
-- [ ] 1.2.2-LW-1 Promote logs to the main workspace.
+- [x] 1.2.2-LW-1 Promote logs to the main workspace.
   - Render the confirmed log session in a primary-area workspace with a compact application/context
     header, fixed filter toolbar, virtualized output, and status region.
   - Remove the long confirmed-source list from the primary view while retaining compact source
@@ -115,7 +115,7 @@ evidence until the named owner records focused validation results.
     unchecked.
   - _Definition of done: logs are a usable main-area workspace rather than a narrow details view.
 
-- [ ] 1.2.2-LW-2 Preserve one session and local display state.
+- [x] 1.2.2-LW-2 Preserve one session and local display state.
   - Keep exactly one aggregate `WS /api/logs`, one subscription, local AND filters, bounded limits,
     virtualization, partial failures, cancellation, and legacy per-pod behavior.
   - Ensure filter, wrap, and display-density changes do not restart or alter the session.
@@ -136,7 +136,7 @@ evidence until the named owner records focused validation results.
 
 ## Phase 4 - Rendering, wrapping, and accessibility
 
-- [ ] 1.2.2-RW-1 Implement no-wrap default and correct wrap measurement.
+- [x] 1.2.2-RW-1 Implement no-wrap default and correct wrap measurement.
   - Render no-wrap rows by default with message-column horizontal scrolling.
   - Add a labelled `Wrap lines` toggle that changes only presentation and supports dynamic row
     heights without clipping, overlap, or stale virtualization measurements.
@@ -155,7 +155,7 @@ evidence until the named owner records focused validation results.
   - _Definition of done: both modes show complete readable messages and maintain usable
     virtualization.
 
-- [ ] 1.2.2-RW-2 Stabilize metadata columns and responsive states.
+- [x] 1.2.2-RW-2 Stabilize metadata columns and responsive states.
   - Use stable metadata tracks for timestamp, cluster/namespace, pod, and container; constrain
     metadata overflow to its own area and keep messages selectable/readable.
   - Verify no overlap or page-level overflow at desktop, tablet, narrow, high-zoom, and reduced-
@@ -175,7 +175,7 @@ evidence until the named owner records focused validation results.
 
 ## Phase 5 - Regression and integration QA
 
-- [ ] 1.2.2-RA-1 Run focused automated regression and safety checks.
+- [x] 1.2.2-RA-1 Run focused automated regression and safety checks.
   - Cover v1.2.1 defaults/modal/session behavior plus the v1.2.2 consulted-context rule, sidecar
     actions, compact modal, workspace, wrap rendering, safe errors, one socket, limits, partial
     failures, and legacy endpoint.
@@ -199,7 +199,7 @@ evidence until the named owner records focused validation results.
     therefore the broader claim of zero application-side mutations needs that administrative
     endpoint explicitly scoped or reviewed.
 
-- [ ] 1.2.2-IQ-1 Exercise read-only end-to-end scenarios.
+- [x] 1.2.2-IQ-1 Exercise read-only end-to-end scenarios.
   - Validate one application in one consulted context and multiple consulted contexts, repeated
     names, mixed primary/sidecar pods, sidecar-only fallback, global/contextual actions, stale or
     partial inventory, source failure, limits, cancellation, and legacy per-pod logs.
@@ -227,7 +227,7 @@ evidence until the named owner records focused validation results.
     no real cluster without metrics-server was available for the graceful-degradation smoke. No
     mutating Kubernetes command or kubeconfig-selection POST was run. Task remains unchecked.
 
-- [ ] 1.2.2-IQ-2 Perform release-scope audit and handoff.
+- [x] 1.2.2-IQ-2 Perform release-scope audit and handoff.
   - Verify requirements/design/tasks consistency, v1.2.1 history preservation, one transport,
     legacy compatibility, read-only behavior, responsive/accessibility evidence, and unresolved
     limitations.
@@ -251,11 +251,11 @@ evidence until the named owner records focused validation results.
 
 ## Definition of done
 
-- [ ] Every task above is implemented by its named owner and has focused validation evidence.
-- [ ] Defaults, sidecar actions, compact modal, workspace layout, rendering contract, and
+- [x] Every task above is implemented by its named owner and has focused validation evidence.
+- [x] Defaults, sidecar actions, compact modal, workspace layout, rendering contract, and
   accessibility behavior agree across requirements, design, and implementation.
-- [ ] All v1.2.0/v1.2.1 transport, limits, virtualization, partial-failure, legacy, read-only,
+- [x] All v1.2.0/v1.2.1 transport, limits, virtualization, partial-failure, legacy, read-only,
   and security boundaries remain intact.
-- [ ] Tests, typechecks, builds, responsive/accessibility checks, and read-only integration checks
+- [x] Tests, typechecks, builds, responsive/accessibility checks, and read-only integration checks
   pass or have explicit limitations recorded.
-- [ ] Package versioning, commit, tag, and publication remain separate approved actions.
+- [x] Package versioning, commit, tag, and publication remain separate approved actions.

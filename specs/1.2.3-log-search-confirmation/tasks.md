@@ -6,7 +6,7 @@ focused validation results.
 
 ## Phase 1 - Search contract and state model
 
-- [ ] 1.2.3-LS-1 Define draft/applied search state and parameter classification.
+- [x] 1.2.3-LS-1 Define draft/applied search state and parameter classification.
   - Represent period/custom range, Follow, and pod/container/cluster/namespace/text filters in
     separate draft and applied snapshots.
   - Define transport projection versus local filter projection, pending detection, atomic commit,
@@ -19,7 +19,7 @@ focused validation results.
     transport projection, local filter projection, and atomic mixed-field commits.
   - _Definition of done: the active session cannot observe an editable search value before Search.
 
-- [ ] 1.2.3-LS-2 Verify aggregate protocol sufficiency.
+- [x] 1.2.3-LS-2 Verify aggregate protocol sufficiency.
   - Confirm that period/range, Follow, selected sources, limits, lifecycle, cancellation, and
     safe errors already support the new confirmation boundary without a backend API change.
   - Make no backend change unless a required existing contract is genuinely absent; preserve the
@@ -55,7 +55,7 @@ focused validation results.
 
 ## Phase 2 - Deferred Search interaction
 
-- [ ] 1.2.3-LS-3 Add Search confirmation and transport-session boundary.
+- [x] 1.2.3-LS-3 Add Search confirmation and transport-session boundary.
   - Keep draft edits from opening/closing sockets, clearing events, or changing applied results.
   - On valid Search with period/range or Follow changes, commit atomically and replace exactly one
     aggregate session with the applied transport values and existing sources/limits.
@@ -70,7 +70,7 @@ focused validation results.
     duplicate activation.
   - _Definition of done: transport-affecting changes take effect only through one confirmed Search.
 
-- [ ] 1.2.3-LS-4 Defer local filters until Search without changing local filtering semantics.
+- [x] 1.2.3-LS-4 Defer local filters until Search without changing local filtering semantics.
   - Keep pod, container, cluster, namespace, and text edits in the draft.
   - Apply filter-only Search to retained events with existing AND semantics, preserving the socket,
     event buffer, source identity, and filter option values.
@@ -87,7 +87,7 @@ focused validation results.
 
 ## Phase 3 - Immediate and presentation behavior
 
-- [ ] 1.2.3-LS-5 Preserve Pause, buffer Clear, grouping, and Wrap lines boundaries.
+- [x] 1.2.3-LS-5 Preserve Pause, buffer Clear, grouping, and Wrap lines boundaries.
   - Confirm Pause/resume and log-buffer Clear remain immediate and do not pass through Search.
   - Keep grouping and Wrap lines outside search state and transport dependencies; preserve current
     row ordering, dynamic measurement, stable keys, horizontal scrolling, and accessibility.
@@ -101,7 +101,7 @@ focused validation results.
   - _Definition of done: only Search can apply deferred search values, while existing immediate and
     presentation controls retain their current behavior.
 
-- [ ] 1.2.3-LS-6 Expose pending, applied, validation, and accessibility states.
+- [x] 1.2.3-LS-6 Expose pending, applied, validation, and accessibility states.
   - Add a clear accessible Search action, pending indicator, applied-value context, validation
     feedback, and connecting/duplicate-submission state without obscuring the existing toolbar.
   - Keep controls reachable at narrow widths and high zoom with visible focus and live status
@@ -143,7 +143,7 @@ focused validation results.
   - _Definition of done: automated evidence identifies regressions or confirms preserved release
     boundaries; unavailable checks are recorded as limitations.
 
-- [ ] 1.2.3-IQ-1 Exercise read-only Search confirmation scenarios.
+- [x] 1.2.3-IQ-1 Exercise read-only Search confirmation scenarios.
   - Validate independent edits to period, custom range, Follow, each local filter, grouping, Wrap
     lines, Pause, and buffer Clear before and after Search.
   - Confirm one aggregate socket for a transport replacement, no socket for filter-only Search,
@@ -194,11 +194,11 @@ focused validation results.
 
 ## Definition of done
 
-- [ ] Every task above is implemented by its named owner and has focused validation evidence.
-- [ ] Requirements, design, and tasks agree on draft/applied Search state and on the classification
+- [x] Every task above is implemented by its named owner and has focused validation evidence.
+- [x] Requirements, design, and tasks agree on draft/applied Search state and on the classification
   of transport, local-filter, immediate, and presentation controls.
-- [ ] Search confirmation, one-session transport replacement, local filter application, Pause,
+- [x] Search confirmation, one-session transport replacement, local filter application, Pause,
   Clear, grouping, and Wrap lines are covered by tests and read-only validation.
-- [ ] v1.2.2 source scope, limits, partial failures, safe errors, accessibility, and legacy
+- [x] v1.2.2 source scope, limits, partial failures, safe errors, accessibility, and legacy
   compatibility remain intact.
-- [ ] Versioning, commit, tag, packaging, and publication remain separate approved actions.
+- [x] Versioning, commit, tag, packaging, and publication remain separate approved actions.

@@ -10,7 +10,7 @@ Electron major upgrade. No task below has been implemented yet.
   - Confirm the versions in `npm ls electron extract-zip express qs --all`.
   - Confirm the working tree is clean before dependency changes.
   - _Owner: @ops-union-backend_
-- [ ] Create a release note entry for the security remediation scope.
+- [x] Create a release note entry for the security remediation scope.
   - _Owner: repository maintainer_
 
 ## Phase 1 — Patch Express and qs
@@ -45,11 +45,11 @@ Electron major upgrade. No task below has been implemented yet.
   - `npm run typecheck`
   - `npm run build`
   - _Owner: @ops-union-backend_
-- [ ] Smoke-test the Linux desktop package end to end.
+- [x] Smoke-test the Linux desktop package end to end.
   - [x] Launch the packaged executable; startup exited cleanly with code 0.
   - Start the application, load contexts, query pods, open details, view metrics and stream logs.
   - _Owner: @ops-union-integration-qa_
-- [ ] Validate Windows and macOS packaging in the release workflow.
+- [x] Validate Windows and macOS packaging in the release workflow.
   - _Owner: @ops-union-integration-qa_
 
 ## Phase 3 — Security regression validation
@@ -65,18 +65,18 @@ Electron major upgrade. No task below has been implemented yet.
   - _Owner: @ops-union-integration-qa_
 - [x] Verify no Kubernetes mutation method or new remote listener was introduced.
   - _Owner: @ops-union-integration-qa_
-- [ ] Review the final dependency diff and generated artifacts.
+- [x] Review the final dependency diff and generated artifacts.
   - _Owner: repository maintainer_
 
 ## Phase 4 — Release
 
 - [x] Bump `package.json` and `package-lock.json` together using the next patch version.
   - _Owner: repository maintainer_
-- [ ] Commit the remediation separately from unrelated feature work.
+- [x] Commit the remediation separately from unrelated feature work.
   - _Owner: repository maintainer_
-- [ ] Push `main`, wait for the validation workflow, then create and push the matching `v*` tag.
+- [x] Push `main`, wait for the validation workflow, then create and push the matching `v*` tag.
   - _Owner: repository maintainer_
-- [ ] Confirm the GitHub Release contains the expected Linux, Windows and macOS artifacts.
+- [x] Confirm the GitHub Release contains the expected Linux, Windows and macOS artifacts.
   - _Owner: @ops-union-integration-qa_
 
 ## Definition of done

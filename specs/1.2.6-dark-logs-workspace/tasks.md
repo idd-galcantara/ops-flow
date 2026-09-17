@@ -7,7 +7,7 @@ provides separate evidence.
 
 ## Phase 1 - Dark surface and token audit
 
-- [ ] 1.2.6-DL-1 Audit and map all covered LogViewer surfaces to dark semantics.
+- [x] 1.2.6-DL-1 Audit and map all covered LogViewer surfaces to dark semantics.
   - Inventory fixed light colors and missing dark selectors for the workspace header, toolbar,
     range summary, filters/selects/inputs, action row, source inspection, output, feedback, and
     footer; include the related application source modal surfaces.
@@ -29,7 +29,7 @@ provides separate evidence.
   - _Definition of done: every covered surface and state has an identified dark semantic owner,
     with light-theme and unrelated component boundaries explicit.
 
-- [ ] 1.2.6-DL-2 Implement dark surface, border, text, control, and feedback corrections.
+- [x] 1.2.6-DL-2 Implement dark surface, border, text, control, and feedback corrections.
   - Apply the existing dark tokens or narrowly scoped dark equivalents to the workspace header,
     toolbar/range summary, filters/selects/inputs, action row, source inspection, validation and
     partial feedback, output, footer, statuses, and related source modal.
@@ -54,7 +54,7 @@ provides separate evidence.
 
 ## Phase 2 - Contrast and interaction evidence
 
-- [ ] 1.2.6-DL-3 Verify contrast and all interactive/live states.
+- [x] 1.2.6-DL-3 Verify contrast and all interactive/live states.
   - Check representative primary/supporting/compact mono text, field values/placeholders,
     highlights, borders, focus rings, status dots/labels, disabled Search, hover, validation,
     partial, live, paused, ended, loading, and error states against computed dark surfaces.
@@ -71,7 +71,7 @@ provides separate evidence.
   - _Definition of done: contrast and interaction-state evidence is recorded, with unsupported
     tooling called out as a limitation rather than inferred as pass.
 
-- [ ] 1.2.6-DL-4 Verify responsive, zoom, keyboard, and overflow behavior.
+- [x] 1.2.6-DL-4 Verify responsive, zoom, keyboard, and overflow behavior.
   - Exercise 320, 768, and 1280 CSS px widths plus 200% zoom where available, selected and empty
     filters, pending Search, expanded source inspection/modal, long identities/status text, long
     no-wrap messages, and wrapped rows.
@@ -140,14 +140,14 @@ provides separate evidence.
 
 ## Definition of done
 
-- [ ] All covered LogViewer and related source surfaces are dark and free of visible light-theme
+- [x] All covered LogViewer and related source surfaces are dark and free of visible light-theme
   fallback panels in dark mode.
-- [ ] Contrast, hierarchy, hover/focus/disabled/live/partial/error states, search highlights,
+- [x] Contrast, hierarchy, hover/focus/disabled/live/partial/error states, search highlights,
   reduced motion, and safe feedback meet the requirements with recorded evidence.
-- [ ] 320/768/1280 widths, 200% zoom where available, keyboard/accessibility behavior, and
+- [x] 320/768/1280 widths, 200% zoom where available, keyboard/accessibility behavior, and
   page-overflow isolation are validated or documented as unavailable.
-- [ ] Search confirmation, select/X affordances, dense rows, filters, Wrap lines, virtualization,
+- [x] Search confirmation, select/X affordances, dense rows, filters, Wrap lines, virtualization,
   source inspection, and one-socket transport remain unchanged.
-- [ ] Frontend regression and scope checks pass, with no backend, API, Kubernetes, desktop,
+- [x] Frontend regression and scope checks pass, with no backend, API, Kubernetes, desktop,
   packaging, or release artifact change.
-- [ ] Every task is evidenced by its named owner; open evidence gaps remain explicitly open.
+- [x] Every task is evidenced by its named owner; open evidence gaps remain explicitly open.

@@ -121,7 +121,7 @@ not rewritten here.
   - _Definition of done: users can narrow retained structured events without changing the active
     aggregate session or losing context labels.
 
-- [ ] 1.2.1-7 Audit accessibility, responsive layout, and safe errors.
+- [x] 1.2.1-7 Audit accessibility, responsive layout, and safe errors.
   - Add accessible names and keyboard focus behavior for hierarchy controls, context selection,
     container toggles, confirmation/cancel actions, summary actions, and viewer filters.
   - Ensure loading, stale, partial, empty, and error messages are scoped and do not expose raw
@@ -144,7 +144,7 @@ not rewritten here.
 
 ## Phase 4 - Integration and release gate
 
-- [ ] 1.2.1-8 Validate application source selection end to end in read-only environments.
+- [x] 1.2.1-8 Validate application source selection end to end in read-only environments.
   - Exercise one application in one context, the same identity in multiple contexts, repeated pod
     names, primary plus sidecar containers, sidecar-only fallback, explicit multi-context
     selection, source failure, stale inventory, and viewer filters.
@@ -167,7 +167,7 @@ not rewritten here.
   - _Definition of done: focused automated checks and read-only scenarios demonstrate the complete
     modal-to-viewer path without mutating the cluster.
 
-- [ ] 1.2.1-9 Perform the release-scope and compatibility audit.
+- [x] 1.2.1-9 Perform the release-scope and compatibility audit.
   - Verify that v1.2.0 requirements remain intact, the legacy per-pod path is preserved, no second
     log transport or mutation path was introduced, and all prior specs remain unchanged.
   - Record implementation evidence separately from this planned specification; do not mark this
@@ -186,11 +186,11 @@ not rewritten here.
 
 ## Definition of done
 
-- [ ] All task IDs above are implemented by their named owners and have focused validation evidence.
-- [ ] Requirements, design decisions, and implementation behavior agree on explicit context
+- [x] All task IDs above are implemented by their named owners and have focused validation evidence.
+- [x] Requirements, design decisions, and implementation behavior agree on explicit context
   selection, primary/sidecar defaults, one aggregate WebSocket, compact summary, and viewer
   filters.
-- [ ] Existing v1.2.0 log behavior, limits, lifecycle, security, and legacy compatibility remain
+- [x] Existing v1.2.0 log behavior, limits, lifecycle, security, and legacy compatibility remain
   intact.
-- [ ] Tests, typechecks, builds, responsive/accessibility checks, and read-only integration checks
+- [x] Tests, typechecks, builds, responsive/accessibility checks, and read-only integration checks
   pass; package versioning, commit, tag, and publication remain separate approved actions.

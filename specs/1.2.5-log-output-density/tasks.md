@@ -6,7 +6,7 @@ unchecked; implementation evidence must be recorded by the named owner.
 
 ## Phase 1 - State-aware select affordances
 
-- [ ] 1.2.5-LD-1 Implement mutually exclusive native-arrow and clear-X states.
+- [x] 1.2.5-LD-1 Implement mutually exclusive native-arrow and clear-X states.
   - Update the four structured select fields for Pod, Container, Cluster, and Namespace so an
     empty/All value visibly keeps the native select arrow and has no X, while a selected value
     visually suppresses the native arrow and shows only the field-local X.
@@ -31,7 +31,7 @@ unchecked; implementation evidence must be recorded by the named owner.
   - _Definition of done: each structured select has the approved state-aware affordance without
     changing its value semantics or native keyboard behavior.
 
-- [ ] 1.2.5-LD-2 Preserve clear accessibility and Search confirmation.
+- [x] 1.2.5-LD-2 Preserve clear accessibility and Search confirmation.
   - Keep field-specific accessible names, hidden X icons, visible focus, usable targets, logical
     local tab order, global Clear filters, and the distinction between draft clearing and retained
     event Clear.
@@ -56,7 +56,7 @@ unchecked; implementation evidence must be recorded by the named owner.
 
 ## Phase 2 - Dense virtualized log rows
 
-- [ ] 1.2.5-LD-3 Remove metadata columns and give message the remaining width.
+- [x] 1.2.5-LD-3 Remove metadata columns and give message the remaining width.
   - Update the LogViewer row presentation so visible rows no longer render timestamp or
     cluster/namespace columns.
   - Keep both pod and container in a compact bounded source-identity area, preserve any existing
@@ -82,7 +82,7 @@ unchecked; implementation evidence must be recorded by the named owner.
   - _Definition of done: the row has only compact source identity plus the remaining-width message
     presentation, with metadata data contracts unchanged.
 
-- [ ] 1.2.5-LD-4 Preserve selection, wrapping, virtualization, and grouping behavior.
+- [x] 1.2.5-LD-4 Preserve selection, wrapping, virtualization, and grouping behavior.
   - Retain selectable message text, search highlighting, no-wrap/wrap semantics, measurable row
     heights, stable `sourceId:sequence` virtualization keys, scroll/auto-scroll, jump-to-latest,
     bounded retention, grouping, and local filter behavior.
@@ -132,7 +132,7 @@ unchecked; implementation evidence must be recorded by the named owner.
     `specs/1.2.5-log-output-density/` are changed; no backend/API/Kubernetes/package files changed.
     No Kubernetes command or mutation was run, and no kubeconfig or raw response data was recorded.
 
-- [ ] 1.2.5-IQ-1 Perform responsive, keyboard, accessibility, and visual acceptance.
+- [x] 1.2.5-IQ-1 Perform responsive, keyboard, accessibility, and visual acceptance.
   - Exercise Pod, Container, Cluster, and Namespace empty/All versus selected states, field-local
     clearing, global Clear filters, pending Search, and no socket change before confirmation.
   - Exercise dense rows with timestamped records, long/empty messages, long identities, both wrap
@@ -177,11 +177,11 @@ unchecked; implementation evidence must be recorded by the named owner.
 
 ## Definition of done
 
-- [ ] All implementation and validation tasks have evidence from their named owners.
-- [ ] Requirements, design, and tasks agree on mutually exclusive select affordances and the dense
+- [x] All implementation and validation tasks have evidence from their named owners.
+- [x] Requirements, design, and tasks agree on mutually exclusive select affordances and the dense
   two-area log-row layout.
-- [ ] Selection, no-wrap/wrap, virtualization, filters, grouping, timestamp payloads, one-socket
+- [x] Selection, no-wrap/wrap, virtualization, filters, grouping, timestamp payloads, one-socket
   behavior, Search confirmation, accessibility, responsive layout, and keyboard behavior are
   covered by appropriate evidence.
-- [ ] No backend, Kubernetes mutation, packaging, commit, or release publication is implied.
-- [ ] Versioning and release approval remain separate actions.
+- [x] No backend, Kubernetes mutation, packaging, commit, or release publication is implied.
+- [x] Versioning and release approval remain separate actions.

@@ -7,7 +7,7 @@ validation results.
 
 ## Phase 1 - Filter field geometry and clearing
 
-- [ ] 1.2.4-LT-1 Stabilize the five filter field shells and clear affordances.
+- [x] 1.2.4-LT-1 Stabilize the five filter field shells and clear affordances.
   - Update the LogViewer filter structure/styles so Pod, Container, Cluster, Namespace, and Message
     text each keep their clear button inside the owning visual field, aligned on the trailing edge,
     and on the same line as the select/input.
@@ -29,7 +29,7 @@ validation results.
   - _Definition of done: every affected field remains a stable no-wrap unit with its clear action
     contained and aligned.
 
-- [ ] 1.2.4-LT-2 Preserve field-specific and global clear semantics with accessible controls.
+- [x] 1.2.4-LT-2 Preserve field-specific and global clear semantics with accessible controls.
   - Keep specific clear buttons keyboard-focusable and named for their owning field, with visible
     focus and a usable compact target.
   - Preserve global `Clear filters`, its count, its all-five-fields behavior, and the distinction
@@ -51,7 +51,7 @@ validation results.
 
 ## Phase 2 - Toolbar action hierarchy
 
-- [ ] 1.2.4-LT-3 Move Search into the lower action row beside Group.
+- [x] 1.2.4-LT-3 Move Search into the lower action row beside Group.
   - Give the toolbar explicit filter and action regions so Search is below the filter row and no
     longer competes with the five filters.
   - Place Group immediately before Search in visual and keyboard order, keep the pair together at
@@ -72,7 +72,7 @@ validation results.
   - _Definition of done: Search has a deterministic lower-row location immediately to the right of
     Group without changing its confirmation behavior.
 
-- [ ] 1.2.4-LT-4 Verify responsive and high-zoom toolbar behavior.
+- [x] 1.2.4-LT-4 Verify responsive and high-zoom toolbar behavior.
   - Validate complete filter-field reflow, the stable internal clear-button alignment, the intact
     Group/Search pair, readable labels, visible focus, and no page-level horizontal overflow.
   - Exercise narrow/mobile, tablet, desktop, high-zoom, and reduced-motion conditions supported by
@@ -109,7 +109,7 @@ validation results.
   - _Definition of done: automated regression and scope evidence confirms that only the intended
     frontend toolbar behavior changed.
 
-- [ ] 1.2.4-IQ-1 Perform read-only visual, responsive, and keyboard acceptance.
+- [x] 1.2.4-IQ-1 Perform read-only visual, responsive, and keyboard acceptance.
   - Exercise each filter's selected/clear state, global Clear filters, pending Search, Group/Search
     placement, narrow layout, high zoom, visible focus, keyboard activation, and accessible names.
   - Prove no field clear button wraps or shifts neighboring controls, no page overflow is introduced,
@@ -143,10 +143,10 @@ validation results.
 
 ## Definition of done
 
-- [ ] Every task above is implemented by its named owner and has focused validation evidence.
-- [ ] Requirements, design, and tasks agree on stable in-field clear affordances and the lower
+- [x] Every task above is implemented by its named owner and has focused validation evidence.
+- [x] Requirements, design, and tasks agree on stable in-field clear affordances and the lower
   Group/Search action row.
-- [ ] Filter clearing, Search confirmation, presentation controls, transport behavior, source
+- [x] Filter clearing, Search confirmation, presentation controls, transport behavior, source
   scope, accessibility, and responsive layout are covered by appropriate evidence.
-- [ ] No backend, Kubernetes mutation, commit, packaging, or release publication is implied.
-- [ ] Versioning and release approval remain separate actions.
+- [x] No backend, Kubernetes mutation, commit, packaging, or release publication is implied.
+- [x] Versioning and release approval remain separate actions.
