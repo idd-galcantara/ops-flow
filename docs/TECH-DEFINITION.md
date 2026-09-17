@@ -1,7 +1,8 @@
-# ops-union - Definição técnica do MVP Electron
+# ops-union - Definicao tecnica do Electron
 
 > Documento de referência da arquitetura e do comportamento de comunicação do
-> ops-union v0.4.0.
+> ops-union. O checkout atual inclui a implementacao de History da especificacao v1.3.0;
+> isso nao representa uma release publicada.
 
 ## 1. Objetivo e escopo
 
@@ -583,6 +584,49 @@ Configurações do viewer:
 - não existe reconexão automática;
 - filtro e auto-scroll são operações locais, sem novas chamadas ao backend.
 
+### 7.4 Sessao agregada e modo History
+
+O workspace atual tambem usa `WS /api/logs` para a sessao agregada. Esse transporte mantem o
+conjunto exato de fontes confirmado pelo Search e nao abre um socket por pod, fonte ou janela.
+
+- **Live:** preserva a assinatura agregada, o follow, a retencao limitada no cliente e os filtros
+  locais existentes.
+- **History:** o Search aplicado envia `history.start` com a politica `complete-when-available` ou
+  `bounded`, intervalo e fontes. O backend faz uma unica leitura finita `follow=false` por fonte,
+  grava um snapshot NDJSON temporario com indice de linha/offset/timestamp e responde com progresso,
+  estados por fonte, limites e janelas `history.window`.
+- Uma janela carrega `sessionId`, `snapshotId`, `generation`, fonte, cursores e indicacao de mais
+  dados. Geracoes, cursores, tamanho de frame e taxa de requisicoes sao validados; respostas de
+  geracao obsoleta sao rejeitadas ou ignoradas.
+- `complete-when-available` significa tudo que a leitura finita entregar ate EOF, falha,
+  cancelamento ou limite. Um limite ou falha produz estado parcial, nunca uma alegacao de paginacao
+  nativa do Kubernetes.
+- A transicao no fim historico e explicita: a sessao finita e fechada e uma nova sessao Live
+  agregada e iniciada. Nao ha reread implicito, e logs `--previous` nao fazem parte da solicitacao
+  padrao.
+
+Os limites atuais incluem 100.000 linhas/32 MiB por fonte, 1.000.000 linhas/256 MiB por sessao,
+48 MiB de disco por fonte, 384 MiB de disco por sessao, 4 MiB de memoria decodificada em voo por
+fonte e 32 MiB por sessao, 256 KiB por registro, 2.000 registros ou 256 KiB por janela, 512 KiB
+por frame, duas sessoes ativas, oito leituras concorrentes, 120 janelas por minuto, TTL terminal de
+15 minutos e grace period de orfaos de uma hora. Esses limites sao fail-closed; os registros ja
+capturados continuam sujeitos ao estado parcial ou ao motivo do limite.
+
+Os estados visiveis incluem preparacao, leitura, pronto, parcial, falha, cancelamento e expiracao,
+alem dos estados por fonte `queued`, `reading`, `indexing`, `ready`, `partial`, `failed` e
+`cancelled`. A validacao registrada inclui 174 testes automatizados, sendo 83 no backend e 91 no
+frontend; a suite focada de historico/protocolo/WebSocket passou com 13/13. Typechecks e builds do
+backend, frontend e desktop, o build da raiz e `git diff --check` tambem passaram.
+
+A validacao de integracao foi somente leitura: health, contexts, namespaces/pods, describe,
+metricas, `kubectl top` e logs finitos pelo WebSocket do backend passaram nos dois clusters de QA,
+sem chamadas mutantes. O QA nao executou o fan-out `POST /api/pods` nem a integracao de WebSocket
+History; como os dois clusters tinham metricas, a ausencia de metricas foi coberta somente por
+testes unitarios. Interacao de navegador/Electron, rotacao/reinicio, falha de retry de limpeza,
+limpeza apos restart do desktop e profiling de RSS permanecem sem verificacao. Os limites de
+memoria decodificada em voo, de 4 MiB por fonte e 32 MiB por sessao, foram testados; nao sao uma
+medicao de RSS.
+
 ## 8. Chamadas IPC do Electron
 
 ### 8.1 Handlers registrados no Main
@@ -778,15 +822,19 @@ não repete as chamadas. O filtro, agrupamento e redimensionamento são locais.
 
 ### 9.7 Abertura da aba Logs
 
-Ao montar a aba Logs:
+Ao montar a aba Logs, o renderer mantem as fontes confirmadas e abre o WebSocket agregado
+`/api/logs`. Depois do Search aplicado:
 
-1. escolhe o primeiro container do pod;
-2. abre um WebSocket com `follow=true` e `tailLines=500`;
-3. acrescenta cada mensagem `line` ao buffer local;
-4. ao trocar o container, reinicia o socket e limpa o buffer;
-5. ao fechar o painel, fecha o socket.
+1. Live envia uma assinatura agregada e acrescenta eventos ao buffer limitado.
+2. History envia `history.start`, acompanha progresso/estado e solicita janelas limitadas ao redor
+  da faixa virtualizada.
+3. Trocar o modo, intervalo ou fontes pelo Search substitui a sessao anterior.
+4. Ao chegar ao fim History, a acao explicita de transicao fecha History e inicia uma nova sessao
+  Live agregada.
 
-Pausar, limpar, filtrar e alterar auto-scroll não geram novas chamadas.
+O endpoint legado por pod continua disponivel para compatibilidade. Pausar, limpar, filtrar,
+agrupar e alterar auto-scroll permanecem operacoes locais; filtros locais nao fazem o backend reler
+o snapshot ou o Kubernetes.
 
 ## 10. Backend e Kubernetes
 
@@ -1062,6 +1110,9 @@ Arquivos que controlam diretamente este comportamento:
 - [backend/src/index.ts](../backend/src/index.ts)
 - [backend/src/app.ts](../backend/src/app.ts)
 - [backend/src/logsWebSocket.ts](../backend/src/logsWebSocket.ts)
+- [backend/src/historyLimits.ts](../backend/src/historyLimits.ts)
+- [backend/src/historySession.ts](../backend/src/historySession.ts)
+- [backend/src/logsProtocol.ts](../backend/src/logsProtocol.ts)
 - [backend/src/routes/contexts.ts](../backend/src/routes/contexts.ts)
 - [backend/src/routes/kubeconfig.ts](../backend/src/routes/kubeconfig.ts)
 - [backend/src/routes/namespaces.ts](../backend/src/routes/namespaces.ts)
@@ -1073,6 +1124,8 @@ Arquivos que controlam diretamente este comportamento:
 - [backend/src/kube/podDetailsService.ts](../backend/src/kube/podDetailsService.ts)
 - [backend/src/kube/logsService.ts](../backend/src/kube/logsService.ts)
 - [frontend/src/api.ts](../frontend/src/api.ts)
+- [frontend/src/logsSearch.ts](../frontend/src/logsSearch.ts)
+- [frontend/src/logsSession.ts](../frontend/src/logsSession.ts)
 - [frontend/src/store.ts](../frontend/src/store.ts)
 - [frontend/src/App.tsx](../frontend/src/App.tsx)
 - [frontend/src/presets.ts](../frontend/src/presets.ts)

@@ -1,5 +1,4 @@
 import { PassThrough } from 'node:stream';
-import { StringDecoder } from 'node:string_decoder';
 import { logForContext } from './kubeconfig.js';
 import { safeErrorMessage } from './podsService.js';
 
@@ -9,13 +8,14 @@ export interface LogStreamOptions {
   pod: string;
   container: string;
   follow: boolean;
-  tailLines: number;
+  tailLines?: number;
 }
 
 export interface StructuredLogOptions extends LogStreamOptions {
   from?: string;
   to?: string;
   maxBytes?: number;
+  maxRecordBytes?: number;
 }
 
 export interface StructuredLogLine {
@@ -27,6 +27,7 @@ export interface StructuredLogLine {
 export interface StructuredLogCallbacks {
   onLine: (line: StructuredLogLine) => boolean | void;
   onWarning?: (count: number) => void;
+  onLimit?: (reason: string) => void;
   onError: (message: string) => void;
   onEnd: (reason: 'eof' | 'to-reached' | 'limit' | 'cancelled') => void;
 }
@@ -35,6 +36,8 @@ export interface LogLineParser {
   push: (chunk: Buffer) => string[];
   end: () => string[];
 }
+
+class LogLineParserLimitError extends Error {}
 
 export interface LogStreamHandle {
   /** Stops the upstream request and releases resources. */
@@ -82,25 +85,40 @@ export function parseLogLine(
   return { kind: 'emit', record: { ...parsed, bytes: Buffer.byteLength(parsed.message, 'utf8') + 1 } };
 }
 
-export function createLogLineParser(): LogLineParser {
-  const decoder = new StringDecoder('utf8');
-  let buffer = '';
-  const split = (): string[] => {
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    return lines.map((line) => line.endsWith('\r') ? line.slice(0, -1) : line);
+export function createLogLineParser(maxLineBytes = 256 * 1024): LogLineParser {
+  const chunks: Buffer[] = [];
+  let bufferedBytes = 0;
+  const append = (chunk: Buffer): void => {
+    if (bufferedBytes + chunk.length > maxLineBytes) throw new LogLineParserLimitError('record-size');
+    if (chunk.length > 0) {
+      chunks.push(chunk);
+      bufferedBytes += chunk.length;
+    }
+  };
+  const takeLine = (): string => {
+    const line = Buffer.concat(chunks, bufferedBytes).toString('utf8');
+    chunks.length = 0;
+    bufferedBytes = 0;
+    return line.endsWith('\r') ? line.slice(0, -1) : line;
+  };
+  const push = (chunk: Buffer): string[] => {
+    const lines: string[] = [];
+    let start = 0;
+    while (start < chunk.length) {
+      const newline = chunk.indexOf(0x0a, start);
+      const end = newline === -1 ? chunk.length : newline;
+      append(chunk.subarray(start, end));
+      if (newline === -1) break;
+      lines.push(takeLine());
+      start = newline + 1;
+    }
+    return lines;
   };
   return {
-    push: (chunk) => {
-      buffer += decoder.write(chunk);
-      return split();
-    },
+    push,
     end: () => {
-      buffer += decoder.end();
-      if (!buffer) return [];
-      const line = buffer;
-      buffer = '';
-      return [line];
+      if (bufferedBytes === 0) return [];
+      return [takeLine()];
     },
   };
 }
@@ -175,7 +193,7 @@ export function streamStructuredPodLogs(
   callbacks: StructuredLogCallbacks,
 ): LogStreamHandle {
   const stream = new PassThrough();
-  const parser = createLogLineParser();
+  const parser = createLogLineParser(options.maxRecordBytes);
   let stopped = false;
   let completed = false;
   let abort: AbortController | undefined;
@@ -212,18 +230,37 @@ export function streamStructuredPodLogs(
       finish('limit');
     }
   };
+  const handleParserError = (error: unknown): void => {
+    if (stopped) return;
+    stopped = true;
+    abort?.abort();
+    if (error instanceof LogLineParserLimitError) {
+      callbacks.onLimit?.('record-size');
+      finish('limit');
+      return;
+    }
+    callbacks.onError(safeErrorMessage(error));
+  };
 
   stream.on('data', (chunk: Buffer) => {
     if (stopped) return;
-    for (const line of parser.push(chunk)) {
-      consumeLine(line);
-      if (stopped) break;
+    try {
+      for (const line of parser.push(chunk)) {
+        consumeLine(line);
+        if (stopped) break;
+      }
+    } catch (error) {
+      handleParserError(error);
     }
   });
   stream.on('end', () => {
     if (stopped) return;
-    for (const line of parser.end()) consumeLine(line);
-    if (!stopped) finish('eof');
+    try {
+      for (const line of parser.end()) consumeLine(line);
+      if (!stopped) finish('eof');
+    } catch (error) {
+      handleParserError(error);
+    }
   });
   stream.on('error', (err: Error) => {
     if (!stopped) {

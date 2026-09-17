@@ -23,7 +23,8 @@ Cada resultado preserva sua origem. Assim, pods com o mesmo nome em clusters dif
 - Filtra por pod, cluster, namespace, status, node ou container.
 - Abre um painel de detalhes com informacoes equivalentes a `kubectl describe`.
 - Consulta CPU e memoria por container quando o `metrics-server` esta disponivel.
-- Transmite logs de containers por WebSocket, com follow, pausa, filtro e auto-scroll.
+- Transmite logs de containers por WebSocket, com modos Live e History, follow, pausa, filtro e
+  auto-scroll.
 - Atualiza a lista manualmente ou em intervalos de 10, 30 ou 60 segundos.
 - Persiste presets de alvos localmente: no `localStorage` em modo web e no diretório de dados do
   Electron em modo desktop.
@@ -54,7 +55,9 @@ flowchart LR
 
 ## Downloads
 
-A release mais recente e a **v0.5.1**. Os instaladores e pacotes estao disponiveis na pagina de
+A release publicada referenciada por estes links e a **v0.5.1**. A implementacao de History da
+especificacao v1.3.0 esta no checkout atual; esta auditoria nao publica uma nova release. Os
+instaladores e pacotes estao disponiveis na pagina de
 [releases do GitHub](https://github.com/idd-galcantara/ops-union/releases/tag/v0.5.1).
 
 ### Linux
@@ -376,6 +379,28 @@ Mensagens enviadas pelo servidor:
 
 Ao fechar a conexao do navegador, o backend interrompe a requisicao de logs no cluster.
 
+### Workspace agregado e historico
+
+O workspace de logs usa o WebSocket agregado `WS /api/logs` para manter um unico transporte para
+as fontes confirmadas. O modo inicial e Live. O modo History precisa ser escolhido e aplicado pelo
+botao **Search**; ele oferece as politicas **Complete when available** e **Bounded snapshot**.
+
+No modo History, o backend faz uma leitura finita `follow=false` por tupla exata
+`(cluster, namespace, pod, container)`, grava um snapshot temporario NDJSON com indice de linha,
+offset e timestamp, e entrega somente janelas limitadas para a virtualizacao. Kubernetes nao e
+tratado como uma fonte paginada: nao ha reread implicito para buscar outra pagina, e `--previous`
+fica fora do escopo padrao.
+
+Os estados de fonte incluem `queued`, `reading`, `indexing`, `ready`, `partial`, `failed` e
+`cancelled`; a sessao tambem informa limites e pode terminar como completa, parcial, falha,
+cancelada ou expirada. Os limites de snapshot, janela, frame, sessoes, leituras concorrentes,
+taxa de requests, TTL e limpeza sao aplicados no backend.
+
+Ao chegar ao fim historico, a acao explicita **Start one new live session** fecha a sessao finita
+e inicia uma nova sessao Live agregada. A fronteira historica permanece indicada enquanto a nova
+sessao conecta. A ausencia de teste interativo de navegador/Electron e as verificacoes ainda nao
+realizadas de rotacao/reinicio e retry de limpeza permanecem limitacoes conhecidas.
+
 ## Arquitetura do codigo
 
 ```text
@@ -467,7 +492,8 @@ npm run typecheck
 npm run build
 ```
 
-A cobertura atual inclui **99 testes**: 48 no backend e 51 no frontend. Os testes verificam, entre outros pontos:
+A validacao atual registrada inclui **174 testes**: 83 no backend e 91 no frontend. A suite focada
+de historico/protocolo/WebSocket do backend passou com **13/13** testes. Os testes verificam, entre outros pontos:
 
 - normalizacao de pods e status;
 - parsing e validacao de alvos;
@@ -478,9 +504,10 @@ A cobertura atual inclui **99 testes**: 48 no backend e 51 no frontend. Os teste
 - conversao de unidades de CPU e memoria;
 - presets e persistencia local;
 - destaque de texto em logs;
+- aquisicao historica finita, snapshots NDJSON, indices, limites, cancelamento, TTL, janelas e geracoes obsoletas;
 - redimensionamento dos paineis.
 
-Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegador e consulte clusters reais.
+Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegador ou o Electron.
 
 ## Limitacoes conhecidas
 
@@ -489,6 +516,9 @@ Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegado
 - Nao ha retry, timeout ou circuit breaker explicito para chamadas Kubernetes.
 - O visualizador de logs nao reconecta automaticamente.
 - Durante a pausa do visualizador, as linhas recebidas sao descartadas; o buffer mantem no maximo 5.000 linhas.
+- A implementacao e os testes focados cobrem a transicao historico-para-Live; ainda nao houve interacao de navegador/Electron nem integracao de WebSocket History em QA. Rotacao/reinicio de containers, falhas de retry de limpeza e limpeza apos restart do desktop tambem permanecem sem verificacao ao vivo.
+- Os limites de memoria decodificada em voo estao implementados e cobertos por testes: 4 MiB por fonte e 32 MiB por sessao. Nao foi executado um profiler de RSS, portanto esses limites nao sao uma medicao de RSS.
+- A validacao de QA nao executou o fan-out `POST /api/pods`; como os dois clusters de QA tinham metricas disponiveis, o comportamento de ausencia de metricas foi validado somente por testes unitarios.
 - Presets e larguras de paineis ficam apenas no navegador atual.
 - Nao ha validacao runtime de schema alem das validacoes implementadas nas rotas.
 - O modo de producao precisa de um servidor/reverse proxy que entregue o frontend e encaminhe `/api` e WebSocket para o backend; o proxy automatico descrito acima e configurado apenas no servidor de desenvolvimento do Vite.

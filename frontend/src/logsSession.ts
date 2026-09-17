@@ -1,10 +1,86 @@
 import type {
   AggregateLogEvent,
+  HistoryRecord,
+  HistoryWindowEvent,
   LogEventRecord,
   LogSource,
   LogSourceState,
   NormalizedPod,
 } from './types';
+
+export const HISTORY_WINDOW_LIMIT = 500;
+export const HISTORY_CACHE_WINDOW_LIMIT = 8;
+export const HISTORY_CACHE_BYTES_LIMIT = 2 * 1024 * 1024;
+
+export interface HistoryWindowCache {
+  windows: HistoryWindowEvent[];
+  bytes: number;
+  maxWindows: number;
+  maxBytes: number;
+}
+
+export interface HistoryWindowCacheUpdate {
+  cache: HistoryWindowCache;
+  evictedKeys: string[];
+}
+
+export function createHistoryWindowCache(maxWindows = HISTORY_CACHE_WINDOW_LIMIT, maxBytes = HISTORY_CACHE_BYTES_LIMIT): HistoryWindowCache {
+  return { windows: [], bytes: 0, maxWindows, maxBytes };
+}
+
+export function historyWindowKey(window: Pick<HistoryWindowEvent, 'sourceKey' | 'startLine'>): string {
+  return `${window.sourceKey}:${window.startLine}`;
+}
+
+export function addHistoryWindow(
+  cache: HistoryWindowCache,
+  window: HistoryWindowEvent,
+  identity: Pick<HistoryWindowEvent, 'sessionId' | 'snapshotId' | 'generation'>,
+): HistoryWindowCacheUpdate | undefined {
+  if (window.sessionId !== identity.sessionId || window.snapshotId !== identity.snapshotId || window.generation !== identity.generation) return undefined;
+  const key = historyWindowKey(window);
+  const existing = cache.windows.find((item) => historyWindowKey(item) === key);
+  const nextWindows = cache.windows.filter((item) => historyWindowKey(item) !== key);
+  let nextBytes = cache.bytes - (existing ? historyWindowBytes(existing) : 0) + historyWindowBytes(window);
+  nextWindows.push(window);
+  const evictedKeys: string[] = [];
+  while (nextWindows.length > cache.maxWindows || nextBytes > cache.maxBytes) {
+    const evicted = nextWindows.shift();
+    if (!evicted) break;
+    nextBytes -= historyWindowBytes(evicted);
+    evictedKeys.push(historyWindowKey(evicted));
+  }
+  return { cache: { ...cache, windows: nextWindows, bytes: nextBytes }, evictedKeys };
+}
+
+export function historyRecordsFromCache(cache: HistoryWindowCache): LogEventRecord[] {
+  const records = new Map<string, LogEventRecord>();
+  for (const window of cache.windows) {
+    for (const record of window.records) {
+      records.set(`${record.sourceKey}:${record.sequence}`, historyRecordToEvent(record));
+    }
+  }
+  return [...records.values()].sort((left, right) => left.source.sourceId.localeCompare(right.source.sourceId) || left.event.sequence - right.event.sequence);
+}
+
+export function historyRecordToEvent(record: HistoryRecord): LogEventRecord {
+  return {
+    source: record.source,
+    event: {
+      type: 'line',
+      sourceId: record.source.sourceId,
+      sequence: record.sequence,
+      timestamp: record.timestamp,
+      message: record.message,
+      bytes: record.bytes,
+      ...(record.application ? { application: record.application } : {}),
+    },
+  };
+}
+
+function historyWindowBytes(window: HistoryWindowEvent): number {
+  return window.records.reduce((total, record) => total + record.bytes, 0);
+}
 
 export interface LogRecordFilters {
   pod: string;

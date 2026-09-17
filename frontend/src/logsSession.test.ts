@@ -2,14 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   appendBoundedEvent,
+  addHistoryWindow,
+  createHistoryWindowCache,
   dedupeSources,
   filterLogRecords,
+  historyRecordsFromCache,
   logRecordMatches,
   logFilterValues,
   sourceIdFor,
   sourcesForPods,
 } from './logsSession';
-import type { LogEventRecord, LogSource, NormalizedPod } from './types';
+import type { HistoryWindowEvent, LogEventRecord, LogSource, NormalizedPod } from './types';
 
 const application = { key: 'label:billing', name: 'billing', source: 'label' as const, labelKey: 'app' as const };
 const pod = (name: string, cluster = 'qa'): NormalizedPod => ({
@@ -56,4 +59,27 @@ test('structured filters apply AND semantics and keep source options bounded', (
   const records = [record(qaSource, 'Billing started', 1), record(prodSource, 'Billing stopped', 2)];
   assert.equal(filterLogRecords(records, { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' }).length, 1);
   assert.deepEqual(logFilterValues([qaSource], records), { pods: ['api'], containers: ['app'], clusters: ['prod', 'qa'], namespaces: ['payments'] });
+});
+
+test('history cache rejects stale generations and evicts old windows by count', () => {
+  const source: LogSource = { sourceId: 'history-source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7 };
+  const window = (startLine: number): HistoryWindowEvent => ({
+    type: 'history.window',
+    ...identity,
+    sourceKey: 'source-key',
+    source,
+    startLine,
+    endLine: startLine + 1,
+    records: [{ sourceKey: 'source-key', source, sequence: startLine + 1, timestamp: null, message: `line ${startLine}`, bytes: 7 }],
+    hasMoreBefore: startLine > 0,
+    hasMoreAfter: true,
+  });
+  let cache = createHistoryWindowCache(2, 1024);
+  assert.equal(addHistoryWindow(cache, { ...window(0), generation: 6 }, identity), undefined);
+  cache = addHistoryWindow(cache, window(0), identity)!.cache;
+  cache = addHistoryWindow(cache, window(1), identity)!.cache;
+  const update = addHistoryWindow(cache, window(2), identity)!;
+  assert.deepEqual(update.evictedKeys, ['source-key:0']);
+  assert.deepEqual(historyRecordsFromCache(update.cache).map((record) => record.event.message), ['line 1', 'line 2']);
 });

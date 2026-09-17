@@ -89,11 +89,34 @@ storage lifecycle. A finite snapshot never uses `streaming` as its terminal stat
 
 ## Snapshot storage and index
 
-The proposed first implementation uses one application-owned temporary directory per history
-session and one NDJSON file per source. A session manifest records source tuple, snapshot version,
+The implementation uses one application-owned temporary directory per history session and one
+NDJSON file per source. A session manifest records source tuple, snapshot version,
 policy, applied range, byte/line counts, statuses, limit reasons, timestamps, and TTL metadata.
 The manifest contains no credentials, request headers, raw response bodies, or filesystem paths in
 renderer-facing payloads.
+
+### Backend decisions for v1.3.0
+
+- **Mode and generation:** `history.start` is the applied History-mode boundary. The server issues
+  the session generation and the session carries immutable `sessionId` and `snapshotId` values.
+  Draft mode and policy remain frontend concerns until Search confirmation.
+- **History-to-live transition:** close the finite history session and start one new aggregate Live
+  session after explicit confirmation. There is no same-socket attach and no per-source socket.
+  This preserves the historical boundary and avoids presenting a finite snapshot as streaming.
+- **Limits:** the implementation uses the named baseline table below plus a 512 KiB protocol frame,
+  a 2,000-record/256 KiB window, two process-wide active sessions, eight concurrent source reads,
+  120 window requests per minute, a 15-minute terminal TTL, and a one-hour orphan grace period.
+  Both policies fail closed at these caps; cap hits always produce a partial/limit reason.
+- **Timestamp and continuity:** timestamps are normalized when valid; missing or malformed values
+  remain `null` and file/line order is authoritative. Each source is read exactly once with
+  `follow=false`; no implicit reread or synthetic pagination occurs. Continuity is reported as
+  single-read, or unknown if a future client reports a restart/rotation.
+- **Previous logs:** `--previous` is excluded from v1.3.0. No previous-container read is inferred
+  from an empty result or source failure; a future variant must be explicit and use a distinct source
+  identity.
+- **Cleanup and security:** session directories and files are random, mode `0700`/`0600`, backend
+  owned, and removed on cancellation, TTL expiry, startup orphan cleanup, shutdown, or bounded
+  cleanup retry exhaustion. Renderer payloads contain no local paths or raw Kubernetes errors.
 
 Each record is one normalized NDJSON object containing the existing safe log event fields plus a
 source-local sequence. The writer appends and flushes incrementally; it never accumulates the whole
@@ -108,11 +131,11 @@ one entry per line within the configured index budget. Timestamp indexes are loo
 promise that records are globally time ordered. Null/malformed timestamps retain line order and are
 reported as missing timestamp metadata rather than repaired from untrusted text.
 
-### Proposed initial resource envelope
+### Implemented resource envelope
 
-These are implementation baselines to validate against existing configuration before coding. They
-must be represented as named configuration, tested at boundary values, and surfaced as safe limit
-metadata; they are not permission to remove tighter existing limits.
+These are the implemented v1.3.0 baselines. They are represented as named configuration, tested at
+boundary values, and surfaced as safe limit metadata; they are not permission to remove tighter
+existing limits.
 
 | Resource | Per source baseline | Per session baseline |
 | --- | ---: | ---: |
@@ -124,10 +147,22 @@ metadata; they are not permission to remove tighter existing limits.
 | Source reads | 1 | 8 concurrent sources |
 | History sessions | 1 active per desktop/backend owner | 2 process-wide |
 
-The design also requires a network/message cap for each protocol frame and a bounded cursor/page
-request rate. The backend task must reconcile these baselines with current server and desktop
-limits before implementation and document any change. Limits are fail-closed: captured records
-remain readable, but the status becomes bounded/partial and no unbounded retry is attempted.
+The backend names the decoded-memory limits `maxInFlightDecodedBytesPerSource` and
+`maxInFlightDecodedBytesPerSession`, with the 4 MiB and 32 MiB baselines above. A page is charged
+for its on-disk page buffer, conservatively expanded decoded text, and fixed per-record object
+overhead before its buffer is allocated or any record is decoded. The existing window record/byte
+caps remain independent. The session accounts the sum of active page reservations, rejects a page
+when either source or session budget would be exceeded with the stable error
+`History page exceeds the in-flight decoded memory limit.`, and releases each reservation in a
+`finally` block because page reads are synchronous.
+
+The implementation also enforces a network/message cap for each protocol frame and a bounded
+cursor/page request rate. Limits are fail-closed: captured records remain readable, but the status
+becomes bounded/partial and no unbounded retry is attempted.
+
+Focused tests verify the exact per-source and per-session decoded-memory envelope and release the
+reservation after each page read. An RSS profiler was not run, so these byte budgets are not an
+RSS measurement claim.
 
 ## Acquisition and source continuity
 
@@ -136,12 +171,11 @@ operation with `follow=false`. It writes records as they arrive, updates the sou
 builds offset/line/timestamp index entries. There is no attempt to ask Kubernetes for a page offset.
 The adapter treats EOF as a normal finite boundary and source errors as source-scoped failures.
 
-The implementation must decide before coding how it identifies a log rotation or container restart
-while a finite read is active. The recommended contract is to capture only the response associated
-with the source generation requested at session start, mark continuity as `unknown` if the client
-reports a restart, and avoid automatic rereads. A reread is a new explicit session, not an implicit
-page fetch. `--previous` is excluded from the default source request; a future explicit variant
-must use a separate source/read identity and metadata flag.
+The implementation captures only the response associated with the source generation requested at
+session start, marks continuity as `unknown` if a client reports a restart, and avoids automatic
+rereads. A reread is a new explicit session, not an implicit page fetch. `--previous` is excluded
+from the default source request; a future explicit variant must use a separate source/read identity
+and metadata flag.
 
 ## Protocol contract
 

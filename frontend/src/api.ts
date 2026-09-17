@@ -8,6 +8,8 @@ import type {
   Target,
   LogSource,
   LogSubscription,
+  HistoryPolicy,
+  HistoryWindowEvent,
 } from './types';
 
 /** Reads safe metadata about the active kubeconfig. */
@@ -120,6 +122,43 @@ export function aggregateLogsUrl(): string {
 /** Keeps the aggregate subscription shape explicit at the transport boundary. */
 export function serializeLogSubscription(subscription: LogSubscription): string {
   return JSON.stringify(subscription);
+}
+
+export function serializeHistoryStart(input: {
+  requestId: string;
+  generation: number;
+  policy: HistoryPolicy;
+  from?: string;
+  to?: string;
+  sources: LogSource[];
+}): string {
+  return JSON.stringify({ type: 'history.start', ...input });
+}
+
+export function serializeHistoryWindow(input: {
+  sessionId: string;
+  generation: number;
+  sourceKey: string;
+  line: number;
+  direction?: 'forward' | 'backward';
+  limit?: number;
+}): string {
+  return JSON.stringify({
+    type: 'history.window',
+    sessionId: input.sessionId,
+    generation: input.generation,
+    cursor: { sourceKey: input.sourceKey, line: input.line },
+    direction: input.direction ?? 'forward',
+    limit: input.limit ?? 500,
+  });
+}
+
+export function serializeHistoryCancel(input: { sessionId: string; generation: number; reason?: string }): string {
+  return JSON.stringify({ type: 'history.cancel', ...input });
+}
+
+export function isHistoryWindowEvent(event: { type: string }): event is HistoryWindowEvent {
+  return event.type === 'history.window';
 }
 
 export function logSourceKey(source: Pick<LogSource, 'cluster' | 'namespace' | 'pod' | 'container'>): string {

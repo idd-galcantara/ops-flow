@@ -6,8 +6,8 @@ Este guia explica como instalar e executar uma versao empacotada do ops-union em
 
 Os arquivos sao gerados em `release/`:
 
-- `ops-union-0.4.0-linux-x86_64.AppImage`
-- `ops-union-0.4.0-linux-amd64.deb`
+- `ops-union-<versao>-linux-x86_64.AppImage`
+- `ops-union-<versao>-linux-amd64.deb`
 
 O AppImage e portatil: nao instala o aplicativo no sistema. O `.deb` instala o aplicativo e cria os atalhos registrados pelo pacote.
 

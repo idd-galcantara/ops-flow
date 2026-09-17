@@ -35,6 +35,51 @@ export interface EffectiveLogSubscription extends LogRange {
   sources: LogSource[];
 }
 
+export type HistoryPolicy = 'complete-when-available' | 'bounded';
+export type HistorySourceStatus = 'queued' | 'reading' | 'indexing' | 'ready' | 'partial' | 'failed' | 'cancelled';
+export type HistoryTerminalStatus = 'complete' | 'partial' | 'failed' | 'cancelled' | 'expired';
+
+export interface HistoryCursor {
+  sourceKey: string;
+  line: number;
+}
+
+export interface HistorySourceProgress {
+  source: LogSource;
+  sourceKey: string;
+  status: HistorySourceStatus;
+  counters: LogCounters;
+  limitReason?: string;
+  error?: string;
+  continuity: 'single-read' | 'unknown';
+}
+
+export interface HistoryAggregateProgress {
+  capturedLines: number;
+  capturedBytes: number;
+  completedSources: number;
+  activeSources: number;
+  queuedSources: number;
+  sourceCount: number;
+  determinate: false;
+  limits: {
+    maxLinesTotal: number;
+    maxBytesTotal: number;
+    maxDiskBytesTotal: number;
+    usedDiskBytes: number;
+  };
+}
+
+export interface HistoryRecord {
+  sourceKey: string;
+  source: LogSource;
+  sequence: number;
+  timestamp: string | null;
+  message: string;
+  bytes: number;
+  application?: ApplicationIdentity;
+}
+
 export interface LogCounters {
   emittedLines: number;
   emittedBytes: number;
@@ -62,6 +107,10 @@ export type AggregateLogEvent =
   | { type: 'sourceError'; source: LogSource; message: string; counters: LogCounters; status: 'error' }
   | { type: 'sourceEnded'; source: LogSource; counters: LogCounters; reason: SourceEndReason }
   | { type: 'summary'; sources: Array<{ source: LogSource; counters: LogCounters; status: 'ended' | 'error' }>; limits: LogLimits; reason: SummaryReason }
+  | { type: 'history.accepted'; requestId: string; sessionId: string; snapshotId: string; generation: number; policy: HistoryPolicy; sourceCount: number }
+  | { type: 'history.progress'; sessionId: string; snapshotId: string; generation: number; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[] }
+  | { type: 'history.window'; sessionId: string; snapshotId: string; generation: number; sourceKey: string; source: LogSource; startLine: number; endLine: number; records: HistoryRecord[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
+  | { type: 'history.terminal'; sessionId: string; snapshotId: string; generation: number; status: HistoryTerminalStatus; policy: HistoryPolicy; aggregate: HistoryAggregateProgress; sources: HistorySourceProgress[]; limitReasons: string[] }
   | { type: 'error'; message: string };
 
 export type LegacyLogEvent =

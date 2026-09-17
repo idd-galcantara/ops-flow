@@ -1962,6 +1962,39 @@ button {
   gap: 8px;
 }
 
+.log-mode-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  margin: 0;
+  padding: 3px 7px;
+  color: var(--text-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 9px var(--mono);
+}
+
+.log-mode-control legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font: 8px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.log-mode-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.log-mode-control input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .log-toolbar-actions {
   align-items: center;
 }
@@ -2051,6 +2084,36 @@ button {
   background: var(--surface-subtle);
   border-bottom: 1px solid var(--line);
   font: 9px var(--mono);
+}
+
+.log-history-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  color: var(--text-soft);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--line);
+  font: 9px/1.45 var(--mono);
+}
+
+.log-history-status > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.log-history-status strong {
+  color: var(--ink);
+}
+
+.log-history-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .log-sources {
@@ -2869,6 +2932,10 @@ button {
     align-items: flex-start;
   }
 
+  .log-mode-control {
+    flex: 1 1 180px;
+  }
+
   .log-search-cluster {
     width: 100%;
   }
@@ -2912,6 +2979,16 @@ button {
 
   .log-range-summary {
     line-height: 1.45;
+  }
+
+  .log-history-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .log-history-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .log-event-meta {
@@ -4471,6 +4548,21 @@ button {
 .app-shell[data-theme='dark'] .log-empty,
 .app-shell[data-theme='dark'] .log-footer {
   color: var(--muted);
+}
+
+.app-shell[data-theme='dark'] .log-mode-control,
+.app-shell[data-theme='dark'] .log-history-status {
+  color: var(--text-soft);
+  border-color: var(--line-strong);
+}
+
+.app-shell[data-theme='dark'] .log-history-status {
+  background: var(--surface-muted);
+}
+
+.app-shell[data-theme='dark'] .log-history-status strong,
+.app-shell[data-theme='dark'] .log-mode-control legend {
+  color: var(--ink);
 }
 
 .app-shell[data-theme='dark'] .log-control select,

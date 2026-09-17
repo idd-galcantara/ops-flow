@@ -1,7 +1,9 @@
-import type { LogPeriod } from './types';
+import type { HistoryPolicy, LogMode, LogPeriod } from './types';
 import type { LogRecordFilters } from './logsSession';
 
 export interface LogSearchValues {
+  mode: LogMode;
+  historyPolicy: HistoryPolicy;
   period: LogPeriod;
   customFrom: string;
   customTo: string;
@@ -14,7 +16,7 @@ export interface LogSearchState {
   applied: LogSearchValues;
 }
 
-export type TransportSearchValues = Pick<LogSearchValues, 'period' | 'customFrom' | 'customTo' | 'follow'>;
+export type TransportSearchValues = Pick<LogSearchValues, 'mode' | 'historyPolicy' | 'period' | 'customFrom' | 'customTo' | 'follow'>;
 export type LocalFilterSearchValues = LogRecordFilters;
 
 export const EMPTY_LOG_FILTERS: LogRecordFilters = {
@@ -26,6 +28,8 @@ export const EMPTY_LOG_FILTERS: LogRecordFilters = {
 };
 
 export const DEFAULT_LOG_SEARCH_VALUES: LogSearchValues = {
+  mode: 'live',
+  historyPolicy: 'complete-when-available',
   period: 'all',
   customFrom: '',
   customTo: '',
@@ -38,8 +42,8 @@ export function cloneLogSearchValues(values: LogSearchValues): LogSearchValues {
 }
 
 export function transportSearchValues(values: LogSearchValues): TransportSearchValues {
-  const { period, customFrom, customTo, follow } = values;
-  return { period, customFrom, customTo, follow };
+  const { mode, historyPolicy, period, customFrom, customTo, follow } = values;
+  return { mode, historyPolicy, period, customFrom, customTo, follow };
 }
 
 export function localFilterSearchValues(values: LogSearchValues): LocalFilterSearchValues {
@@ -48,6 +52,8 @@ export function localFilterSearchValues(values: LogSearchValues): LocalFilterSea
 
 export function searchValuesEqual(left: LogSearchValues, right: LogSearchValues): boolean {
   return (
+    left.mode === right.mode &&
+    left.historyPolicy === right.historyPolicy &&
     left.period === right.period &&
     left.customFrom === right.customFrom &&
     left.customTo === right.customTo &&
@@ -58,6 +64,8 @@ export function searchValuesEqual(left: LogSearchValues, right: LogSearchValues)
 
 export function transportSearchValuesEqual(left: LogSearchValues, right: LogSearchValues): boolean {
   return (
+    left.mode === right.mode &&
+    left.historyPolicy === right.historyPolicy &&
     left.period === right.period &&
     left.customFrom === right.customFrom &&
     left.customTo === right.customTo &&

@@ -32,3 +32,8 @@ test('createLogLineParser retains partial lines and split UTF-8 characters', () 
   assert.deepEqual(parser.push(input.subarray(split)), ['2026-09-16T10:00:00Z café']);
   assert.deepEqual(parser.end(), ['next']);
 });
+
+test('createLogLineParser rejects an oversized unterminated line before retaining it', () => {
+  const parser = createLogLineParser(4);
+  assert.throws(() => parser.push(Buffer.from('12345')), /record-size/);
+});
