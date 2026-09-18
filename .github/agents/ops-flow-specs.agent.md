@@ -39,6 +39,8 @@ source code.
 Every implementation or validation task must identify an owner using one of these exact agent
 names:
 
+- `@ops-union-architecture-review` for read-only cross-cutting architecture audits, code-structure
+  mapping, contract/ownership review, evidence synthesis, and prioritized improvement backlogs.
 - `@ops-union-backend` for Node, TypeScript backend, Kubernetes clients, REST, or WebSocket API.
 - `@ops-union-frontend` for React, Vite, UI, state, styling, accessibility, or frontend API use.
 - `@ops-union-integration-qa` for end-to-end, real-cluster, packaging, security, or read-only
