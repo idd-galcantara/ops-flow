@@ -13,10 +13,10 @@ The highest-value risks are at boundaries rather than in the core happy path:
 1. A malformed percent-encoded legacy log WebSocket path reaches uncaught `decodeURIComponent` calls and can terminate the backend process.
 2. REST target and namespace fan-out has no explicit request cardinality or concurrency bound; the log/history paths have limits, but ordinary discovery/query fan-out does not.
 3. Backend termination is not graceful. Electron sends `SIGTERM`, while the backend relies on process exit and startup orphan cleanup, so history files can remain until the one-hour orphan grace period.
-4. The local backend and WebSocket have no client authentication. Binding to loopback limits network exposure, but any local process can issue read requests using the backend's kubeconfig privileges.
+4. The local backend and WebSocket intentionally have no additional client authentication. This is accepted for the single-user local model because the backend already operates with the user's kubeconfig privileges; loopback binding remains the transport boundary and any local process with access to it is within that trust assumption.
 5. Context loading has no request/revision guard, unlike namespace and pod loading, so a response from before kubeconfig replacement can overwrite the newly selected context list.
 
-These are review findings, not implemented fixes. No product source, test, manifest, generated artifact, release artifact, Kubernetes resource, kubeconfig, or current context was changed by this audit. No requirements or design correction was necessary.
+These are review findings and accepted boundary assumptions, not implemented fixes. No product source, test, manifest, generated artifact, release artifact, Kubernetes resource, kubeconfig, or current context was changed by this audit. No requirements or design correction was necessary.
 
 ## Repository and process map
 
@@ -208,15 +208,15 @@ No separate delegated specialist-agent execution channel was available in this s
 ### ARF-004
 
 **Category:** security/privacy
-**Severity:** medium
+**Severity:** low
 **Confidence:** confirmed
-**Status:** accepted-follow-up
+**Status:** informational
 **Evidence:** [backend/src/config.ts](../../backend/src/config.ts) binds to `127.0.0.1`; [backend/src/app.ts](../../backend/src/app.ts) exposes read routes without authentication; [backend/src/logsWebSocket.ts](../../backend/src/logsWebSocket.ts) accepts upgrades without authentication; [docs/TECH-DEFINITION.md](../../docs/TECH-DEFINITION.md) documents that any local process can access the backend.
-**Observation:** Loopback binding limits network reachability but is not an application identity boundary. Any local process that can connect can query contexts, pods, details, metrics, and logs using the backend's loaded kubeconfig credentials. The internal token protects only kubeconfig selection.
-**Impact:** A compromised local process or local web-to-loopback path may obtain cluster read data outside the intended renderer. This is compatible with the current single-user design but is not equivalent to renderer-only access.
-**Recommendation:** Define the threat model in a follow-up spec and choose a consistent local transport control: authenticated REST/WebSocket sessions, a per-run token for all channels, or an OS-native IPC boundary where practical. Preserve a documented standalone development mode.
-**Suggested owner:** `@ops-union-integration-qa` and repository maintainer
-**Validation:** Demonstrate unauthenticated access from a second local client against a test backend, then verify the selected mitigation for REST and both WebSocket paths without contacting a real cluster.
+**Observation:** Loopback binding is the intended transport boundary for the local, single-user application. The backend uses the user's kubeconfig privileges, so additional client authentication would not create a new Kubernetes permission boundary. Any local process that can connect can issue the same read-only requests, and that is an accepted trust assumption for the current product model.
+**Impact:** A compromised local process may obtain cluster read data outside the renderer. This remains a documented residual risk, but it is not a current product gap or release blocker under the single-user local threat model.
+**Recommendation:** Keep the loopback-only, read-only boundary documented. Revisit authentication or an OS-native transport only if the product becomes multi-user, hosts untrusted local clients, or requires renderer-only access as an explicit guarantee.
+**Suggested owner:** repository maintainer
+**Validation:** Confirm loopback binding, read-only route inventory, and the single-user threat-model decision during future security reviews.
 
 ### ARF-005
 
@@ -292,7 +292,6 @@ These are candidates for separate future specifications. None is implemented, ap
 | P0 | Harden WebSocket path parsing and protocol rejection | Prevents a malformed local request from terminating the backend | Small backend change plus regression tests; independent | `@ops-union-backend` | Malformed legacy URL is rejected, process stays healthy, normal log path still passes |
 | P1 | Bound REST discovery/query fan-out | Protects backend, Kubernetes API, and operator workstation from unbounded read concurrency | Backend contract/spec first; medium service and route change | `@ops-union-backend` | Documented caps, bounded active listers, partial failures preserved, oversized inputs safe |
 | P1 | Graceful backend/desktop shutdown contract | Makes history cleanup and process exit deterministic | Backend signal lifecycle, Main timeout/escalation, integration harness; medium | `@ops-union-backend` + `@ops-union-integration-qa` | Signal and window-close scenarios exit within a bound and remove owned temporary storage |
-| P1 | Protect the local transport | Clarifies whether local clients other than the renderer may use kubeconfig-backed reads | Threat-model decision, REST/WS auth or OS IPC; medium/large | Maintainer + `@ops-union-integration-qa` | Unauthorized local REST, aggregate WS, and legacy WS requests are rejected under the chosen mode |
 | P1 | Repair context stale-response ownership | Prevents old kubeconfig context lists from winning races | Small frontend state/test change | `@ops-union-frontend` | Deferred old response cannot overwrite selected configuration |
 | P2 | Establish shared REST/WebSocket contracts | Reduces producer/consumer drift and adds runtime input trust | Schema ownership decision, shared package or generated fixtures; medium | `@ops-union-backend` + `@ops-union-frontend` | Contract tests and boundary decoders cover discriminated events and error payloads |
 | P2 | Add desktop/browser smoke validation | Covers the untested process and renderer boundaries | Test harness and fixture backend; medium | `@ops-union-integration-qa` | Startup, IPC, persistence, shutdown, details, Live, and History smoke checks pass |
@@ -304,7 +303,7 @@ These are candidates for separate future specifications. None is implemented, ap
 - No browser automation, Electron launch, screen-reader check, responsive check, or packaged-runtime check was run. The desktop package has no test script.
 - No live REST, WebSocket, or pod/metrics/log scenario was run against the available kubeconfig contexts. Context names were listed only; no current context was changed and no cluster response or secret was recorded.
 - The audit did not reproduce ARF-001, ARF-002, ARF-003, ARF-004, or ARF-005 dynamically. Their confidence is based on source control flow and existing test boundaries; each has a focused validation above.
-- The exact threat model for other local processes, local browser pages, and multi-user machines is not specified. ARF-004 is accepted as a follow-up decision, not declared a release blocker.
+- The exact threat model for other local processes, local browser pages, and multi-user machines is intentionally limited by the current single-user local model. ARF-004 records the residual trust assumption and is not declared a release blocker or implementation follow-up.
 - The audit does not determine whether the current release artifacts are intentionally retained, stale, or required for distribution. No release files were changed.
 - No mutation-capable Kubernetes client call was found in the audited source paths, but absence of a call in source review is not equivalent to a live authorization review.
 
@@ -312,10 +311,9 @@ These are candidates for separate future specifications. None is implemented, ap
 
 1. Create a small backend hardening spec for malformed URL handling, generic error sanitization, and explicit REST fan-out limits.
 2. Create a lifecycle spec covering backend signal handling, child exit timeout/escalation, and history cleanup across restart.
-3. Create a local transport threat-model/spec decision before changing authentication or IPC behavior.
-4. Create a frontend stale-response spec for context loading, with a deferred-response regression test.
-5. Create a shared-contract and desktop smoke-validation spec after the ownership decision for REST/WebSocket schemas.
-6. Defer documentation convergence until the next accepted product/release state; do not rewrite historical specs as part of this audit.
+3. Create a frontend stale-response spec for context loading, with a deferred-response regression test.
+4. Create a shared-contract and desktop smoke-validation spec after the ownership decision for REST/WebSocket schemas.
+5. Defer documentation convergence until the next accepted product/release state; do not rewrite historical specs as part of this audit.
 
 ## Final validation and boundary confirmation
 
