@@ -25,6 +25,13 @@ export interface LogSearchOperationSnapshot {
   sources: LogSource[];
 }
 
+export interface LogSearchJumpRequest {
+  requestId: number;
+  mode: LogMode;
+  kind: LogSearchOperationKind;
+  armed: boolean;
+}
+
 export type LogSearchActivationResult =
   | { accepted: false; reason: 'busy' | 'no-sources' | 'invalid-range'; error?: string }
   | {
@@ -130,6 +137,21 @@ export function historySearchOperationComplete(terminalSeen: boolean, queryReady
 
 export function logSearchOperationComplete(kind: LogSearchOperationKind, terminalSeen: boolean, queryReadySeen: boolean): boolean {
   return kind !== 'history' || historySearchOperationComplete(terminalSeen, queryReadySeen);
+}
+
+export function createLogSearchJumpRequest(operation: Pick<LogSearchOperationSnapshot, 'requestId' | 'values'>, kind: LogSearchOperationKind): LogSearchJumpRequest {
+  return { requestId: operation.requestId, mode: operation.values.mode, kind, armed: true };
+}
+
+export function shouldConsumeLogSearchJumpRequest(
+  request: LogSearchJumpRequest | undefined,
+  options: { requestId: number; mode: LogMode; paused: boolean; resultsReady: boolean },
+): boolean {
+  return Boolean(request?.armed && request.requestId === options.requestId && request.mode === options.mode && !options.paused && options.resultsReady);
+}
+
+export function consumeLogSearchJumpRequest(request: LogSearchJumpRequest | undefined): LogSearchJumpRequest | undefined {
+  return request ? { ...request, armed: false } : undefined;
 }
 
 export function createLogSearchOperationSnapshot(

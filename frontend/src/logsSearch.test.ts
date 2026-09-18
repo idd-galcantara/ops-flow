@@ -6,13 +6,16 @@ import {
   canAcceptSearchActivation,
   commitLogSearch,
   createLogSearchActivation,
+  createLogSearchJumpRequest,
   createLogSearchOperationSnapshot,
+  consumeLogSearchJumpRequest,
   historySearchOperationComplete,
   localFilterSearchValues,
   logSearchOperationComplete,
   searchHasPendingChanges,
   searchOperationKind,
   searchValuesEqual,
+  shouldConsumeLogSearchJumpRequest,
   transportSearchValues,
   transportSearchValuesEqual,
 } from './logsSearch';
@@ -75,6 +78,19 @@ test('history busy completion waits for both initial result boundary events', ()
   assert.equal(historySearchOperationComplete(true, false), false);
   assert.equal(historySearchOperationComplete(false, true), false);
   assert.equal(historySearchOperationComplete(true, true), true);
+});
+
+test('Search jump requests cover Live, History, and local searches and consume once when ready', () => {
+  for (const [kind, mode] of [['live', 'live'], ['history', 'history'], ['local', 'live']] as const) {
+    const request = createLogSearchJumpRequest({ requestId: 11, values: { ...DEFAULT_LOG_SEARCH_VALUES, mode } }, kind);
+    assert.deepEqual(request, { requestId: 11, mode, kind, armed: true });
+    assert.equal(shouldConsumeLogSearchJumpRequest(request, { requestId: 11, mode, paused: false, resultsReady: false }), false);
+    assert.equal(shouldConsumeLogSearchJumpRequest(request, { requestId: 10, mode, paused: false, resultsReady: true }), false);
+    assert.equal(shouldConsumeLogSearchJumpRequest(request, { requestId: 11, mode, paused: true, resultsReady: true }), false);
+    assert.equal(shouldConsumeLogSearchJumpRequest(request, { requestId: 11, mode, paused: false, resultsReady: true }), true);
+    const consumed = consumeLogSearchJumpRequest(request);
+    assert.equal(shouldConsumeLogSearchJumpRequest(consumed, { requestId: 11, mode, paused: false, resultsReady: true }), false);
+  }
 });
 
 test('operation snapshots isolate candidate values, activation range, and source tuples', () => {

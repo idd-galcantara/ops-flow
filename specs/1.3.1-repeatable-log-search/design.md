@@ -12,12 +12,15 @@ like a permanently disabled action. Version 1.3.1 separates three concepts:
 
 The existing draft/applied model remains the source of truth for pending edits. A repeat activation
 adds a new request/session boundary without inventing a second set of user-facing search values.
+Every accepted Search also owns one invocation of the existing `Jump to latest` action when its
+mode-specific initial results are ready. This applies to Live and History, including filter-only
+confirmation, while preserving each mode's existing viewport and loading behavior.
 
 ## Ownership boundaries
 
 - `frontend/src/components/LogViewer.tsx` owns Search activation, draft/applied snapshots, the
-  immutable operation snapshot, busy presentation, mode-specific completion, and session
-  replacement triggers.
+  immutable operation snapshot, busy presentation, mode-specific completion, session replacement
+  triggers, and the one-shot `Jump to latest` request latch.
 - `frontend/src/logsSearch.ts` remains the authority for value equality, cloning, transport/local
   projections, and pending-change classification. Equality SHALL no longer determine whether an
   idle Search button is actionable by itself.
@@ -26,6 +29,10 @@ adds a new request/session boundary without inventing a second set of user-facin
   later from mutable draft state.
 - Existing Live session effects and History generation/query helpers remain authorities for socket
   cleanup, source identity, stale response rejection, window caches, and local/History filtering.
+- `LogViewer.tsx` owns the request-scoped `Jump to latest` latch and invokes the existing action.
+  In Live the latch is fulfilled once the accepted request has current rendered rows; in History it
+  is fulfilled once the current-generation query or initial result is sufficient. It is not reused
+  for initial workspace setup, superseded sessions/generations, or later History window loading.
 - The aggregate backend protocol owner SHALL verify that an explicit repeat can produce a distinct
   Live session or History generation. No new backend endpoint is expected.
 - `frontend/src/index.css` and existing icon primitives own stable button geometry, busy styling,
@@ -69,20 +76,22 @@ Every accepted activation validates and captures a request snapshot containing c
 values, the UTC range resolved at that activation, and the exact selected source tuples. It receives
 a monotonically increasing request identity. The request identity is used to reject completion or
 data from a superseded session and is distinct from the user-visible search values, so two
-equal-value activations can still be separate operations. A Live repeat uses a new WebSocket because
-the backend accepts one initial subscription per socket; a History repeat uses a new socket and a
-new positive generation.
+equal-value activations can still be separate operations. The automatic `Jump to latest` action is
+eligible only for the accepted request identity, runs once at most, and is not armed by setup or
+completed by a superseded session/generation. A Live repeat uses a new WebSocket because the backend
+accepts one initial subscription per socket; a History repeat uses a new socket and a new positive
+generation.
 
 ## Activation matrix
 
-| Draft vs applied | Mode | Search behavior | Socket/generation | Busy completion |
-| --- | --- | --- | --- | --- |
-| Different, local filters only | Live | Commit and refilter retained events | Same socket | Local projection committed |
-| Different, transport/mode values | Live | Commit and replace session | One new aggregate session | Session accepted or terminal error |
-| Different, local filters only | History | Commit and start the confirmed query | Same History generation | Search returns idle after commit; query/window loading remains independent |
-| Different, transport/mode values | History | Commit and create new generation | One new History session | Initial result boundary or error |
-| Equal, Repeat Search | Live | Refresh current confirmed request | One new aggregate session | Session accepted or terminal error |
-| Equal, Repeat Search | History | Recreate finite snapshot/query | One new History generation | Initial result boundary or error |
+| Draft vs applied | Mode | Search behavior | Socket/generation | Busy completion | Automatic `Jump to latest` |
+| --- | --- | --- | --- | --- | --- |
+| Different, local filters only | Live | Commit and refilter retained events | Same socket | Local projection committed | Once after current accepted-request rows are rendered |
+| Different, transport/mode values | Live | Commit and replace session | One new aggregate session | Session accepted or terminal error | Once after current accepted-request rows are rendered |
+| Different, local filters only | History | Commit and start the confirmed query | Same History generation | Search returns idle after commit; query/window loading remains independent | Once when the initial query/result is sufficient; tail-window requests remain independent |
+| Different, transport/mode values | History | Commit and create new generation | One new History session | Initial result boundary or error | Once when the initial query/result is sufficient; tail-window requests remain independent |
+| Equal, Repeat Search | Live | Refresh current confirmed request | One new aggregate session | Session accepted or terminal error | Once after current accepted-request rows are rendered |
+| Equal, Repeat Search | History | Recreate finite snapshot/query | One new History generation | Initial result boundary or error | Once when the initial query/result is sufficient; tail-window requests remain independent |
 
 The matrix deliberately preserves v1.2.3 filter-only behavior when filters are newly changed, while
 making an explicit no-change activation a refresh. This gives the user a way to refresh a relative
@@ -107,12 +116,20 @@ busy
 
 history terminal + initial query ready
   -- window request --> independent history-window loading
+
+accepted Search + mode-specific initial results ready
+  -- existing Jump to latest --> latest result visible once for requestId
 ```
 
 A repeat Live Search must force a new session boundary even when the transport projection is equal;
 updating an equal React state object alone is not a sufficient trigger. A repeat History Search must
 similarly advance the session/generation identity, because stale windows from the previous snapshot
-must never be accepted into the new result.
+must never be accepted into the new result. Every accepted Search, including filter-only confirmation,
+arms one request-scoped invocation of the existing `Jump to latest` action. Live waits for current
+rows; History waits for sufficient initial query/results and does not replace or wait for tail-window
+requests. The action is not armed by initial setup and cannot be completed by a superseded
+session/generation. Existing `Pause` behavior remains authoritative and the action does not change
+Pause, busy/completion, draft values, or source scope.
 
 ## Busy and completion contract
 
@@ -130,6 +147,11 @@ The button's busy state represents the main Search operation, not every later vi
 - For filter-only History confirmation, the Search operation returns idle after the applied filter
   snapshot is committed. The existing `history.query.start`, `history.query.ready`, and window
   loading states continue independently on the same History generation.
+- After any accepted Search, the workspace invokes the existing `Jump to latest` action once for its
+  requestId when initial results are ready. Live waits for current rows; History waits for sufficient
+  initial query/results while preserving later tail-window requests. This is distinct from continuous
+  auto-follow. If `Pause` is active, the existing paused behavior wins: the action does not resume the
+  stream, change Pause, or reset paused counters.
 - Invalid input never becomes busy. Safe errors and validation feedback remain separate from the
   idle/busy visual treatment.
 
@@ -168,7 +190,13 @@ Search after busy ends applies that prepared draft or repeats the then-current a
 - Each operation uses its captured source tuples and resolved range. The effect or transport layer
   must not read later draft values when starting or completing that operation.
 - `Pause`, retained-event `Clear`, `Group`, and `Wrap lines` remain immediate/presentation actions
-  and never become Search operations.
+  and never become Search operations. A successful Live Search tail reveal must not toggle or
+  otherwise alter `Pause`.
+- History Search keeps its current viewport, virtualized window, and explicit tail-request behavior;
+  the automatic action uses the existing `Jump to latest` function after initial results and does not
+  replace or wait for later tail-window requests.
+- The automatic action is keyed by the accepted Search `requestId`: setup, ordinary initial loads,
+  and superseded sessions/generations do not invoke it, and one request cannot invoke it twice.
 - The selected source tuple list is captured for each operation. Changes to source selection remain
   outside this workspace's Search draft and continue through the existing Change sources flow.
 - Existing limits, partial failures, cancellation, safe errors, virtualization, and stale-event
@@ -185,6 +213,12 @@ Search after busy ends applies that prepared draft or repeats the then-current a
 - Assert busy blocks duplicate activation, while draft edits during busy remain pending.
 - Assert busy clears at Live acceptance/error and History initial result readiness/error, without
   clearing it prematurely at History acceptance alone.
+- Assert each accepted Live and History Search, including filter-only confirmation, invokes the
+  existing `Jump to latest` action exactly once per requestId at the mode-specific initial-results
+  boundary. Assert Live waits for current rows, History waits for sufficient initial query/results,
+  and History tail-window requests remain independent.
+- Assert setup, ordinary initial loads, and superseded sessions/generations do not invoke the action;
+  assert `Pause`, busy/completion, draft edits, applied values, and source scope remain unchanged.
 - Assert filter-only History confirmation returns the main Search control to idle after commit while
   its same-generation query/window loading remains independent.
 - Assert invalid custom ranges preserve the prior applied state and never show busy.
@@ -202,4 +236,5 @@ Search after busy ends applies that prepared draft or repeats the then-current a
   and typecheck commands when the protocol check requires them, and run `git diff --check` after
   implementation.
 - Record unavailable browser, Electron, screen-reader, or cluster checks as limitations rather than
-  implementation evidence.
+  implementation evidence. In particular, browser/E2E evidence for the request-scoped automatic
+  action SHALL be recorded as unavailable when no suitable harness exists.

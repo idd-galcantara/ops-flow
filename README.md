@@ -27,6 +27,10 @@ Cada resultado preserva sua origem. Assim, pods com o mesmo nome em clusters dif
   auto-scroll.
 - Mantem o Search repetivel: com mudancas pendentes ele confirma o novo rascunho; sem mudancas ele
   inicia uma nova sessao Live ou geracao History.
+- Depois de qualquer Search aceito, em Live ou History, incluindo confirmacoes somente de filtros,
+  o viewer agenda uma unica chamada a acao existente **Jump to latest** quando os resultados
+  iniciais ficam prontos: em Live aguarda linhas renderizadas e, em History, a query inicial. A
+  acao respeita Pause e preserva as cargas independentes de janelas History.
 - Atualiza a lista manualmente ou em intervalos de 10, 30 ou 60 segundos.
 - Persiste presets de alvos localmente: no `localStorage` em modo web e no diretório de dados do
   Electron em modo desktop.
@@ -498,7 +502,7 @@ npm run typecheck
 npm run build
 ```
 
-A validacao da versao 1.3.1 registrada inclui **191 testes**: 88 no backend e 103 no frontend.
+A validacao da versao 1.3.1 registrada inclui **192 testes**: 88 no backend e 104 no frontend.
 Os typechecks do backend e frontend, o build do frontend e `git diff --check` tambem passaram. Os
 testes verificam, entre outros pontos:
 

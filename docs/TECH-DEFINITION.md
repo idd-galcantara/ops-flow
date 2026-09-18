@@ -582,7 +582,8 @@ Configurações do viewer:
 - pausar interrompe o append local, mas mantém o socket aberto;
 - linhas recebidas durante a pausa são descartadas;
 - não existe reconexão automática;
-- filtro e auto-scroll são operações locais, sem novas chamadas ao backend.
+- filtro e o auto-scroll comum são operações locais; a ação `Jump to latest` pode solicitar uma
+  janela de cauda History quando necessário.
 
 ### 7.4 Sessao agregada e modo History
 
@@ -600,6 +601,11 @@ conjunto exato de fontes confirmado pelo Search e nao abre um socket por pod, fo
   sessao agregada e resolve faixas relativas no momento da ativacao; a repeticao History cria uma
   nova geracao. Ativacoes duplicadas sao bloqueadas enquanto a operacao esta ocupada, sem impedir
   edicoes no rascunho.
+- Depois de qualquer Search aceito, em Live ou History, incluindo confirmacoes somente de filtros,
+  o viewer agenda uma unica chamada a acao existente `Jump to latest` quando os resultados iniciais
+  ficam prontos. Em Live, aguarda linhas renderizadas; em History, aguarda a query inicial e
+  preserva as cargas independentes de janelas e da cauda. A acao respeita Pause e nao altera o
+  comportamento pausado.
 - Uma janela carrega `sessionId`, `snapshotId`, `generation`, fonte, cursores e indicacao de mais
   dados. Geracoes, cursores, tamanho de frame e taxa de requisicoes sao validados; respostas de
   geracao obsoleta sao rejeitadas ou ignoradas.
@@ -618,8 +624,8 @@ capturados continuam sujeitos ao estado parcial ou ao motivo do limite.
 
 Os estados visiveis incluem preparacao, leitura, pronto, parcial, falha, cancelamento e expiracao,
 alem dos estados por fonte `queued`, `reading`, `indexing`, `ready`, `partial`, `failed` e
-`cancelled`. A validacao da versao 1.3.1 registrada inclui 191 testes automatizados, sendo 88 no
-backend e 103 no frontend. Os typechecks do backend e frontend, o build do frontend e `git diff
+`cancelled`. A validacao da versao 1.3.1 registrada inclui 192 testes automatizados, sendo 88 no
+backend e 104 no frontend. Os typechecks do backend e frontend, o build do frontend e `git diff
 --check` tambem passaram.
 
 A validacao de integracao da versao 1.3.1 foi somente leitura: health, contexts, describe, fontes

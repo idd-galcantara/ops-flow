@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { LoaderCircle, Pause, Play, Search, Trash2, X } from 'lucide-react';
 import { aggregateLogsUrl, serializeHistoryCancel, serializeHistoryQueryStart, serializeHistoryQueryWindow, serializeHistoryStart, serializeHistoryWindow, serializeLogSubscription } from '../api';
 import { LOG_PERIODS, resolveLogRange } from '../logsRange';
-import { cloneLogSearchValues, createLogSearchActivation, createLogSearchOperationSnapshot, DEFAULT_LOG_SEARCH_VALUES, logSearchOperationComplete, searchHasPendingChanges, type LogSearchOperationKind, type LogSearchOperationSnapshot, type LogSearchState } from '../logsSearch';
+import { cloneLogSearchValues, consumeLogSearchJumpRequest, createLogSearchActivation, createLogSearchJumpRequest, createLogSearchOperationSnapshot, DEFAULT_LOG_SEARCH_VALUES, logSearchOperationComplete, searchHasPendingChanges, shouldConsumeLogSearchJumpRequest, type LogSearchJumpRequest, type LogSearchOperationKind, type LogSearchOperationSnapshot, type LogSearchState } from '../logsSearch';
 import { DEFAULT_LOG_DISPLAY_STATE, logRecordKey, setWrapLines, type LogGrouping } from '../logsPresentation';
 import { addHistoryQueryWindow, addHistoryWindow, appendBoundedEvent, CLIENT_LOG_BUFFER, createHistoryQueryWindowCache, createHistoryWindowCache, filterLogRecords, historyQueryRecordAt, historyRecordToEvent, HISTORY_WINDOW_LIMIT, historyRecordsFromCache, logFilterValues, sourceLabel, sourceStateForEvent, sourcesForPods, type HistoryQueryWindowCache, type HistoryQueryWindowRequest, type HistoryWindowCache, type HistoryWindowRequest, type LogRecordFilters } from '../logsSession';
 import { ErrorState } from './Feedback';
@@ -81,6 +81,7 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
   const [paused, setPaused] = useState(false);
   const [receivedWhilePaused, setReceivedWhilePaused] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
+  const { draft, applied } = search;
   const outputRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<SummaryReason | undefined>(undefined);
   const pausedRef = useRef(paused);
@@ -96,6 +97,10 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
   const historyQueryRequestRef = useRef<((request: HistoryQueryWindowRequest) => void) | undefined>(undefined);
   const historyQueryStartRef = useRef<((filters: HistoryQueryFilters) => void) | undefined>(undefined);
   const historyQueryVisibleRangeRef = useRef<{ firstIndex: number; lastIndex: number } | undefined>(undefined);
+  const historyQueryReadyRequestRef = useRef<number | undefined>(undefined);
+  const liveSessionAcceptedRef = useRef(false);
+  const searchJumpRequestRef = useRef<LogSearchJumpRequest | undefined>(undefined);
+  const jumpToLatestRef = useRef<(() => void) | undefined>(undefined);
   const requestGenerationRef = useRef(0);
   const requestIdRef = useRef(0);
   const searchOperationIdRef = useRef(0);
@@ -104,7 +109,6 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
   const historyTailPendingRef = useRef(false);
   const historyTailRevealRef = useRef(false);
   const selectedSources = availableSources;
-  const { draft, applied } = search;
   const hasPendingSearch = searchHasPendingChanges(search);
   const filterValues = useMemo(() => logFilterValues(selectedSources, events), [selectedSources, events]);
   const appliedCustomRange = useMemo(() => ({ from: applied.customFrom, to: applied.customTo }), [applied.customFrom, applied.customTo]);
@@ -113,6 +117,8 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
   const queryHistoryActive = applied.mode === 'history' && Boolean(historyQuery);
   const isSearchApplying = Boolean(searchOperation);
   const virtualCount = queryHistoryActive ? historyQuery!.totalMatches : visibleEvents.length;
+  const virtualCountRef = useRef(virtualCount);
+  virtualCountRef.current = virtualCount;
   const virtualizer = useVirtualizer({
     count: virtualCount,
     getScrollElement: () => outputRef.current,
@@ -174,6 +180,8 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
     historyRequestRef.current = undefined;
     historyQueryRequestRef.current = undefined;
     historyQueryStartRef.current = undefined;
+    liveSessionAcceptedRef.current = false;
+    historyQueryReadyRequestRef.current = undefined;
     historyTailPendingRef.current = false;
     historyTailRevealRef.current = false;
     if (!operation && appliedRangeResult.error) {
@@ -216,6 +224,7 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
     const startHistoryQuery = (filters: HistoryQueryFilters) => {
       const identity = historyRuntimeRef.current.identity;
       if (!identity || !historyRuntimeRef.current.terminal || socket.readyState !== WebSocket.OPEN) return;
+      historyQueryReadyRequestRef.current = undefined;
       const previousQueryId = historyQueryRuntimeRef.current.queryId;
       if (previousQueryId) historyQueryRuntimeRef.current.retiredQueryIds.add(previousQueryId);
       historyQueryRuntimeRef.current.queryId = undefined;
@@ -321,6 +330,8 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
           historyQueryRuntimeRef.current.queryId = event.queryId;
           historyQueryRuntimeRef.current.requested.clear();
           historyQueryRuntimeRef.current.pending.clear();
+          const jumpRequest = searchJumpRequestRef.current;
+          if (jumpRequest?.requestId === searchOperationIdRef.current && jumpRequest.mode === 'history') historyQueryReadyRequestRef.current = jumpRequest.requestId;
           setHistoryQuery({ identity: historyRuntimeRef.current.identity!, queryId: event.queryId, totalMatches: event.totalMatches });
           setHistoryQueryCache(createHistoryQueryWindowCache());
           setHistoryQueryRetryRequests([]);
@@ -385,6 +396,7 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
       }
       if (event.type === 'accepted') {
         setAcceptedLimits(event.limits);
+        liveSessionAcceptedRef.current = true;
         finishSearchOperation(operationId);
         if (transitioningFromHistoryRef.current) {
           transitioningFromHistoryRef.current = false;
@@ -451,6 +463,7 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
         if (identity && socket.readyState === WebSocket.OPEN) socket.send(serializeHistoryCancel({ ...identity, reason: 'session-replaced' }));
       }
       socket.close();
+      liveSessionAcceptedRef.current = false;
       historyQueryRequestRef.current = undefined;
       historyQueryStartRef.current = undefined;
       if (historySocketRef.current === socket) historySocketRef.current = undefined;
@@ -480,12 +493,12 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
   }, [historyQuery?.queryId, historyQuery?.totalMatches, historyQueryCache.windows.length, queryHistoryActive, virtualizer]);
 
   useEffect(() => {
-    const shouldRevealTail = applied.mode === 'live' || historyTailRevealRef.current;
+    const shouldRevealTail = historyTailRevealRef.current || (applied.mode === 'live' && liveSessionAcceptedRef.current);
     if (shouldRevealTail && autoScroll && !paused && virtualCount > 0) {
       virtualizer.scrollToIndex(virtualCount - 1, { align: 'end' });
       historyTailRevealRef.current = false;
     }
-  }, [applied.mode, autoScroll, paused, virtualCount, virtualizer]);
+  }, [applied.mode, autoScroll, events.length, paused, virtualCount, virtualizer]);
 
   const sourceErrors = [...sourceStates.values()].filter((item) => item.status === 'error');
   const historySourceErrors = historyState?.sources.filter((item) => item.status === 'failed' || Boolean(item.error)) ?? [];
@@ -520,6 +533,7 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
       return;
     }
     setValidationError(undefined);
+    searchJumpRequestRef.current = createLogSearchJumpRequest(activation.snapshot, activation.kind);
     if (activation.startsTransport) beginTransportOperation(activation.snapshot, activation.kind);
     setSearch(activation.nextState);
   };
@@ -583,6 +597,16 @@ export function LogViewer({ pod, pods, sources, consultedContexts, onChangeSourc
     setAutoScroll(true);
     if (virtualCount > 0) virtualizer.scrollToIndex(virtualCount - 1, { align: 'end' });
   };
+  jumpToLatestRef.current = jumpToLatest;
+  useEffect(() => {
+    const request = searchJumpRequestRef.current;
+    const historyResultsReady = Boolean(historyQuery?.queryId) && historyQueryReadyRequestRef.current === request?.requestId;
+    const resultsReady = applied.mode === 'live' ? liveSessionAcceptedRef.current && events.length > 0 : historyResultsReady;
+    const jump = jumpToLatestRef.current;
+    if (!jump || !shouldConsumeLogSearchJumpRequest(request, { requestId: searchOperationIdRef.current, mode: applied.mode, paused, resultsReady })) return;
+    searchJumpRequestRef.current = consumeLogSearchJumpRequest(request);
+    jump();
+  }, [applied.filters, applied.mode, events.length, historyQuery?.queryId, paused, state, virtualCount]);
   const canTransitionToLive = applied.mode === 'history' && historyState && ['complete', 'partial'].includes(historyState.status);
   const transitionToLive = () => {
     if (!canTransitionToLive || hasPendingSearch || isSearchApplying) return;

@@ -7,7 +7,8 @@ activity.
 
 ## Ownership and sequencing
 
-- `@ops-union-frontend` owns the Search state, repeat trigger, busy UI, and focused frontend tests.
+- `@ops-union-frontend` owns the Search state, repeat trigger, Live tail reveal, busy UI, and
+  focused frontend tests.
 - `@ops-union-backend` owns a read-only protocol compatibility check and any narrowly required
   backend tests or generation adjustment.
 - `@ops-union-integration-qa` owns read-only transport, History-generation, stale-response,
@@ -115,6 +116,48 @@ activity.
     and metrics against available QA contexts; no Kubernetes mutation, packaging, or release was
     performed. Repeat UI transport counts and browser accessibility checks remain unavailable.
 
+- [x] 1.3.1-RS-7 Correct Live Search tail reveal after successful activation.
+  - After a successful Live Search activation with `Pause` inactive, reveal the newest rows rendered
+    by the replacement session even when the log output was scrolled away from the tail before
+    Search. Keep the reveal one-shot per accepted activation, preserve the existing History
+    viewport/window behavior, and leave `Pause` state, paused counters, and draft edits during busy
+    unchanged; when `Pause` is active, do not force a reveal or resume following.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-3.8 through RS-3.11, RS-4.4, RS-5.1 through RS-5.2, RA-1.6.
+  - Validation: focused frontend tests that start from a scrolled-away Live viewport, assert tail
+    reveal after the replacement session is accepted and rows render, assert no duplicate reveal for
+    one activation, and verify History, `Pause`, and draft-edits-during-busy regression behavior.
+    Run the focused test file plus `npm run typecheck` in `frontend/`.
+  - Evidence: `logsSearch.ts` provides a one-shot Live tail-reveal latch consumed only after current
+    rows exist, and `LogViewer.tsx` arms it only for a Search-started Live session accepted while
+    not paused. Focused frontend tests: 104 passed; typecheck and build passed; `git diff --check`
+    passed. No React/browser harness exists, so viewport pixels, keyboard focus, and responsive
+    behavior remain unavailable as direct evidence.
+
+- [x] 1.3.1-RS-8 Execute the existing `Jump to latest` action once after every accepted Search.
+  - Extend the recently changed behavior from Live-only to every accepted Search in Live or
+    History, including filter-only confirmation, using the same existing action/function semantics.
+  - In Live, wait for current rows for the accepted request; in History, wait for sufficient
+    current-generation query/initial results while preserving existing tail-window requests.
+  - Scope the one-shot execution to the accepted Search `requestId`; do not run it during initial
+    workspace setup or for a session/generation superseded before initial results are ready.
+  - Preserve `Pause`, Search busy/completion boundaries, draft/applied values and edits, selected
+    source tuples, and confirmed source scope.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-3.8 through RS-3.12, RS-4.4, RS-5.1 through RS-5.2, RA-1.6, IQ-1.6.
+  - Validation: focused frontend tests for Live and History transport and filter-only Search,
+    requestId deduplication, setup/superseded exclusion, Live row readiness, History initial-result
+    readiness, preserved tail-window requests, and Pause/busy/draft/source-scope invariants; run
+    the focused frontend test file, `npm run typecheck`, and `npm run build` in `frontend/`.
+    Record browser/E2E, Electron, screen-reader, and responsive limitations explicitly when no
+    suitable harness is available.
+  - Evidence: `LogViewer.tsx` creates one request per accepted Search and invokes the existing
+    `jumpToLatest()` action when Live rows or the current History query are ready; requestId and
+    mode guards exclude setup and superseded sessions. Pure frontend tests cover Live, History,
+    and filter-only requests plus one-shot consumption. Frontend tests: 104 passed; typecheck and
+    build passed; `git diff --check` passed. Browser/E2E, Electron, screen-reader, and responsive
+    checks remain unavailable.
+
 ## Validation record
 
 Implementation owners SHALL append evidence here only after the corresponding task is actually
@@ -127,6 +170,11 @@ limitations; it does not imply release approval.
 - Backend typecheck/build: typecheck passed; backend source unchanged.
 - Read-only integration and accessibility evidence: read-only QA passed for available API/WebSocket
   and cluster checks; browser/Electron/screen-reader/responsive checks unavailable.
+- Live tail-reveal correction: implemented and validated; 104 frontend tests passed, typecheck and
+  build passed. Direct browser viewport evidence remains unavailable.
+- Automatic `Jump to latest` for every accepted Live/History Search: implemented and validated;
+  104 frontend tests passed, typecheck/build passed. Direct browser viewport evidence remains
+  unavailable.
 - Packaging, publishing, commit, and release: intentionally out of scope for this handoff.
 
 ## Definition of done
@@ -135,6 +183,9 @@ limitations; it does not imply release approval.
 - Pending-change Search keeps the v1.2.3/v1.3.0 activation matrix.
 - Search is enabled while idle, visibly busy during the defined operation, and enabled again at the
   correct completion boundary.
+- Every accepted Live or History Search, including filter-only confirmation, invokes the existing
+  `Jump to latest` action once at the mode-specific initial-results boundary without changing
+  History tail-window behavior or the existing `Pause` and busy/draft-editing contracts.
 - Duplicate operations, stale results, source-scope widening, unsafe output, and read-only boundary
   regressions are covered by focused evidence.
 - Residual browser, Electron, cluster, or assistive-technology limitations are recorded honestly.

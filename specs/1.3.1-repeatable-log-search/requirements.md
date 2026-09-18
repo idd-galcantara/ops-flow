@@ -20,6 +20,9 @@ Kubernetes mutation.
   control first.
 - As a logs user, I can see that Search is busy while the requested operation is in progress and
   know when it is available again.
+- As a logs user, after any accepted Search in Live or History, including a filter-only
+   confirmation, I can use the existing `Jump to latest` behavior once the initial results are
+   ready, even when I had moved away from the newest output.
 - As a logs user, I can continue editing a new draft while an operation is in progress without
   accidentally applying that newer draft to the operation already running.
 - As a platform operator, I can rely on the existing one-session, bounded, safe, and read-only
@@ -40,6 +43,11 @@ Kubernetes mutation.
 - **History initial result boundary:** The current-generation `history.terminal` event followed by
    the current-generation `history.query.ready` event for the confirmed filters. A later
    `history.query.window` or source window request has its existing independent loading state.
+- **Initial results ready:** In Live, current rows for the accepted request are rendered; in
+   History, the current-generation query or initial result is sufficient for the existing initial
+   result boundary. Tail-window requests remain independent and are not replaced by this boundary.
+- **Automatic latest jump:** One invocation of the existing `Jump to latest` action, using its
+   existing semantics, associated with one accepted Search `requestId`.
 - **Transport values:** Mode, period, custom range, and Follow values that determine a session or
   history generation.
 - **Local filters:** Pod, container, cluster, namespace, and message-text predicates over the
@@ -114,6 +122,26 @@ Kubernetes mutation.
    return to its idle, enabled state even if the draft has no pending changes.
 7. The busy state SHALL not prevent the workspace from reporting partial results, safe errors,
    limits, History expiry, or the existing connection status.
+8. WHEN any Search activation is accepted in Live or History, including a filter-only
+   confirmation, THEN the workspace SHALL invoke the existing `Jump to latest` action exactly once
+   for that accepted request when its initial results are ready. The invocation SHALL use the same
+   action/function semantics already used by the workspace.
+9. In Live, initial results SHALL be considered ready when current rows for the accepted request
+   are rendered. In History, initial results SHALL be considered ready when the current-generation
+   query or initial result is sufficient under the existing History initial result boundary. The
+   automatic action SHALL preserve existing tail-window requests and SHALL not replace or wait for
+   later virtualized window loads.
+10. The automatic `Jump to latest` invocation SHALL execute at most once per accepted Search
+   `requestId` and SHALL not run during initial workspace setup, for an ordinary setup/session
+   without an accepted Search, or for a session/generation superseded before its initial results
+   are ready.
+11. WHEN `Pause` is active THEN the automatic Search-triggered action SHALL preserve the existing
+   paused behavior: it SHALL not resume the stream, change the Pause control state, reset paused
+   counters, or alter the existing Pause semantics. Search SHALL remain independently responsible
+   for replacing the Live session and completing its busy state.
+12. The automatic action SHALL not change Search busy/completion boundaries, draft or applied
+   values, draft edits made during busy, selected source tuples, or confirmed source scope. It
+   SHALL remain a consequence of the accepted Search request rather than a new Search operation.
 
 ### RS-4 - Interaction and accessibility contract
 
@@ -159,6 +187,11 @@ Kubernetes mutation.
    required unless the current generation/session contract cannot express the repeat boundary.
 5. This specification SHALL not authorize source-code implementation, commit, packaging, release,
    or completion of implementation without recorded evidence.
+6. Tests SHALL prove that every accepted Search in Live and History, including filter-only
+   confirmation, invokes the existing `Jump to latest` action once per `requestId` when initial
+   results are ready; Live SHALL wait for current rows, History SHALL wait for sufficient initial
+   query/results, and History tail-window behavior, `Pause`, busy state, draft edits, and source
+   scope SHALL remain unchanged.
 
 ### IQ-1 - Integration acceptance gate
 
@@ -172,11 +205,18 @@ Kubernetes mutation.
    responsive behavior at supported narrow and high-zoom layouts.
 5. Kubernetes and desktop validation SHALL remain read-only; no mutation, packaging, publishing,
    or release action is part of this acceptance gate.
+6. Validation SHALL record browser/E2E, Electron, screen-reader, and responsive limitations when
+   those environments are unavailable; such limitations SHALL not be represented as evidence that
+   the automatic action ran.
 
 ## Definition of done
 
 - Search remains enabled after an applied search and can explicitly repeat the same request.
 - Live Repeat Search refreshes relative ranges and creates exactly one replacement session.
+- Every accepted Search invokes the existing `Jump to latest` action once per request in Live and
+   History, including filter-only confirmation, at the mode-specific initial-results boundary.
+- Live waits for current rows and History preserves its query-ready and tail-window behavior,
+   without changing `Pause`, busy, draft-editing, or source-scope behavior.
 - History Repeat Search creates exactly one new generation without mixing stale results.
 - The button shows loading only during the active Search operation and returns to enabled idle state
   after the defined completion or failure boundary.
