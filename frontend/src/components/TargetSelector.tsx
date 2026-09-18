@@ -400,7 +400,7 @@ export function TargetSelector({
 
 /**
  * Saved target combinations, so a recurring investigation (e.g. "Example preset =
- * tb + gt") can be restored in one click instead of rebuilt every time.
+ * cluster-a + cluster-b") can be restored in one click instead of rebuilt every time.
  */
 function PresetSection({ openRequest, resetRequest }: { openRequest: number; resetRequest: number }) {
   const presets = useOpsFlowStore((s) => s.presets);

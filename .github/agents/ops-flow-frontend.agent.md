@@ -23,7 +23,7 @@ You are the frontend specialist for **ops-union**, a LOCAL, READ-ONLY web app th
 - Phase 3: target-selection UI (pick contexts + type namespaces to assemble the target list); unified table with columns Cluster, Namespace, Pod, Status, Ready, Restarts, Age; configurable grouping (by namespace | by cluster | flat) plus a text filter.
 - Phase 4: pod detail panel with a describe tab and a metrics tab; graceful UI when metrics are unavailable.
 - Phase 5: log viewer over WebSocket with container selection, auto-scroll, pause, clear, and filter.
-- Phase 6: optional auto-refresh of the pod list, locally saved target presets (e.g. "Example preset = tb+gt"), consistent error and loading states.
+- Phase 6: optional auto-refresh of the pod list, locally saved target presets (e.g. "Example preset = cluster-a + cluster-b"), consistent error and loading states.
 
 ## Hard rules
 - **READ-ONLY UI.** Never build controls or actions that trigger mutation (restart, scale, exec, delete). The UI is strictly for viewing.

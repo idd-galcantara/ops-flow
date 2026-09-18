@@ -124,7 +124,7 @@ Browser: visão unificada com agrupamento (namespace | cluster | flat),
 
 ### Fase 6 — Polimento
 - Auto-refresh/watch opcional da lista de pods.
-- Presets de alvos salvos localmente (ex.: "Example preset = tb+gt").
+- Presets de alvos salvos localmente (ex.: "Example preset = cluster-a + cluster-b").
 - Tratamento de erros e estados de loading consistentes.
 - **Entregável:** MVP fluido e usável no dia a dia.
 

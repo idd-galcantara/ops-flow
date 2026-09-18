@@ -1,7 +1,7 @@
 import type { Target } from './types';
 import { targetKey } from './types';
 
-/** A saved combination of targets, e.g. "Example preset = tb + gt". */
+/** A saved combination of targets, e.g. "Example preset = cluster-a + cluster-b". */
 export interface Preset {
   id: string;
   name: string;

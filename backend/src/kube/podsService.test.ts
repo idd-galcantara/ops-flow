@@ -5,8 +5,8 @@ import { MAX_TAIL_LINES, normalizeTailLines } from './logsService.js';
 import { errorStatusCode, getPods, safeErrorMessage, type PodLister } from './podsService.js';
 import type { Target } from './types.js';
 
-const tb: Target = { cluster: 'cluster-a', namespace: 'namespace-a' };
-const gt: Target = { cluster: 'cluster-b', namespace: 'namespace-a' };
+const targetA: Target = { cluster: 'cluster-a', namespace: 'namespace-a' };
+const targetB: Target = { cluster: 'cluster-b', namespace: 'namespace-a' };
 
 function pod(name: string): V1Pod {
   return { metadata: { name }, spec: { containers: [{ name: 'app' }] } };
@@ -17,7 +17,7 @@ test('getPods aggregates pods from multiple targets, annotated with origin', asy
     if (t.cluster === 'cluster-a') return [pod('pod-a'), pod('pod-b')];
     return [pod('pod-c')];
   };
-  const { pods, errors } = await getPods([tb, gt], lister);
+  const { pods, errors } = await getPods([targetA, targetB], lister);
   assert.equal(errors.length, 0);
   assert.equal(pods.length, 3);
   const tbPods = pods.filter((p) => p.cluster === 'cluster-a');
@@ -32,11 +32,11 @@ test('getPods isolates a failing target and keeps the successful ones', async ()
     if (t.cluster === 'cluster-b') throw new Error('cluster unreachable');
     return [pod('pod-a')];
   };
-  const { pods, errors } = await getPods([tb, gt], lister);
+  const { pods, errors } = await getPods([targetA, targetB], lister);
   assert.equal(pods.length, 1);
   assert.equal(pods[0].cluster, 'cluster-a');
   assert.equal(errors.length, 1);
-  assert.deepEqual(errors[0].target, gt);
+  assert.deepEqual(errors[0].target, targetB);
   assert.match(errors[0].message, /unreachable/);
 });
 
@@ -44,7 +44,7 @@ test('getPods returns empty pods and collects all errors when every target fails
   const lister: PodLister = async () => {
     throw new Error('boom');
   };
-  const { pods, errors } = await getPods([tb, gt], lister);
+  const { pods, errors } = await getPods([targetA, targetB], lister);
   assert.equal(pods.length, 0);
   assert.equal(errors.length, 2);
 });
