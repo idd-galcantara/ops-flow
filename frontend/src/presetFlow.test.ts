@@ -9,8 +9,9 @@ function createStore(loadPods: () => Promise<void>) {
     store: {
       presets: [{ id: 'qa' }],
       applyPreset: (id: string) => events.push(`apply:${id}`),
-      loadPods: async () => {
+      loadPods: async (options?: { silent?: boolean }) => {
         events.push('load:start');
+        assert.equal(options?.silent, undefined);
         await loadPods();
         events.push('load:end');
       },

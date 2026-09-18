@@ -8,12 +8,14 @@ const record: LogEventRecord = {
   event: { type: 'line', sourceId: 'source-a', sequence: 7, timestamp: null, message: 'ready', bytes: 5 },
 };
 
-test('display state defaults to no-wrap and toggles without changing grouping', () => {
-  assert.equal(DEFAULT_LOG_DISPLAY_STATE.wrapLines, false);
+test('display state defaults to wrapped and toggles without changing grouping', () => {
+  assert.equal(DEFAULT_LOG_DISPLAY_STATE.wrapLines, true);
   const wrapped = setWrapLines(DEFAULT_LOG_DISPLAY_STATE, true);
   assert.deepEqual(wrapped, { grouping: 'application', wrapLines: true });
   assert.deepEqual(setWrapLines(wrapped, true), wrapped);
-  assert.deepEqual(setWrapLines(wrapped, false), DEFAULT_LOG_DISPLAY_STATE);
+  const unwrapped = setWrapLines(wrapped, false);
+  assert.deepEqual(unwrapped, { grouping: 'application', wrapLines: false });
+  assert.deepEqual(setWrapLines(unwrapped, true), DEFAULT_LOG_DISPLAY_STATE);
 });
 
 test('virtualized log rows use a stable source and sequence key', () => {

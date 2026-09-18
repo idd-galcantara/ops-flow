@@ -25,6 +25,10 @@ Cada resultado preserva sua origem. Assim, pods com o mesmo nome em clusters dif
 - Consulta CPU e memoria por container quando o `metrics-server` esta disponivel.
 - Transmite logs de containers por WebSocket, com modos Live e History, follow, pausa, filtro e
   auto-scroll.
+- Fecha o workspace de logs e limpa selecoes antigas quando Fetch pods, refresh, retry ou um preset
+  inicia uma nova consulta; o auto-refresh silencioso preserva o workspace atual.
+- Inicia cada novo workspace de logs com **Wrap lines** habilitado, mantendo a alternancia manual
+  disponivel para a sessao atual.
 - Mantem o Search repetivel: com mudancas pendentes ele confirma o novo rascunho; sem mudancas ele
   inicia uma nova sessao Live ou geracao History.
 - Depois de qualquer Search aceito, em Live ou History, incluindo confirmacoes somente de filtros,
@@ -62,7 +66,7 @@ flowchart LR
 ## Downloads
 
 A release publicada referenciada por estes links e a **v0.5.1**. A implementacao da especificacao
-v1.3.1 esta no checkout atual; esta auditoria nao publica uma nova release. Os
+v1.3.2 esta no checkout atual; esta auditoria nao publica uma nova release. Os
 instaladores e pacotes estao disponiveis na pagina de
 [releases do GitHub](https://github.com/idd-galcantara/ops-union/releases/tag/v0.5.1).
 
@@ -388,7 +392,11 @@ Ao fechar a conexao do navegador, o backend interrompe a requisicao de logs no c
 ### Workspace agregado e historico
 
 O workspace de logs usa o WebSocket agregado `WS /api/logs` para manter um unico transporte para
-as fontes confirmadas. O modo inicial e Live. O modo History precisa ser escolhido e aplicado pelo
+as fontes confirmadas. O modo inicial e Live, e cada novo workspace inicia com **Wrap lines**
+habilitado; o controle pode ser desativado e reativado durante a sessao. Uma consulta explicita de
+pods, incluindo Fetch pods, refresh, retry ou aplicacao de preset, fecha o workspace e limpa as
+selecoes de logs antes de apresentar o novo resultado. O auto-refresh silencioso preserva o
+workspace, o filtro local e os detalhes atuais. O modo History precisa ser escolhido e aplicado pelo
 botao **Search**; ele usa uma unica captura finita com os limites tecnicos configurados. O Search
 permanece habilitado quando o workspace esta ocioso: mudancas pendentes sao confirmadas, e uma
 ativacao sem mudancas repete a operacao. Em Live isso substitui a sessao agregada e resolve faixas
@@ -502,7 +510,7 @@ npm run typecheck
 npm run build
 ```
 
-A validacao da versao 1.3.1 registrada inclui **192 testes**: 88 no backend e 104 no frontend.
+A validacao da versao 1.3.2 registrada inclui **193 testes**: 88 no backend e 105 no frontend.
 Os typechecks do backend e frontend, o build do frontend e `git diff --check` tambem passaram. Os
 testes verificam, entre outros pontos:
 
@@ -515,6 +523,8 @@ testes verificam, entre outros pontos:
 - conversao de unidades de CPU e memoria;
 - presets e persistencia local;
 - destaque de texto em logs;
+- fechamento do workspace em consultas explicitas, preservacao no auto-refresh silencioso e estado
+  inicial de Wrap lines;
 - confirmacao e repeticao do Search, incluindo isolamento do rascunho durante uma operacao ocupada;
 - aquisicao historica finita, snapshots NDJSON, indices, limites, cancelamento, TTL, janelas e geracoes obsoletas;
 - redimensionamento dos paineis.
@@ -528,9 +538,9 @@ Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegado
 - Nao ha retry, timeout ou circuit breaker explicito para chamadas Kubernetes.
 - O visualizador de logs nao reconecta automaticamente.
 - Durante a pausa do visualizador, as linhas recebidas sao descartadas; o buffer mantem no maximo 5.000 linhas.
-- A implementacao e os testes focados cobrem a repeticao do Search e a transicao historico-para-Live. A contagem de sockets/generations pela UI, a interacao de navegador/Electron, screen reader e os testes responsivos/high-zoom permanecem sem harness; rotacao/reinicio de containers, falhas de retry de limpeza e limpeza apos restart do desktop tambem permanecem sem verificacao ao vivo.
+- A validacao headless cobriu a launchpad em desktop, mobile e escala 2x, sem overflow horizontal visivel. A interacao de navegador/Electron para reset, auto-refresh, retry, presets, transporte obsoleto e linhas longas agrupadas nao foi concluida porque o alvo CDP ficou obsoleto; nao ha ferramenta de screen reader disponivel. Rotacao/reinicio de containers, falhas de retry de limpeza e limpeza apos restart do desktop tambem permanecem sem verificacao ao vivo.
 - Os limites de memoria decodificada em voo estao implementados e cobertos por testes: 4 MiB por fonte e 32 MiB por sessao. Nao foi executado um profiler de RSS, portanto esses limites nao sao uma medicao de RSS.
-- A validacao read-only de QA cobriu health, contexts, describe, fontes do WebSocket agregado e metricas nos contextos disponiveis; nenhuma mutacao, packaging ou release foi executada.
+- A validacao read-only de QA cobriu fan-out de pods, falha parcial, describe, metricas, evento `started` do WebSocket agregado e health `readOnly: true` nos contextos disponiveis; nenhuma mutacao, packaging, commit ou release foi executada. A identidade do cluster possui algumas permissoes capazes de mutacao, portanto a protecao read-only continua sendo aplicada pela aplicacao.
 - Presets e larguras de paineis ficam apenas no navegador atual.
 - Nao ha validacao runtime de schema alem das validacoes implementadas nas rotas.
 - O modo de producao precisa de um servidor/reverse proxy que entregue o frontend e encaminhe `/api` e WebSocket para o backend; o proxy automatico descrito acima e configurado apenas no servidor de desenvolvimento do Vite.

@@ -1,7 +1,7 @@
 # ops-union - Definicao tecnica do Electron
 
 > Documento de referência da arquitetura e do comportamento de comunicação do
-> ops-union. O checkout atual inclui a implementacao da especificacao v1.3.1;
+> ops-union. O checkout atual inclui a implementacao da especificacao v1.3.2;
 > isso nao representa uma release publicada.
 
 ## 1. Objetivo e escopo
@@ -624,16 +624,22 @@ capturados continuam sujeitos ao estado parcial ou ao motivo do limite.
 
 Os estados visiveis incluem preparacao, leitura, pronto, parcial, falha, cancelamento e expiracao,
 alem dos estados por fonte `queued`, `reading`, `indexing`, `ready`, `partial`, `failed` e
-`cancelled`. A validacao da versao 1.3.1 registrada inclui 192 testes automatizados, sendo 88 no
-backend e 104 no frontend. Os typechecks do backend e frontend, o build do frontend e `git diff
---check` tambem passaram.
+`cancelled`. A validacao da versao 1.3.2 registrada inclui 193 testes automatizados, sendo 88 no
+backend e 105 no frontend. Os typechecks do backend e frontend, o build do frontend, os
+diagnosticos e `git diff --check` tambem passaram. Os testes incluem o fechamento do workspace em
+consultas explicitas, a preservacao no auto-refresh silencioso e o default de `Wrap lines`.
 
-A validacao de integracao da versao 1.3.1 foi somente leitura: health, contexts, describe, fontes
-do WebSocket agregado e metricas foram exercitados nos contextos QA disponiveis, sem chamadas
-mutantes. Contagem de sockets/generations pela UI, interacao de navegador/Electron, screen reader,
-layouts responsivos/high-zoom, rotacao/reinicio, falha de retry de limpeza, limpeza apos restart do
-desktop e profiling de RSS permanecem sem verificacao. Os limites de memoria decodificada em voo,
-de 4 MiB por fonte e 32 MiB por sessao, foram testados; nao sao uma medicao de RSS.
+A validacao de integracao da versao 1.3.2 foi somente leitura: fan-out de pods, falha parcial,
+describe, metricas, evento `started` do WebSocket agregado e health `readOnly: true` foram
+exercitados nos contextos QA disponiveis, sem chamadas mutantes. A validacao headless cobriu a
+launchpad em desktop, mobile e escala 2x, sem overflow horizontal visivel. A interacao de
+navegador/Electron para reset, auto-refresh, retry, presets, transporte obsoleto e linhas longas
+agrupadas nao foi concluida porque o alvo CDP ficou obsoleto; nao ha ferramenta de screen reader
+disponivel. Rotacao/reinicio, falha de retry de limpeza, limpeza apos restart do desktop e
+profiling de RSS permanecem sem verificacao. A identidade do cluster possui algumas permissoes
+capazes de mutacao, portanto a protecao read-only continua sendo aplicada pela aplicacao. Os
+limites de memoria decodificada em voo, de 4 MiB por fonte e 32 MiB por sessao, foram testados;
+nao sao uma medicao de RSS.
 
 ## 8. Chamadas IPC do Electron
 
@@ -794,6 +800,12 @@ alvos para ignorar respostas antigas que chegarem depois de uma nova seleção.
 As requisições HTTP antigas não são abortadas no browser, mas suas respostas
 não conseguem sobrescrever o estado atual.
 
+Ao iniciar uma consulta explicita de pods, incluindo `Fetch pods`, `Refresh now`, retry ou
+aplicacao de preset, o renderer fecha o workspace de logs e limpa fontes, selecoes, modal,
+detalhes, selecao de linha e filtro da tabela antes de apresentar o novo resultado. Isso desmonta
+o `LogViewer` e preserva a limpeza do transporte agregado. O auto-refresh silencioso usa o caminho
+`refreshing` e preserva workspace, detalhes, filtro e estado de apresentacao.
+
 ### 9.5 Auto-refresh de pods
 
 Opções disponíveis:
@@ -840,6 +852,10 @@ Ao montar a aba Logs, o renderer mantem as fontes confirmadas e abre o WebSocket
   mudancas tambem cria uma nova sessao Live ou geracao History.
 4. Ao chegar ao fim History, a acao explicita de transicao fecha History e inicia uma nova sessao
   Live agregada.
+
+Cada nova montagem do workspace inicia com `Wrap lines` habilitado. O controle altera somente a
+apresentacao da sessao atual; nao persiste a escolha, reinicia o transporte nem altera agrupamento,
+Search, filtros ou estado Live/History.
 
 O endpoint legado por pod continua disponivel para compatibilidade. Pausar, limpar, filtrar,
 agrupar e alterar auto-scroll permanecem operacoes locais; filtros locais nao fazem o backend reler

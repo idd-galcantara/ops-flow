@@ -51,6 +51,7 @@ interface OpsFlowState {
   lastUpdatedAt?: number;
   /** True while an auto-refresh is refetching, so the table isn't blanked. */
   refreshing: boolean;
+  explicitQueryRevision: number;
 
   /** View controls. */
   grouping: GroupingMode;
@@ -104,6 +105,7 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
   podsLoading: false,
   hasQueried: false,
   refreshing: false,
+  explicitQueryRevision: 0,
   grouping: 'namespace',
   filter: '',
   refreshSeconds: 0,
@@ -294,7 +296,15 @@ export const useOpsFlowStore = create<OpsFlowState>((set, get) => ({
     const revision = get().configurationRevision;
     const targetSignature = targets.map(targetKey).join('|');
     if (targets.length === 0) return;
-    set(silent ? { refreshing: true, podsError: undefined } : { podsLoading: true, podsError: undefined });
+    if (silent) {
+      set({ refreshing: true, podsError: undefined });
+    } else {
+      set((state) => ({
+        podsLoading: true,
+        podsError: undefined,
+        explicitQueryRevision: state.explicitQueryRevision + 1,
+      }));
+    }
     try {
       const { pods, errors } = await fetchPods(targets);
       const latest = get();

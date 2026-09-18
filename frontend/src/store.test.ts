@@ -90,3 +90,27 @@ test('clearPresets persists an empty library and preserves current view state', 
     useOpsFlowStore.setState(original);
   }
 });
+
+test('explicit pod queries signal workspace reset while silent refresh does not', async () => {
+  const original = useOpsFlowStore.getState();
+  const originalFetch = globalThis.fetch;
+  useOpsFlowStore.setState({
+    targets: [{ cluster: 'qa', namespace: 'payments' }],
+    explicitQueryRevision: 10,
+    podsLoading: false,
+    refreshing: false,
+    filter: 'api',
+  });
+  globalThis.fetch = async () => new Response(JSON.stringify({ pods: [], errors: [] }), { status: 200 });
+
+  try {
+    await useOpsFlowStore.getState().loadPods();
+    assert.equal(useOpsFlowStore.getState().explicitQueryRevision, 11);
+    await useOpsFlowStore.getState().loadPods({ silent: true });
+    assert.equal(useOpsFlowStore.getState().explicitQueryRevision, 11);
+    assert.equal(useOpsFlowStore.getState().filter, 'api');
+  } finally {
+    globalThis.fetch = originalFetch;
+    useOpsFlowStore.setState(original);
+  }
+});

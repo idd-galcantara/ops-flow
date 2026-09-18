@@ -9,7 +9,7 @@ export interface LogDisplayState {
 
 export const DEFAULT_LOG_DISPLAY_STATE: LogDisplayState = {
   grouping: 'application',
-  wrapLines: false,
+  wrapLines: true,
 };
 
 export function setWrapLines(state: LogDisplayState, wrapLines: boolean): LogDisplayState {

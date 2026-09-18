@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ArrowRight, Bookmark, Layers, Moon, Search, ScrollText, Sun, Workflow } from 'lucide-react';
 import { EmptyState, ErrorState } from './components/Feedback';
 import { ApplicationLogSourceModal } from './components/ApplicationLogSourceModal';
@@ -145,6 +145,7 @@ export default function App() {
   const targetErrors = useOpsFlowStore((s) => s.targetErrors);
   const podsLoading = useOpsFlowStore((s) => s.podsLoading);
   const podsError = useOpsFlowStore((s) => s.podsError);
+  const explicitQueryRevision = useOpsFlowStore((s) => s.explicitQueryRevision);
   const hasQueried = useOpsFlowStore((s) => s.hasQueried);
   const grouping = useOpsFlowStore((s) => s.grouping);
   const setGrouping = useOpsFlowStore((s) => s.setGrouping);
@@ -239,10 +240,18 @@ export default function App() {
     void hydratePresets();
   }, [hydratePresets]);
 
-  // A normal query can replace the target set, so never keep stale pod details open.
-  useEffect(() => {
-    if (podsLoading) setSelected(null);
-  }, [podsLoading]);
+  useLayoutEffect(() => {
+    if (explicitQueryRevision === 0) return;
+    setSelected(null);
+    setSelectedPodKeys(new Set());
+    setSelectedLogPods([]);
+    setLogSources([]);
+    setLogConsultedContexts([]);
+    setLogModal(null);
+    setLogSelectionError(null);
+    setDetailsInitialTab('describe');
+    setFilter('');
+  }, [explicitQueryRevision, setFilter]);
 
   useEffect(() => {
     if (!logModal || !lastUpdatedAt || logModal.inventory.snapshotAt === lastUpdatedAt) return;
