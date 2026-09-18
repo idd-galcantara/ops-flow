@@ -15,7 +15,7 @@ import {
  */
 
 export interface ContextInfo {
-  /** Context name, e.g. "kubernetes-qa-tb". This is what the UI selects. */
+  /** Context name, e.g. "cluster-a". This is what the UI selects. */
   name: string;
   /** Cluster name the context points to. */
   cluster: string;

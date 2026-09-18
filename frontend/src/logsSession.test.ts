@@ -18,15 +18,15 @@ import {
 } from './logsSession';
 import type { HistoryQueryWindowEvent, HistoryWindowEvent, LogEventRecord, LogSource, NormalizedPod } from './types';
 
-const application = { key: 'label:billing', name: 'billing', source: 'label' as const, labelKey: 'app' as const };
-const pod = (name: string, cluster = 'qa'): NormalizedPod => ({
+const application = { key: 'label:application-b', name: 'application-b', source: 'label' as const, labelKey: 'app' as const };
+const pod = (name: string, cluster = 'cluster-a'): NormalizedPod => ({
   cluster,
-  namespace: 'payments',
+  namespace: 'namespace-a',
   name,
   status: 'Running',
   ready: '1/1',
   restarts: 0,
-  node: 'node-a',
+  node: 'node-1',
   ageSeconds: 30,
   containers: ['app', 'proxy'],
   application,
@@ -37,10 +37,10 @@ function record(source: LogSource, message: string, sequence: number): LogEventR
 }
 
 test('sourcesForPods preserves context and de-duplicates only identical tuples', () => {
-  const sources = sourcesForPods([pod('api'), pod('api'), pod('api', 'prod')]);
+  const sources = sourcesForPods([pod('api'), pod('api'), pod('api', 'cluster-b')]);
   assert.equal(sources.length, 4);
-  assert.equal(sources[0].sourceId, sourceIdFor({ cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' }));
-  assert.equal(sources[2].cluster, 'prod');
+  assert.equal(sources[0].sourceId, sourceIdFor({ cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' }));
+  assert.equal(sources[2].cluster, 'cluster-b');
 });
 
 test('dedupeSources keeps the first metadata for a source tuple', () => {
@@ -53,20 +53,20 @@ test('appendBoundedEvent discards oldest records and structured filtering search
   const first = record(source, 'first', 1);
   const second = record(source, 'second', 2);
   assert.deepEqual(appendBoundedEvent([first], second, 1), [second]);
-  assert.equal(logRecordMatches(second, 'billing'), true);
+  assert.equal(logRecordMatches(second, 'application-b'), true);
   assert.equal(logRecordMatches(second, 'not present'), false);
 });
 
 test('structured filters apply AND semantics and keep source options bounded', () => {
-  const qaSource: LogSource = { sourceId: 'qa', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
-  const prodSource: LogSource = { sourceId: 'prod', cluster: 'prod', namespace: 'payments', pod: 'api', container: 'app' };
-  const records = [record(qaSource, 'Billing started', 1), record(prodSource, 'Billing stopped', 2)];
-  assert.equal(filterLogRecords(records, { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' }).length, 1);
-  assert.deepEqual(logFilterValues([qaSource], records), { pods: ['api'], containers: ['app'], clusters: ['prod', 'qa'], namespaces: ['payments'] });
+  const sourceA: LogSource = { sourceId: 'cluster-a', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
+  const sourceB: LogSource = { sourceId: 'cluster-b', cluster: 'cluster-b', namespace: 'namespace-a', pod: 'api', container: 'app' };
+  const records = [record(sourceA, 'Example application started', 1), record(sourceB, 'Example application stopped', 2)];
+  assert.equal(filterLogRecords(records, { pod: 'api', container: 'app', cluster: 'cluster-a', namespace: 'namespace-a', text: 'started' }).length, 1);
+  assert.deepEqual(logFilterValues([sourceA], records), { pods: ['api'], containers: ['app'], clusters: ['cluster-a', 'cluster-b'], namespaces: ['namespace-a'] });
 });
 
 test('history cache rejects stale generations and evicts old windows by count', () => {
-  const source: LogSource = { sourceId: 'history-source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const source: LogSource = { sourceId: 'history-source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
   const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7 };
   const window = (startLine: number): HistoryWindowEvent => ({
     type: 'history.window',
@@ -93,7 +93,7 @@ test('history starts each source at the first captured record', () => {
 });
 
 test('history cache evicts from the opposite edge of the requested direction', () => {
-  const source: LogSource = { sourceId: 'history-source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const source: LogSource = { sourceId: 'history-source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
   const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7 };
   const window = (startLine: number): HistoryWindowEvent => ({
     type: 'history.window',
@@ -115,8 +115,8 @@ test('history cache evicts from the opposite edge of the requested direction', (
 });
 
 test('history cache merges short windows from duplicate source IDs by exact source key', () => {
-  const firstSource: LogSource = { sourceId: 'same-name', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
-  const secondSource: LogSource = { sourceId: 'same-name', cluster: 'prod', namespace: 'payments', pod: 'api', container: 'app' };
+  const firstSource: LogSource = { sourceId: 'same-name', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
+  const secondSource: LogSource = { sourceId: 'same-name', cluster: 'cluster-b', namespace: 'namespace-a', pod: 'api', container: 'app' };
   const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7 };
   const makeWindow = (sourceKey: string, source: LogSource, message: string): HistoryWindowEvent => ({
     type: 'history.window',
@@ -130,17 +130,17 @@ test('history cache merges short windows from duplicate source IDs by exact sour
     hasMoreAfter: true,
   });
   let cache = createHistoryWindowCache();
-  cache = addHistoryWindow(cache, makeWindow('qa-key', firstSource, 'qa line'), identity)!.cache;
-  cache = addHistoryWindow(cache, makeWindow('prod-key', secondSource, 'prod line'), identity)!.cache;
+  cache = addHistoryWindow(cache, makeWindow('cluster-a-key', firstSource, 'cluster-a line'), identity)!.cache;
+  cache = addHistoryWindow(cache, makeWindow('cluster-b-key', secondSource, 'cluster-b line'), identity)!.cache;
   const records = historyRecordsFromCache(cache);
-  assert.deepEqual(records.map((record) => record.event.message), ['prod line', 'qa line']);
-  assert.deepEqual(records.map((record) => record.event.sourceId), ['prod-key', 'qa-key']);
+  assert.deepEqual(records.map((record) => record.event.message), ['cluster-a line', 'cluster-b line']);
+  assert.deepEqual(records.map((record) => record.event.sourceId), ['cluster-a-key', 'cluster-b-key']);
   assert.equal(records[0].event.sequence, 1);
   assert.equal(records[1].event.sequence, 1);
 });
 
 test('history query cache indexes global positions, rejects stale queries, and reopens evicted ranges', () => {
-  const source: LogSource = { sourceId: 'history-source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const source: LogSource = { sourceId: 'history-source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
   const identity = { sessionId: 'session', snapshotId: 'snapshot', generation: 7, queryId: 'query-1' };
   const window = (startIndex: number, queryId = identity.queryId): HistoryQueryWindowEvent => ({
     type: 'history.query.window',

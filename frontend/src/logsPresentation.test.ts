@@ -4,7 +4,7 @@ import { DEFAULT_LOG_DISPLAY_STATE, logRecordKey, setWrapLines } from './logsPre
 import type { LogEventRecord } from './types';
 
 const record: LogEventRecord = {
-  source: { sourceId: 'source-a', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' },
+  source: { sourceId: 'source-a', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' },
   event: { type: 'line', sourceId: 'source-a', sequence: 7, timestamp: null, message: 'ready', bytes: 5 },
 };
 

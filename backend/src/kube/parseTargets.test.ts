@@ -4,12 +4,12 @@ import { parseTargets } from './parseTargets.js';
 
 test('parseTargets accepts a valid list and trims values', () => {
   const result = parseTargets({
-    targets: [{ cluster: ' kubernetes-qa-tb ', namespace: ' bank-overdraft ' }],
+    targets: [{ cluster: ' cluster-a ', namespace: ' namespace-a ' }],
   });
   assert.ok('targets' in result);
   if ('targets' in result) {
     assert.deepEqual(result.targets, [
-      { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
+      { cluster: 'cluster-a', namespace: 'namespace-a' },
     ]);
   }
 });
@@ -17,8 +17,8 @@ test('parseTargets accepts a valid list and trims values', () => {
 test('parseTargets accepts multiple namespaces on the same cluster', () => {
   const result = parseTargets({
     targets: [
-      { cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft' },
-      { cluster: 'kubernetes-qa-gt', namespace: 'bank-payments' },
+      { cluster: 'cluster-b', namespace: 'namespace-a' },
+      { cluster: 'cluster-b', namespace: 'namespace-b' },
     ],
   });
   assert.ok('targets' in result);

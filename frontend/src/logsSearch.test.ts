@@ -45,7 +45,7 @@ test('search state keeps every editable value pending until an atomic commit', (
 });
 
 test('transport projection excludes local filters and filter projection excludes transport values', () => {
-  const values = { ...DEFAULT_LOG_SEARCH_VALUES, period: 'custom' as const, customFrom: '2026-09-16T10:00', follow: false, filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'ready' } };
+  const values = { ...DEFAULT_LOG_SEARCH_VALUES, period: 'custom' as const, customFrom: '2026-09-16T10:00', follow: false, filters: { pod: 'api', container: 'app', cluster: 'cluster-a', namespace: 'namespace-a', text: 'ready' } };
   assert.deepEqual(transportSearchValues(values), { mode: 'live', period: 'custom', customFrom: '2026-09-16T10:00', customTo: '', follow: false });
   assert.deepEqual(localFilterSearchValues(values), values.filters);
   assert.deepEqual(Object.keys(transportSearchValues(values)).sort(), ['customFrom', 'customTo', 'follow', 'mode', 'period']);
@@ -95,7 +95,7 @@ test('Search jump requests cover Live, History, and local searches and consume o
 
 test('operation snapshots isolate candidate values, activation range, and source tuples', () => {
   const values = { ...DEFAULT_LOG_SEARCH_VALUES, filters: { ...DEFAULT_LOG_SEARCH_VALUES.filters, text: 'ready' } };
-  const source = { sourceId: 'source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app', application: { key: 'app', name: 'api', source: 'pod' as const } };
+  const source = { sourceId: 'source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app', application: { key: 'app', name: 'api', source: 'pod' as const } };
   const snapshot = createLogSearchOperationSnapshot(values, { from: '2026-09-16T09:55:00.000Z' }, [source], 4);
 
   values.filters.text = 'changed';
@@ -117,7 +117,7 @@ test('relative ranges are resolved into each activation snapshot at its own inst
 });
 
 test('activation helper models repeats, local confirmation, transport replacement, and immutable snapshots', () => {
-  const source = { sourceId: 'source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app', application: { key: 'app', name: 'api', source: 'pod' as const } };
+  const source = { sourceId: 'source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app', application: { key: 'app', name: 'api', source: 'pod' as const } };
   const applied = { ...DEFAULT_LOG_SEARCH_VALUES, filters: { ...DEFAULT_LOG_SEARCH_VALUES.filters } };
   const now = new Date('2026-09-16T10:00:00.000Z');
 
@@ -161,7 +161,7 @@ test('activation helper models repeats, local confirmation, transport replacemen
 
 test('activation helper rejects invalid custom ranges and keeps History completion independent from local confirmation', () => {
   const values = { ...DEFAULT_LOG_SEARCH_VALUES, filters: { ...DEFAULT_LOG_SEARCH_VALUES.filters } };
-  const source = { sourceId: 'source', cluster: 'qa', namespace: 'payments', pod: 'api', container: 'app' };
+  const source = { sourceId: 'source', cluster: 'cluster-a', namespace: 'namespace-a', pod: 'api', container: 'app' };
   const invalid = createLogSearchActivation({ draft: { ...values, period: 'custom' as const, customFrom: 'not-a-date' }, applied: values }, { isBusy: false, sources: [source], requestId: 7 });
   assert.deepEqual(invalid, { accepted: false, reason: 'invalid-range', error: 'Choose a valid UTC start date.' });
 

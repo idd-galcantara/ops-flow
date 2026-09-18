@@ -214,10 +214,10 @@ evidence until the named owner records focused validation results.
   - _Definition of done: the complete selection-to-workspace flow is validated without cluster
     mutation and with limitations explicitly recorded.
   - _Evidence (2026-09-16): `kubectl config get-contexts` listed both reference contexts;
-    `kubectl get pods --context kubernetes-qa-tb -n bank-overdraft` and the equivalent `qa-gt`
+    `kubectl get pods --context cluster-a -n namespace-a` and the equivalent `cluster-b`
     query returned live pods, each with the expected `2/2` readiness. GET `/api/contexts` returned
     both contexts without credentials, and GET `/api/health` returned `readOnly: true`. A real
-    aggregate WebSocket subscription with one `overdraft-bff` source per context was accepted,
+    aggregate WebSocket subscription with one `pod-app-a` source per context was accepted,
     emitted one line from each source, preserved both source IDs, and ended with `summary=completed`
     under limits; the real legacy per-pod WebSocket emitted `started`, `line`, and `end`. Unit tests
     cover consulted-context defaults/exclusion, repeated names, sidecar actions/fallback, stale and

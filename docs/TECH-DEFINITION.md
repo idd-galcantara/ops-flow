@@ -345,8 +345,8 @@ Consulta `KubeConfig.getContexts()` e retorna somente nomes e metadados público
 {
   "contexts": [
     {
-      "name": "kubernetes-qa-tb",
-      "cluster": "cluster-name",
+      "name": "cluster-a",
+      "cluster": "cluster-example",
       "namespace": "default"
     }
   ]
@@ -362,7 +362,7 @@ Request:
 
 ```json
 {
-  "clusters": ["kubernetes-qa-tb", "kubernetes-qa-gt"]
+  "clusters": ["cluster-a", "cluster-b"]
 }
 ```
 
@@ -372,8 +372,8 @@ Resposta:
 {
   "namespaces": [
     {
-      "name": "bank-overdraft",
-      "clusters": ["kubernetes-qa-gt", "kubernetes-qa-tb"]
+      "name": "namespace-a",
+      "clusters": ["cluster-b", "cluster-a"]
     }
   ],
   "errors": []
@@ -399,8 +399,8 @@ Request:
 ```json
 {
   "targets": [
-    { "cluster": "kubernetes-qa-tb", "namespace": "bank-overdraft" },
-    { "cluster": "kubernetes-qa-gt", "namespace": "bank-overdraft" }
+    { "cluster": "cluster-a", "namespace": "namespace-a" },
+    { "cluster": "cluster-b", "namespace": "namespace-a" }
   ]
 }
 ```
@@ -411,13 +411,13 @@ Resposta agregada:
 {
   "pods": [
     {
-      "cluster": "kubernetes-qa-tb",
-      "namespace": "bank-overdraft",
-      "name": "api-7c8d6f9c6b-x2abc",
+      "cluster": "cluster-a",
+      "namespace": "namespace-a",
+      "name": "pod-app-7c8d6f9c6b-x2abc",
       "status": "Running",
       "ready": "2/2",
       "restarts": 0,
-      "node": "node-a",
+      "node": "node-1",
       "ageSeconds": 3600,
       "containers": ["app", "istio-proxy"]
     }
@@ -703,10 +703,10 @@ O arquivo contém apenas:
 [
   {
     "id": "...",
-    "name": "QA overdraft",
+    "name": "Example preset",
     "description": "...",
     "targets": [
-      { "cluster": "kubernetes-qa-tb", "namespace": "bank-overdraft" }
+      { "cluster": "cluster-a", "namespace": "namespace-a" }
     ]
   }
 ]

@@ -11,19 +11,19 @@ function kubeConfigYaml(): string {
   return `apiVersion: v1
 kind: Config
 clusters:
-  - name: status-cluster
+  - name: cluster-status
     cluster:
-      server: https://status-cluster.example.test
+      server: https://cluster-status.example.test
 users:
   - name: status-user
     user:
       token: route-token-that-must-not-appear
 contexts:
-  - name: status-context
+  - name: context-status
     context:
-      cluster: status-cluster
+      cluster: cluster-status
       user: status-user
-current-context: status-context
+current-context: context-status
 `;
 }
 

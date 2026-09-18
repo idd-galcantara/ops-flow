@@ -5,8 +5,8 @@
 O ops-union é uma aplicação web **local** e **read-only** que oferece uma visão unificada de
 recursos Kubernetes (pods, describe, métricas e logs) agregados de **múltiplos clusters** e
 **múltiplos namespaces** simultaneamente. Substitui a repetição manual de `kubectl` por context,
-permitindo inspecionar, por exemplo, os pods de `bank-overdraft` em `kubernetes-qa-tb` e
-`kubernetes-qa-gt` numa única tela.
+permitindo inspecionar, por exemplo, os pods de `namespace-a` em `cluster-a` e
+`cluster-b` numa única tela.
 
 A unidade de consulta é o par `(cluster, namespace)`. O frontend envia uma lista flexível de
 alvos e o backend faz fan-out em paralelo usando o `~/.kube/config` do usuário.

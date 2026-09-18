@@ -1,7 +1,7 @@
 import type { Target } from './types';
 import { targetKey } from './types';
 
-/** A saved combination of targets, e.g. "QA overdraft = tb + gt". */
+/** A saved combination of targets, e.g. "Example preset = tb + gt". */
 export interface Preset {
   id: string;
   name: string;
@@ -281,7 +281,7 @@ export function createPreset(name: string, targets: Target[], description = ''):
   };
 }
 
-/** Short human summary, e.g. "2 clusters · bank-overdraft". */
+/** Short human summary, e.g. "2 clusters · namespace-a". */
 export function describePreset(preset: Preset): string {
   const clusters = new Set(preset.targets.map((t) => t.cluster));
   const namespaces = [...new Set(preset.targets.map((t) => t.namespace))];

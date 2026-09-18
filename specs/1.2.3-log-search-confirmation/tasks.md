@@ -156,8 +156,8 @@ focused validation results.
   - _Validation: documented read-only browser/network and, where available, live-cluster
     scenarios; no Kubernetes mutations or kubeconfig exposure.
   - _Evidence (2026-09-16): Read-only preconditions passed: `GET /api/health` reported
-    `readOnly: true`, `GET /api/contexts` returned `kubernetes-qa-tb` and `kubernetes-qa-gt`,
-    and `kubectl get pods` succeeded in `bank-overdraft` for both contexts. The live aggregate
+    `readOnly: true`, `GET /api/contexts` returned `cluster-a` and `cluster-b`,
+    and `kubectl get pods` succeeded in `namespace-a` for both contexts. The live aggregate
     WebSocket accepted two sources and completed with per-source cluster/namespace scope; a
     valid-plus-invalid source run returned a scoped source error and a completed summary rather
     than aborting the valid source. GET describe/metrics calls succeeded for a real pod, and the

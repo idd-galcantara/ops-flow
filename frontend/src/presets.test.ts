@@ -27,10 +27,10 @@ function installStorage(initial: Record<string, string> = {}): void {
 const STORAGE_KEY = 'ops-union.presets.v1';
 
 test('createPreset trims the name and copies the targets', () => {
-  const preset = createPreset('  QA overdraft  ', [
-    { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
+  const preset = createPreset('  Example preset  ', [
+    { cluster: 'cluster-a', namespace: 'namespace-a' },
   ], '  Shared QA investigation  ');
-  assert.equal(preset.name, 'QA overdraft');
+  assert.equal(preset.name, 'Example preset');
   assert.equal(preset.description, 'Shared QA investigation');
   assert.equal(preset.targets.length, 1);
   assert.ok(preset.id.length > 0);
@@ -44,21 +44,21 @@ test('createPreset gives distinct ids to presets made in the same tick', () => {
 
 test('savePresets and loadPresets round-trip', () => {
   installStorage();
-  const preset = createPreset('QA overdraft', [
-    { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
-    { cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft' },
+  const preset = createPreset('Example preset', [
+    { cluster: 'cluster-a', namespace: 'namespace-a' },
+    { cluster: 'cluster-b', namespace: 'namespace-a' },
   ]);
   savePresets([preset]);
   const loaded = loadPresets();
   assert.equal(loaded.length, 1);
-  assert.equal(loaded[0].name, 'QA overdraft');
+  assert.equal(loaded[0].name, 'Example preset');
   assert.equal(loaded[0].targets.length, 2);
 });
 
 test('savePresets and loadPresets preserve recent usage metadata', () => {
   installStorage();
-  const preset = createPreset('QA overdraft', [
-    { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
+  const preset = createPreset('Example preset', [
+    { cluster: 'cluster-a', namespace: 'namespace-a' },
   ]);
 
   savePresets(markPresetUsed([preset], preset.id, 4321));
@@ -134,11 +134,11 @@ test('loadPersistentPresets uses the desktop store when available', async () => 
 });
 
 test('describePreset summarizes clusters and namespaces', () => {
-  const sameNamespace = createPreset('qa', [
-    { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' },
-    { cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft' },
+  const sameNamespace = createPreset('Example preset', [
+    { cluster: 'cluster-a', namespace: 'namespace-a' },
+    { cluster: 'cluster-b', namespace: 'namespace-a' },
   ]);
-  assert.equal(describePreset(sameNamespace), '2 clusters · bank-overdraft');
+  assert.equal(describePreset(sameNamespace), '2 clusters · namespace-a');
 
   const single = createPreset('one', [{ cluster: 'c1', namespace: 'ns' }]);
   assert.equal(describePreset(single), '1 cluster · ns');
@@ -180,7 +180,7 @@ test('markPresetUsed updates only the selected preset with the supplied timestam
 
 test('serializePresets creates a portable versioned document without local metadata', () => {
   const preset = {
-    ...createPreset('  QA overdraft  ', [
+    ...createPreset('  Example preset  ', [
       { cluster: ' cluster-b ', namespace: ' ns-b ' },
       { cluster: 'cluster-a', namespace: 'ns-a' },
       { cluster: 'cluster-a', namespace: 'ns-a' },
@@ -193,7 +193,7 @@ test('serializePresets creates a portable versioned document without local metad
     version: 1,
     exportedAt: '2026-09-16T12:00:00.000Z',
     presets: [{
-      name: 'QA overdraft',
+      name: 'Example preset',
       description: 'Shared QA',
       targets: [
         { cluster: 'cluster-b', namespace: 'ns-b' },

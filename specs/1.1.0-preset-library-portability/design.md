@@ -35,10 +35,10 @@ The supported document shape is:
   "exportedAt": "2026-09-16T12:00:00.000Z",
   "presets": [
     {
-      "name": "QA overdraft",
+      "name": "Example preset",
       "description": "Clusters de QA",
       "targets": [
-        { "cluster": "kubernetes-qa-tb", "namespace": "bank-overdraft" }
+        { "cluster": "cluster-a", "namespace": "namespace-a" }
       ]
     }
   ]

@@ -165,7 +165,7 @@ export function NamespaceInput({
             }}
             onKeyDown={handleKeyDown}
             placeholder={
-              selectedClusters.length === 0 ? 'select a context first' : 'e.g. bank-overdraft'
+              selectedClusters.length === 0 ? 'select a context first' : 'e.g. namespace-a'
             }
             aria-label="Namespace"
             role="combobox"

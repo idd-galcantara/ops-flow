@@ -5,16 +5,16 @@ import type { NormalizedPod } from './types';
 
 function pod(overrides: Partial<NormalizedPod> = {}): NormalizedPod {
   return {
-    cluster: 'kubernetes-qa-tb',
-    namespace: 'bank-overdraft',
-    name: 'overdraft-service-1',
+    cluster: 'cluster-a',
+    namespace: 'namespace-a',
+    name: 'pod-service-1',
     status: 'Running',
     ready: '2/2',
     restarts: 0,
-    node: 'node-a',
+    node: 'node-1',
     ageSeconds: 3600,
     containers: ['app', 'istio-proxy'],
-    application: { key: 'label:billing', name: 'billing', source: 'label', labelKey: 'app' },
+    application: { key: 'label:application-b', name: 'application-b', source: 'label', labelKey: 'app' },
     ...overrides,
   };
 }
@@ -50,55 +50,55 @@ test('isDegraded detects containers that are not all ready', () => {
 test('matchesFilter searches across name, cluster, namespace, status, node and containers', () => {
   const p = pod();
   assert.equal(matchesFilter(p, ''), true, 'filtro vazio inclui tudo');
-  assert.equal(matchesFilter(p, 'overdraft-service'), true);
-  assert.equal(matchesFilter(p, 'qa-tb'), true);
+  assert.equal(matchesFilter(p, 'pod-service'), true);
+  assert.equal(matchesFilter(p, 'cluster-a'), true);
   assert.equal(matchesFilter(p, 'RUNNING'), true, 'case-insensitive');
   assert.equal(matchesFilter(p, 'istio'), true, 'busca em containers');
-  assert.equal(matchesFilter(p, 'node-a'), true);
+  assert.equal(matchesFilter(p, 'node-1'), true);
   assert.equal(matchesFilter(p, 'inexistente'), false);
-  assert.equal(matchesFilter(p, 'billing'), true);
+  assert.equal(matchesFilter(p, 'application-b'), true);
 });
 
 test('groupPods groups by namespace across clusters', () => {
   const pods = [
-    pod({ cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft', name: 'a' }),
-    pod({ cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft', name: 'b' }),
-    pod({ cluster: 'kubernetes-qa-gt', namespace: 'bank-payments', name: 'c' }),
+    pod({ cluster: 'cluster-a', namespace: 'namespace-a', name: 'a' }),
+    pod({ cluster: 'cluster-b', namespace: 'namespace-a', name: 'b' }),
+    pod({ cluster: 'cluster-b', namespace: 'namespace-b', name: 'c' }),
   ];
   const groups = groupPods(pods, 'namespace');
   assert.equal(groups.length, 2);
-  assert.equal(groups[0].key, 'bank-overdraft');
+  assert.equal(groups[0].key, 'namespace-a');
   assert.equal(groups[0].pods.length, 2, 'reúne os dois clusters no mesmo namespace');
-  assert.equal(groups[1].key, 'bank-payments');
+  assert.equal(groups[1].key, 'namespace-b');
   assert.equal(groups[1].pods.length, 1);
 });
 
 test('groupPods groups by cluster', () => {
   const pods = [
-    pod({ cluster: 'kubernetes-qa-tb', name: 'a' }),
-    pod({ cluster: 'kubernetes-qa-gt', name: 'b' }),
-    pod({ cluster: 'kubernetes-qa-gt', name: 'c' }),
+    pod({ cluster: 'cluster-a', name: 'a' }),
+    pod({ cluster: 'cluster-b', name: 'b' }),
+    pod({ cluster: 'cluster-b', name: 'c' }),
   ];
   const groups = groupPods(pods, 'cluster');
   assert.deepEqual(
     groups.map((g) => [g.key, g.pods.length]),
     [
-      ['kubernetes-qa-gt', 2],
-      ['kubernetes-qa-tb', 1],
+      ['cluster-a', 1],
+      ['cluster-b', 2],
     ],
   );
 });
 
 test('groupPods groups by application without merging context in each pod', () => {
   const pods = [
-    pod({ cluster: 'qa', name: 'billing-a', application: { key: 'label:billing', name: 'billing', source: 'label' } }),
-    pod({ cluster: 'prod', name: 'billing-b', application: { key: 'label:billing', name: 'billing', source: 'label' } }),
-    pod({ cluster: 'qa', name: 'checkout', application: { key: 'label:checkout', name: 'checkout', source: 'label' } }),
+    pod({ cluster: 'cluster-a', name: 'application-b-a', application: { key: 'label:application-b', name: 'application-b', source: 'label' } }),
+    pod({ cluster: 'cluster-b', name: 'application-b-b', application: { key: 'label:application-b', name: 'application-b', source: 'label' } }),
+    pod({ cluster: 'cluster-a', name: 'application-c', application: { key: 'label:application-c', name: 'application-c', source: 'label' } }),
   ];
   const groups = groupPods(pods, 'application');
   assert.deepEqual(groups.map((group) => [group.key, group.pods.map((item) => item.cluster)]), [
-    ['label:billing', ['prod', 'qa']],
-    ['label:checkout', ['qa']],
+    ['label:application-b', ['cluster-a', 'cluster-b']],
+    ['label:application-c', ['cluster-a']],
   ]);
 });
 
@@ -123,15 +123,15 @@ test('groupPods sorting is stable and deterministic', () => {
 });
 
 test('groupPods handles large namespaces without losing pods', () => {
-  // kube-system style volume: grouping must stay correct at scale, since the
+  // namespace-system style volume: grouping must stay correct at scale, since the
   // table paginates rendering rather than dropping rows.
   const many = Array.from({ length: 1339 }, (_, i) =>
-    pod({ namespace: 'kube-system', name: `sys-${i}` }),
+    pod({ namespace: 'namespace-system', name: `system-pod-${i}` }),
   );
-  const mixed = [...many, pod({ namespace: 'bank-overdraft', name: 'app-1' })];
+  const mixed = [...many, pod({ namespace: 'namespace-a', name: 'app-1' })];
   const groups = groupPods(mixed, 'namespace');
   assert.equal(groups.length, 2);
   const total = groups.reduce((sum, g) => sum + g.pods.length, 0);
   assert.equal(total, 1340, 'nenhum pod é perdido no agrupamento');
-  assert.equal(groups.find((g) => g.key === 'kube-system')?.pods.length, 1339);
+  assert.equal(groups.find((g) => g.key === 'namespace-system')?.pods.length, 1339);
 });

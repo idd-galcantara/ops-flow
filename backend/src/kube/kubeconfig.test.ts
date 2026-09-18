@@ -117,30 +117,30 @@ test('loadKubeConfig reports invalid content without exposing file content', () 
 });
 
 test('reloadKubeConfig preserves the previous config on failure and clears client caches on switch', () => {
-  const first = temporaryConfig(kubeConfigYaml('first-context', 'first-cluster'));
-  const second = temporaryConfig(kubeConfigYaml('second-context', 'second-cluster'));
+  const first = temporaryConfig(kubeConfigYaml('context-a', 'cluster-a'));
+  const second = temporaryConfig(kubeConfigYaml('context-b', 'cluster-b'));
   const previousEnvironment = process.env.KUBECONFIG;
   delete process.env.KUBECONFIG;
 
   try {
     resetKubeConfigCache();
     reloadKubeConfig(first.file);
-    const firstClient = coreClientForContext('first-context');
+    const firstClient = coreClientForContext('context-a');
     assert.deepEqual(listContexts(), [
-      { name: 'first-context', cluster: 'first-cluster', namespace: undefined },
+      { name: 'context-a', cluster: 'cluster-a', namespace: undefined },
     ]);
 
     assert.throws(() => reloadKubeConfig(path.join(first.directory, 'missing')));
     assert.deepEqual(listContexts(), [
-      { name: 'first-context', cluster: 'first-cluster', namespace: undefined },
+      { name: 'context-a', cluster: 'cluster-a', namespace: undefined },
     ]);
-    assert.equal(coreClientForContext('first-context'), firstClient);
+    assert.equal(coreClientForContext('context-a'), firstClient);
 
     reloadKubeConfig(second.file);
-    const secondClient = coreClientForContext('second-context');
+    const secondClient = coreClientForContext('context-b');
     assert.notEqual(secondClient, firstClient);
     assert.deepEqual(listContexts(), [
-      { name: 'second-context', cluster: 'second-cluster', namespace: undefined },
+      { name: 'context-b', cluster: 'cluster-b', namespace: undefined },
     ]);
   } finally {
     if (previousEnvironment === undefined) delete process.env.KUBECONFIG;
@@ -152,8 +152,8 @@ test('reloadKubeConfig preserves the previous config on failure and clears clien
 });
 
 test('persisted selected config takes precedence over KUBECONFIG on startup', () => {
-  const environment = temporaryConfig(kubeConfigYaml('environment-context', 'environment-cluster'));
-  const selected = temporaryConfig(kubeConfigYaml('selected-context', 'selected-cluster'));
+  const environment = temporaryConfig(kubeConfigYaml('context-env', 'cluster-env'));
+  const selected = temporaryConfig(kubeConfigYaml('context-selected', 'cluster-selected'));
   const previousEnvironment = process.env.KUBECONFIG;
   const previousSelected = process.env.OPS_FLOW_SELECTED_KUBECONFIG;
   process.env.KUBECONFIG = environment.file;
@@ -162,7 +162,7 @@ test('persisted selected config takes precedence over KUBECONFIG on startup', ()
   try {
     resetKubeConfigCache();
     assert.deepEqual(listContexts(), [
-      { name: 'selected-context', cluster: 'selected-cluster', namespace: undefined },
+      { name: 'context-selected', cluster: 'cluster-selected', namespace: undefined },
     ]);
     assert.equal(getKubeConfigStatus().source, 'selected');
   } finally {
@@ -177,7 +177,7 @@ test('persisted selected config takes precedence over KUBECONFIG on startup', ()
 });
 
 test('getKubeConfigStatus reports safe metadata for the selected config', () => {
-  const fixture = temporaryConfig(kubeConfigYaml('status-context', 'status-cluster'));
+  const fixture = temporaryConfig(kubeConfigYaml('context-status', 'cluster-status'));
   const previousEnvironment = process.env.KUBECONFIG;
   delete process.env.KUBECONFIG;
 

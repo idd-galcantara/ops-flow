@@ -179,10 +179,10 @@ A consulta e feita para todas as combinacoes selecionadas. Por exemplo, dois clu
 ```json
 {
   "targets": [
-    { "cluster": "kubernetes-qa-tb", "namespace": "bank-overdraft" },
-    { "cluster": "kubernetes-qa-tb", "namespace": "bank-payments" },
-    { "cluster": "kubernetes-qa-gt", "namespace": "bank-overdraft" },
-    { "cluster": "kubernetes-qa-gt", "namespace": "bank-payments" }
+    { "cluster": "cluster-a", "namespace": "namespace-a" },
+    { "cluster": "cluster-a", "namespace": "namespace-b" },
+    { "cluster": "cluster-b", "namespace": "namespace-a" },
+    { "cluster": "cluster-b", "namespace": "namespace-b" }
   ]
 }
 ```
@@ -276,8 +276,8 @@ Retorna os contextos disponiveis no kubeconfig:
 {
   "contexts": [
     {
-      "name": "kubernetes-qa-tb",
-      "cluster": "cluster-name",
+      "name": "cluster-a",
+      "cluster": "cluster-example",
       "namespace": "default"
     }
   ]
@@ -291,7 +291,7 @@ POST /api/namespaces
 Content-Type: application/json
 
 {
-  "clusters": ["kubernetes-qa-tb", "kubernetes-qa-gt"]
+  "clusters": ["cluster-a", "cluster-b"]
 }
 ```
 
@@ -301,8 +301,8 @@ Resposta consolidada:
 {
   "namespaces": [
     {
-      "name": "bank-overdraft",
-      "clusters": ["kubernetes-qa-tb", "kubernetes-qa-gt"]
+      "name": "namespace-a",
+      "clusters": ["cluster-a", "cluster-b"]
     }
   ],
   "errors": []
@@ -320,8 +320,8 @@ Content-Type: application/json
 {
   "targets": [
     {
-      "cluster": "kubernetes-qa-tb",
-      "namespace": "bank-overdraft"
+      "cluster": "cluster-a",
+      "namespace": "namespace-a"
     }
   ]
 }
@@ -333,13 +333,13 @@ O retorno contem os pods normalizados e erros independentes por alvo:
 {
   "pods": [
     {
-      "cluster": "kubernetes-qa-tb",
-      "namespace": "bank-overdraft",
-      "name": "api-7c8d6f9c6b-x2abc",
+      "cluster": "cluster-a",
+      "namespace": "namespace-a",
+      "name": "pod-app-7c8d6f9c6b-x2abc",
       "status": "Running",
       "ready": "2/2",
       "restarts": 0,
-      "node": "node-a",
+      "node": "node-1",
       "ageSeconds": 3600,
       "containers": ["app", "istio-proxy"]
     }

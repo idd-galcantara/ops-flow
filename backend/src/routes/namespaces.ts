@@ -4,7 +4,7 @@ import { safeErrorMessage } from '../kube/podsService.js';
 
 /**
  * POST /api/namespaces
- * Body: { clusters: ["kubernetes-qa-tb", ...] }
+ * Body: { clusters: ["cluster-a", ...] }
  * Returns { namespaces: [{ name, clusters }], errors: [{ cluster, message }] }
  *
  * A POST because the cluster list travels in the body, but this is a read-only

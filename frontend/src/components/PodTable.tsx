@@ -5,7 +5,7 @@ import type { GroupingMode, NormalizedPod } from '../types';
 
 /**
  * Rows rendered per group before requiring an explicit expand. Large namespaces
- * (kube-system can hold thousands of pods) would otherwise put tens of thousands
+ * (namespace-system can hold thousands of pods) would otherwise put tens of thousands
  * of nodes in the DOM and stall the browser.
  */
 const ROWS_PER_PAGE = 100;

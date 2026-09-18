@@ -4,9 +4,9 @@ import { serializeHistoryCancel, serializeHistoryQueryStart, serializeHistoryQue
 import type { LogSource } from './types';
 
 const source: LogSource = {
-  sourceId: 'qa/payments/api/app',
-  cluster: 'qa',
-  namespace: 'payments',
+  sourceId: 'cluster-a/namespace-a/api/app',
+  cluster: 'cluster-a',
+  namespace: 'namespace-a',
   pod: 'api',
   container: 'app',
 };
@@ -49,12 +49,12 @@ test('history query messages use session identity, filters, and global offsets',
   assert.deepEqual(JSON.parse(serializeHistoryQueryStart({
     sessionId: 'session',
     generation: 9,
-    filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' },
+    filters: { pod: 'api', container: 'app', cluster: 'cluster-a', namespace: 'namespace-a', text: 'started' },
   })), {
     type: 'history.query.start',
     sessionId: 'session',
     generation: 9,
-    filters: { pod: 'api', container: 'app', cluster: 'qa', namespace: 'payments', text: 'started' },
+    filters: { pod: 'api', container: 'app', cluster: 'cluster-a', namespace: 'namespace-a', text: 'started' },
   });
   assert.deepEqual(JSON.parse(serializeHistoryQueryWindow({ sessionId: 'session', generation: 9, queryId: 'query-1', offset: 1_000, limit: 500 })), {
     type: 'history.query.window',

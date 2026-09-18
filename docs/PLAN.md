@@ -9,8 +9,8 @@ O trabalho diário exige inspecionar o mesmo tipo de recurso espalhado por vári
 namespaces, hoje via `kubectl` repetido, um context de cada vez:
 
 ```
-kubectl get pods --context kubernetes-qa-tb -n bank-overdraft
-kubectl get pods --context kubernetes-qa-gt -n bank-overdraft
+kubectl get pods --context cluster-a -n namespace-a
+kubectl get pods --context cluster-b -n namespace-a
 ```
 
 Falta uma visão única, organizada e fácil, sem trocar de context na mão.
@@ -32,9 +32,9 @@ A unidade de consulta é o **par (cluster, namespace)**. O front envia uma lista
 ```json
 {
   "targets": [
-    { "cluster": "kubernetes-qa-tb", "namespace": "bank-overdraft" },
-    { "cluster": "kubernetes-qa-gt", "namespace": "bank-overdraft" },
-    { "cluster": "kubernetes-qa-gt", "namespace": "bank-payments" }
+    { "cluster": "cluster-a", "namespace": "namespace-a" },
+    { "cluster": "cluster-b", "namespace": "namespace-a" },
+    { "cluster": "cluster-b", "namespace": "namespace-b" }
   ]
 }
 ```
@@ -77,9 +77,9 @@ Browser (React)
    │  POST /api/pods { targets: [{cluster, namespace}...] }
    ▼
 Backend (Node)
-   ├── task → client(kubernetes-qa-tb, bank-overdraft) → pods
-   ├── task → client(kubernetes-qa-gt, bank-overdraft) → pods
-   └── task → client(kubernetes-qa-gt, bank-payments)  → pods
+   ├── task → client(cluster-a, namespace-a) → pods
+   ├── task → client(cluster-b, namespace-a) → pods
+   └── task → client(cluster-b, namespace-b)  → pods
    ▼  merge; cada item recebe { cluster, namespace }
 Browser: visão unificada com agrupamento (namespace | cluster | flat),
          filtros e drill-down → describe / métricas / logs (WebSocket)
@@ -124,7 +124,7 @@ Browser: visão unificada com agrupamento (namespace | cluster | flat),
 
 ### Fase 6 — Polimento
 - Auto-refresh/watch opcional da lista de pods.
-- Presets de alvos salvos localmente (ex.: "QA overdraft = tb+gt").
+- Presets de alvos salvos localmente (ex.: "Example preset = tb+gt").
 - Tratamento de erros e estados de loading consistentes.
 - **Entregável:** MVP fluido e usável no dia a dia.
 
@@ -151,7 +151,7 @@ embora o `kubectl` funcionasse com o mesmo kubeconfig. Causa raiz:
 
 - Os clusters apresentam **apenas o certificado folha**.
 - O `certificate-authority-data` do kubeconfig contém somente a CA **intermediária**
-  (ex.: `CN = kubernetes-qa-tb CA`).
+  (ex.: `CN = cluster-a CA`).
 - Os emissores acima dela — `SSL Kubernetes CA v1` → `PagPKI Root CA v1` — vivem no
   **trust store do sistema** (`/etc/ssl/certs/ca-certificates.crt`).
 - O `@kubernetes/client-node` monta seu agente HTTPS a partir do `caData` apenas, então
@@ -176,7 +176,7 @@ e expõe o sidecar na lista de containers para seleção de logs.
 
 ## Nota de escala: paginação de linhas na tabela
 
-Na validação da Fase 3, incluir `kube-system` entre os alvos trouxe **1339 pods** num
+Na validação da Fase 3, incluir `namespace-system` entre os alvos trouxe **1339 pods** num
 único grupo. Renderizar tudo de uma vez colocaria dezenas de milhares de nós no DOM e
 travaria a interface.
 
@@ -223,7 +223,7 @@ Métodos da API Kubernetes efetivamente usados no backend:
   namespace.
 
 Observação: o describe pode conter a palavra "secret" quando um event do cluster
-menciona o **nome** de um Secret (ex.: `SecretRotationComplete`). É o mesmo texto que
+menciona o **nome** de um Secret (ex.: `ResourceRotationComplete`). É o mesmo texto que
 `kubectl describe` exibe — nome de recurso, não conteúdo de segredo.
 
 ### 6.3 — Localhost: **conforme**

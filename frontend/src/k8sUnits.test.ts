@@ -17,7 +17,7 @@ test('parseCpuToCores understands the suffixes the metrics API returns', () => {
 });
 
 test('formatCpu renders millicores like kubectl top', () => {
-  // Real value observed on kubernetes-qa-tb; kubectl top showed 18m.
+  // Real value observed on cluster-a; kubectl top showed 18m.
   assert.equal(formatCpu('17071271n'), '17m');
   assert.equal(formatCpu('316755n'), '0.32m');
   assert.equal(formatCpu('500m'), '500m');

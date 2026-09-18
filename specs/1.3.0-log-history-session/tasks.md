@@ -61,8 +61,8 @@ open and are not claims that unsupported environment checks passed.
   limit, shutdown cleanup, `follow=false`, one aggregate socket, stale generations, and live
   compatibility.
 - Read-only integration passed health, contexts, namespaces/pods, describe, metrics, `kubectl top`,
-  and finite backend WebSocket logs in `kubernetes-qa-tb` and `kubernetes-qa-gt`, namespace
-  `bank-overdraft`. No mutating calls were made.
+  and finite backend WebSocket logs in `cluster-a` and `cluster-b`, namespace
+  `namespace-a`. No mutating calls were made.
 - QA did not run `/api/pods` POST fan-out or history WebSocket integration under policy. Both clusters
   had metrics, so missing-metrics behavior was unit-tested only. Browser/Electron interaction,
   rotation/restart, cleanup-retry failure, desktop restart cleanup, and RSS profiling remain

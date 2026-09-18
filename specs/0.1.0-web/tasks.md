@@ -56,7 +56,7 @@ são incrementais — cada uma constrói sobre a anterior.
   - _Requirements: 2.2, 2.3, 2.4_
 
 - [x] 6.2 Validar fan-out contra clusters reais
-  - `POST /api/pods` com `kubernetes-qa-tb` e `kubernetes-qa-gt` em `bank-overdraft`; conferir unificação e isolamento de falha.
+  - `POST /api/pods` com `cluster-a` e `cluster-b` em `namespace-a`; conferir unificação e isolamento de falha.
   - _Copilot agent: @ops-union-integration-qa_
   - _Requirements: 2.1, 2.2, 2.4_
 

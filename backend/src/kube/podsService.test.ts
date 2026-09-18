@@ -5,8 +5,8 @@ import { MAX_TAIL_LINES, normalizeTailLines } from './logsService.js';
 import { errorStatusCode, getPods, safeErrorMessage, type PodLister } from './podsService.js';
 import type { Target } from './types.js';
 
-const tb: Target = { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' };
-const gt: Target = { cluster: 'kubernetes-qa-gt', namespace: 'bank-overdraft' };
+const tb: Target = { cluster: 'cluster-a', namespace: 'namespace-a' };
+const gt: Target = { cluster: 'cluster-b', namespace: 'namespace-a' };
 
 function pod(name: string): V1Pod {
   return { metadata: { name }, spec: { containers: [{ name: 'app' }] } };
@@ -14,27 +14,27 @@ function pod(name: string): V1Pod {
 
 test('getPods aggregates pods from multiple targets, annotated with origin', async () => {
   const lister: PodLister = async (t) => {
-    if (t.cluster === 'kubernetes-qa-tb') return [pod('tb-1'), pod('tb-2')];
-    return [pod('gt-1')];
+    if (t.cluster === 'cluster-a') return [pod('pod-a'), pod('pod-b')];
+    return [pod('pod-c')];
   };
   const { pods, errors } = await getPods([tb, gt], lister);
   assert.equal(errors.length, 0);
   assert.equal(pods.length, 3);
-  const tbPods = pods.filter((p) => p.cluster === 'kubernetes-qa-tb');
-  const gtPods = pods.filter((p) => p.cluster === 'kubernetes-qa-gt');
+  const tbPods = pods.filter((p) => p.cluster === 'cluster-a');
+  const gtPods = pods.filter((p) => p.cluster === 'cluster-b');
   assert.equal(tbPods.length, 2);
   assert.equal(gtPods.length, 1);
-  assert.ok(pods.every((p) => p.namespace === 'bank-overdraft'));
+  assert.ok(pods.every((p) => p.namespace === 'namespace-a'));
 });
 
 test('getPods isolates a failing target and keeps the successful ones', async () => {
   const lister: PodLister = async (t) => {
-    if (t.cluster === 'kubernetes-qa-gt') throw new Error('cluster unreachable');
-    return [pod('tb-1')];
+    if (t.cluster === 'cluster-b') throw new Error('cluster unreachable');
+    return [pod('pod-a')];
   };
   const { pods, errors } = await getPods([tb, gt], lister);
   assert.equal(pods.length, 1);
-  assert.equal(pods[0].cluster, 'kubernetes-qa-tb');
+  assert.equal(pods[0].cluster, 'cluster-a');
   assert.equal(errors.length, 1);
   assert.deepEqual(errors[0].target, gt);
   assert.match(errors[0].message, /unreachable/);

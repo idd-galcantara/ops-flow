@@ -4,13 +4,13 @@ import type { V1Pod } from '@kubernetes/client-node';
 import { normalizePod } from './normalizePod.js';
 import type { Target } from './types.js';
 
-const target: Target = { cluster: 'kubernetes-qa-tb', namespace: 'bank-overdraft' };
+const target: Target = { cluster: 'cluster-a', namespace: 'namespace-a' };
 
 test('normalizePod annotates origin cluster and namespace', () => {
   const pod: V1Pod = { metadata: { name: 'api-1' } };
   const result = normalizePod(pod, target);
-  assert.equal(result.cluster, 'kubernetes-qa-tb');
-  assert.equal(result.namespace, 'bank-overdraft');
+  assert.equal(result.cluster, 'cluster-a');
+  assert.equal(result.namespace, 'namespace-a');
   assert.equal(result.name, 'api-1');
 });
 
@@ -18,7 +18,7 @@ test('normalizePod maps ready, restarts and node', () => {
   const pod: V1Pod = {
     metadata: { name: 'api-1' },
     spec: {
-      nodeName: 'node-a',
+      nodeName: 'node-1',
       containers: [{ name: 'app' }, { name: 'sidecar' }],
     },
     status: {
@@ -32,7 +32,7 @@ test('normalizePod maps ready, restarts and node', () => {
   const result = normalizePod(pod, target);
   assert.equal(result.ready, '1/2');
   assert.equal(result.restarts, 3);
-  assert.equal(result.node, 'node-a');
+  assert.equal(result.node, 'node-1');
   assert.equal(result.status, 'Running');
   assert.deepEqual(result.containers, ['app', 'sidecar']);
 });
@@ -136,7 +136,7 @@ test('normalizePod derives application identity by label precedence', () => {
       metadata: {
         name: 'api-1',
         labels: {
-          'app.kubernetes.io/name': 'payments',
+          'app.kubernetes.io/name': 'application-a',
           app: 'legacy',
           'k8s-app': 'kube',
         },
@@ -145,17 +145,17 @@ test('normalizePod derives application identity by label precedence', () => {
     target,
   );
   assert.deepEqual(result.application, {
-    key: 'label:app.kubernetes.io%2Fname:payments',
-    name: 'payments',
+    key: 'label:app.kubernetes.io%2Fname:application-a',
+    name: 'application-a',
     source: 'label',
     labelKey: 'app.kubernetes.io/name',
   });
 });
 
 test('normalizePod falls back through labels, controller owner, and pod', () => {
-  const app = normalizePod({ metadata: { name: 'api', labels: { app: 'payments' } } }, target);
+  const app = normalizePod({ metadata: { name: 'api', labels: { app: 'application-a' } } }, target);
   assert.equal(app.application.source, 'label');
-  assert.equal(app.application.name, 'payments');
+  assert.equal(app.application.name, 'application-a');
 
   const owner = normalizePod(
     {
@@ -163,18 +163,18 @@ test('normalizePod falls back through labels, controller owner, and pod', () => 
         name: 'api',
         ownerReferences: [
           { apiVersion: 'v1', kind: 'Pod', name: 'ignored', uid: '1', controller: false },
-          { apiVersion: 'apps/v1', kind: 'Deployment', name: 'payments', uid: '2', controller: true },
+          { apiVersion: 'apps/v1', kind: 'Deployment', name: 'application-a', uid: '2', controller: true },
         ],
       },
     },
     target,
   );
   assert.deepEqual(owner.application, {
-    key: 'ownerReference:Deployment:payments',
-    name: 'payments',
+    key: 'ownerReference:Deployment:application-a',
+    name: 'application-a',
     source: 'ownerReference',
     ownerKind: 'Deployment',
-    ownerName: 'payments',
+    ownerName: 'application-a',
   });
 
   const fallback = normalizePod({ metadata: { name: 'api' } }, target);

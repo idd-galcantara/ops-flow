@@ -161,6 +161,6 @@ WS   /api/pods/:cluster/:namespace/:pod/logs?container=&follow=&tailLines=
 ## Estratégia de testes
 
 - **Backend unit:** normalização de pod, coleta de falha parcial no fan-out, higienização de mensagens.
-- **Backend integração (QA agent):** contra clusters reais (`kubernetes-qa-tb`, `kubernetes-qa-gt`, ns `bank-overdraft`), validando fan-out, isolamento de falha e degradação de métricas.
+- **Backend integração (QA agent):** contra clusters reais (`cluster-a`, `cluster-b`, ns `namespace-a`), validando fan-out, isolamento de falha e degradação de métricas.
 - **Frontend:** render da tabela com dados mistos, troca de agrupamento, exibição de erro por alvo.
 - **Read-only:** revisão garantindo que nenhum método de mutação é chamado ou exposto.

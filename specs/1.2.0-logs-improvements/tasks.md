@@ -168,8 +168,8 @@ unrelated release and integration work remains unchecked.
   - _Dependencies: 4.1_
   - _Validation: documented read-only integration scenario with no cluster mutation.
   - _Evidence (2026-09-16): `kubectl config get-contexts -o name` exposed both
-    `kubernetes-qa-tb` and `kubernetes-qa-gt`; read-only `kubectl get pods` found running
-    reference pods in `bank-overdraft` in both contexts. A local `WS /api/logs` session used
+    `cluster-a` and `cluster-b`; read-only `kubectl get pods` found running
+    reference pods in `namespace-a` in both contexts. A local `WS /api/logs` session used
     one source from each context plus one missing pod: both valid sources emitted timestamped
     lines, the missing source returned a sanitized source error, and the aggregate summary was
     `completed`. Additional read-only WebSocket scenarios observed `to-reached`, aggregate
@@ -196,7 +196,7 @@ unrelated release and integration work remains unchecked.
     covered by focused tests. Backend/frontend tests passed (62/62 and 75/75), all workspace
     typechecks and builds passed, and `git diff --check` passed.
   - _Limitation: the active kubeconfig grants some mutation verbs according to
-    `kubectl auth can-i --list` on `kubernetes-qa-tb`; this audit confirms the application code
+    `kubectl auth can-i --list` on `cluster-a`; this audit confirms the application code
     does not invoke them, not that the cluster credentials are least-privilege. Local POST
     routes for kubeconfig selection and read queries remain outside Kubernetes mutation scope.
 

@@ -5,8 +5,8 @@ import { applicationKeys, canConfirmLogSelection, hasSingleApplicationKey, modal
 import type { NormalizedPod } from './types';
 
 const pod: NormalizedPod = {
-  cluster: 'qa', namespace: 'payments', name: 'api', status: 'Running', ready: '1/1', restarts: 0,
-  node: 'node-a', ageSeconds: 1, containers: ['app'], application: { key: 'label:billing', name: 'billing', source: 'label', labelKey: 'app' },
+  cluster: 'cluster-a', namespace: 'namespace-a', name: 'api', status: 'Running', ready: '1/1', restarts: 0,
+  node: 'node-1', ageSeconds: 1, containers: ['app'], application: { key: 'label:application-b', name: 'application-b', source: 'label', labelKey: 'app' },
 };
 
 test('modal confirmation is blocked for empty, loading, or stale inventory', () => {
@@ -20,11 +20,11 @@ test('modal confirmation is blocked for empty, loading, or stale inventory', () 
 });
 
 test('application log flow accepts one application key and blocks mixed identities', () => {
-  const sameApplication = [pod, { ...pod, name: 'worker' }];
-  const otherApplication = { ...pod, application: { ...pod.application, key: 'label:checkout', name: 'checkout' } };
+  const sameApplication = [pod, { ...pod, name: 'pod-worker-a' }];
+  const otherApplication = { ...pod, application: { ...pod.application, key: 'label:application-c', name: 'application-c' } };
 
-  assert.deepEqual([...applicationKeys(sameApplication)], ['label:billing']);
+  assert.deepEqual([...applicationKeys(sameApplication)], ['label:application-b']);
   assert.equal(hasSingleApplicationKey(sameApplication), true);
-  assert.deepEqual([...applicationKeys([...sameApplication, otherApplication])].sort(), ['label:billing', 'label:checkout']);
+  assert.deepEqual([...applicationKeys([...sameApplication, otherApplication])].sort(), ['label:application-b', 'label:application-c']);
   assert.equal(hasSingleApplicationKey([...sameApplication, otherApplication]), false);
 });

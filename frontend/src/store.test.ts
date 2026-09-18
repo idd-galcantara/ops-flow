@@ -95,7 +95,7 @@ test('explicit pod queries signal workspace reset while silent refresh does not'
   const original = useOpsFlowStore.getState();
   const originalFetch = globalThis.fetch;
   useOpsFlowStore.setState({
-    targets: [{ cluster: 'qa', namespace: 'payments' }],
+    targets: [{ cluster: 'cluster-a', namespace: 'namespace-a' }],
     explicitQueryRevision: 10,
     podsLoading: false,
     refreshing: false,

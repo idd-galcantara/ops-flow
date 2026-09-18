@@ -40,7 +40,7 @@ export function readSystemRoots(bundlePaths: string[] = SYSTEM_CA_BUNDLES): stri
  *
  * Why this is needed: clusters here present only their leaf certificate, and the
  * kubeconfig's `certificate-authority-data` holds just the *intermediate* CA
- * (e.g. "kubernetes-qa-tb CA"). The issuers above it ("SSL Kubernetes CA v1" ->
+ * (e.g. "cluster-a CA"). The issuers above it ("SSL Kubernetes CA v1" ->
  * "PagPKI Root CA v1") live in the OS trust store. `@kubernetes/client-node`
  * builds its HTTPS agent from `caData` alone, so the chain cannot be verified
  * and TLS fails with UNABLE_TO_GET_ISSUER_CERT.

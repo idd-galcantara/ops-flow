@@ -28,7 +28,7 @@ export function hasExactNamespaceMatch(namespaces: NamespaceInfo[], value: strin
  *
  * Ranking favours what the user is most likely reaching for:
  * 1. exact match
- * 2. prefix match ("bank-ov" -> "bank-overdraft" before "autbank-overdraft")
+ * 2. prefix match ("namespace-" -> "namespace-a" before "namespace-other")
  * 3. namespaces present in every selected cluster, since a unified view across
  *    clusters is the whole point of ops-union
  * 4. alphabetical, so the list is stable

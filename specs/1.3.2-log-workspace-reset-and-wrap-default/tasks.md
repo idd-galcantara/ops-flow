@@ -81,7 +81,7 @@ authorizes Kubernetes mutation, packaging, publishing, commit, or release activi
     release action occurred.
   - Validation: read-only integration QA record with environment, commands, evidence counts, and
     explicit unavailable checks.
-  - Evidence: read-only QA used contexts `kubernetes-qa-tb` and `kubernetes-qa-gt`; fan-out returned
+  - Evidence: read-only QA used contexts `cluster-a` and `cluster-b`; fan-out returned
     17 annotated pods, partial failure preserved valid results plus a scoped error, describe and
     metrics returned successfully, the log WebSocket emitted `started`, and backend health reported
     `readOnly: true`. No mutation, package, publish, commit, or release action occurred. The cluster

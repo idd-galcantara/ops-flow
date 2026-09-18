@@ -8,41 +8,41 @@ import {
 } from './namespaceSuggestions';
 import type { NamespaceInfo } from './types';
 
-const TWO_CLUSTERS = ['kubernetes-qa-tb', 'kubernetes-qa-gt'];
+const TWO_CLUSTERS = ['cluster-a', 'cluster-b'];
 
 function ns(name: string, clusters: string[] = TWO_CLUSTERS): NamespaceInfo {
   return { name, clusters };
 }
 
 test('suggestNamespaces filters by substring, case-insensitively', () => {
-  const all = [ns('bank-overdraft'), ns('bank-payments'), ns('kube-system')];
-  const result = suggestNamespaces(all, 'BANK', 2);
+  const all = [ns('namespace-a'), ns('namespace-b'), ns('system-namespace')];
+  const result = suggestNamespaces(all, 'NAMESPACE-', 2);
   assert.deepEqual(
     result.map((n) => n.name),
-    ['bank-overdraft', 'bank-payments'],
+    ['namespace-a', 'namespace-b'],
   );
 });
 
 test('suggestNamespaces ranks an exact match first', () => {
-  const all = [ns('bank-overdraft-batch'), ns('bank-overdraft')];
-  const result = suggestNamespaces(all, 'bank-overdraft', 2);
-  assert.equal(result[0].name, 'bank-overdraft');
+  const all = [ns('namespace-batch'), ns('namespace-a')];
+  const result = suggestNamespaces(all, 'namespace-a', 2);
+  assert.equal(result[0].name, 'namespace-a');
 });
 
 test('suggestNamespaces ranks prefix matches above mid-string matches', () => {
-  // Typing "bank-ov" should reach bank-overdraft before autbank-overdraft.
-  const all = [ns('autbank-overdraft'), ns('bank-overdraft')];
-  const result = suggestNamespaces(all, 'bank-ov', 2);
-  assert.equal(result[0].name, 'bank-overdraft');
+  // Typing "namespace-" should reach namespace-a before namespace-other.
+  const all = [ns('namespace-other'), ns('namespace-a')];
+  const result = suggestNamespaces(all, 'namespace-', 2);
+  assert.equal(result[0].name, 'namespace-a');
 });
 
 test('suggestNamespaces favours namespaces present in every selected cluster', () => {
   const all = [
-    ns('bank-a', ['kubernetes-qa-tb']),
-    ns('bank-b', TWO_CLUSTERS),
+    ns('namespace-c', ['cluster-a']),
+    ns('namespace-d', TWO_CLUSTERS),
   ];
-  const result = suggestNamespaces(all, 'bank', 2);
-  assert.equal(result[0].name, 'bank-b', 'o que existe em ambos vem primeiro');
+  const result = suggestNamespaces(all, 'namespace', 2);
+  assert.equal(result[0].name, 'namespace-d', 'o que existe em ambos vem primeiro');
   assert.equal(result[0].inAllClusters, true);
   assert.equal(result[1].inAllClusters, false);
 });
@@ -73,8 +73,8 @@ test('suggestNamespaces marks nothing as inAllClusters when no cluster is select
 });
 
 test('hasExactNamespaceMatch only accepts a known namespace', () => {
-  const all = [ns('bank-overdraft')];
-  assert.equal(hasExactNamespaceMatch(all, ' bank-overdraft '), true);
+  const all = [ns('namespace-a')];
+  assert.equal(hasExactNamespaceMatch(all, ' namespace-a '), true);
   assert.equal(hasExactNamespaceMatch(all, 'bank'), false);
   assert.equal(hasExactNamespaceMatch(all, 'unknown'), false);
 });
@@ -87,7 +87,7 @@ test('canUseManualNamespace only enables fallback after empty discovery fails', 
 });
 
 test('describeNamespaceReach reports coverage only for multi-cluster selections', () => {
-  const suggestion = { ...ns('bank-overdraft'), inAllClusters: true };
+  const suggestion = { ...ns('namespace-a'), inAllClusters: true };
   assert.equal(describeNamespaceReach(suggestion, 2), '2 of 2');
   assert.equal(describeNamespaceReach(suggestion, 1), '', 'nothing to compare with 1 cluster');
 });
