@@ -15,11 +15,15 @@ adds a new request/session boundary without inventing a second set of user-facin
 
 ## Ownership boundaries
 
-- `frontend/src/components/LogViewer.tsx` owns Search activation, draft/applied snapshots, busy
-  presentation, mode-specific completion, and session replacement triggers.
+- `frontend/src/components/LogViewer.tsx` owns Search activation, draft/applied snapshots, the
+  immutable operation snapshot, busy presentation, mode-specific completion, and session
+  replacement triggers.
 - `frontend/src/logsSearch.ts` remains the authority for value equality, cloning, transport/local
   projections, and pending-change classification. Equality SHALL no longer determine whether an
   idle Search button is actionable by itself.
+- `frontend/src/logsRange.ts` remains the authority for resolving the candidate range at the
+  activation boundary. The resolved range belongs to the operation snapshot and is not recalculated
+  later from mutable draft state.
 - Existing Live session effects and History generation/query helpers remain authorities for socket
   cleanup, source identity, stale response rejection, window caches, and local/History filtering.
 - The aggregate backend protocol owner SHALL verify that an explicit repeat can produce a distinct
@@ -44,7 +48,16 @@ interface LogSearchState {
 
 type SearchOperation =
   | { status: 'idle' }
-  | { status: 'applying'; requestId: number; kind: 'live' | 'history' | 'local' };
+  | {
+      status: 'applying';
+      requestId: number;
+      kind: 'live' | 'history' | 'local';
+      snapshot: {
+        values: LogSearchValues;
+        range: { from?: string; to?: string };
+        sources: LogSource[];
+      };
+    };
 ```
 
 The exact implementation names may differ. The important invariant is that `searchHasPendingChanges`
@@ -52,10 +65,13 @@ answers only whether draft values differ from applied values, while `SearchOpera
 whether duplicate activation must be blocked. An idle Search button is enabled when the workspace
 has a valid confirmed source scope, whether or not `searchHasPendingChanges` is true.
 
-Every activation captures a request snapshot and receives a monotonically increasing request
-identity. The request identity is used to reject completion or data from a superseded session. It
-is distinct from the user-visible search values so two equal-value activations can still be
-separate operations.
+Every accepted activation validates and captures a request snapshot containing cloned candidate
+values, the UTC range resolved at that activation, and the exact selected source tuples. It receives
+a monotonically increasing request identity. The request identity is used to reject completion or
+data from a superseded session and is distinct from the user-visible search values, so two
+equal-value activations can still be separate operations. A Live repeat uses a new WebSocket because
+the backend accepts one initial subscription per socket; a History repeat uses a new socket and a
+new positive generation.
 
 ## Activation matrix
 
@@ -63,7 +79,7 @@ separate operations.
 | --- | --- | --- | --- | --- |
 | Different, local filters only | Live | Commit and refilter retained events | Same socket | Local projection committed |
 | Different, transport/mode values | Live | Commit and replace session | One new aggregate session | Session accepted or terminal error |
-| Different, local filters only | History | Commit and start the confirmed query | Same History generation | Initial query ready or error |
+| Different, local filters only | History | Commit and start the confirmed query | Same History generation | Search returns idle after commit; query/window loading remains independent |
 | Different, transport/mode values | History | Commit and create new generation | One new History session | Initial result boundary or error |
 | Equal, Repeat Search | Live | Refresh current confirmed request | One new aggregate session | Session accepted or terminal error |
 | Equal, Repeat Search | History | Recreate finite snapshot/query | One new History generation | Initial result boundary or error |
@@ -105,12 +121,15 @@ The button's busy state represents the main Search operation, not every later vi
 - For Live, busy ends when the replacement aggregate session is accepted, or when connection/error
   handling makes that operation terminal. Existing source-level streaming and summary behavior
   remains visible through the connection status.
-- For History, busy continues through snapshot preparation until the terminal snapshot status and
-  initial confirmed query readiness establish a usable result boundary. Initial window requests may
-  have their own loading indicator; later scrolling/window loading must not be confused with Search
-  activation.
+- For a transport-affecting History Search, busy continues through snapshot preparation until the
+  current-generation `history.terminal` and `history.query.ready` events establish the initial
+  result boundary. The first and later window requests have their own loading indicator; they must
+  not be confused with Search activation.
 - For filter-only Live confirmation, no transport busy indicator is needed. The local projection
   commits synchronously from the applied filter snapshot.
+- For filter-only History confirmation, the Search operation returns idle after the applied filter
+  snapshot is committed. The existing `history.query.start`, `history.query.ready`, and window
+  loading states continue independently on the same History generation.
 - Invalid input never becomes busy. Safe errors and validation feedback remain separate from the
   idle/busy visual treatment.
 
@@ -146,6 +165,8 @@ Search after busy ends applies that prepared draft or repeats the then-current a
 - An equal-value Repeat Search is intentionally different from a pending local-filter-only Search:
   it refreshes the session/generation so a relative Live range can acquire newer records and a
   History snapshot can be recreated.
+- Each operation uses its captured source tuples and resolved range. The effect or transport layer
+  must not read later draft values when starting or completing that operation.
 - `Pause`, retained-event `Clear`, `Group`, and `Wrap lines` remain immediate/presentation actions
   and never become Search operations.
 - The selected source tuple list is captured for each operation. Changes to source selection remain
@@ -164,6 +185,8 @@ Search after busy ends applies that prepared draft or repeats the then-current a
 - Assert busy blocks duplicate activation, while draft edits during busy remain pending.
 - Assert busy clears at Live acceptance/error and History initial result readiness/error, without
   clearing it prematurely at History acceptance alone.
+- Assert filter-only History confirmation returns the main Search control to idle after commit while
+  its same-generation query/window loading remains independent.
 - Assert invalid custom ranges preserve the prior applied state and never show busy.
 - Assert accessible name, `aria-busy`, status announcement, focus, stable geometry, and responsive
   behavior in idle, pending, and busy states.
@@ -175,6 +198,8 @@ Search after busy ends applies that prepared draft or repeats the then-current a
 - Count aggregate Live sessions and History generations under repeated, rapid, failed, and partial
   operations using read-only fixtures or read-only cluster checks.
 - Verify stale Live events and History windows cannot cross a repeat boundary.
-- Run workspace tests, typechecks, builds, and `git diff --check` after implementation.
+- Run `npm test`, `npm run typecheck`, and `npm run build` in `frontend/`, reuse the backend test
+  and typecheck commands when the protocol check requires them, and run `git diff --check` after
+  implementation.
 - Record unavailable browser, Electron, screen-reader, or cluster checks as limitations rather than
   implementation evidence.

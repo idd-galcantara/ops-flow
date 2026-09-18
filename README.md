@@ -25,6 +25,8 @@ Cada resultado preserva sua origem. Assim, pods com o mesmo nome em clusters dif
 - Consulta CPU e memoria por container quando o `metrics-server` esta disponivel.
 - Transmite logs de containers por WebSocket, com modos Live e History, follow, pausa, filtro e
   auto-scroll.
+- Mantem o Search repetivel: com mudancas pendentes ele confirma o novo rascunho; sem mudancas ele
+  inicia uma nova sessao Live ou geracao History.
 - Atualiza a lista manualmente ou em intervalos de 10, 30 ou 60 segundos.
 - Persiste presets de alvos localmente: no `localStorage` em modo web e no diretório de dados do
   Electron em modo desktop.
@@ -55,8 +57,8 @@ flowchart LR
 
 ## Downloads
 
-A release publicada referenciada por estes links e a **v0.5.1**. A implementacao de History da
-especificacao v1.3.0 esta no checkout atual; esta auditoria nao publica uma nova release. Os
+A release publicada referenciada por estes links e a **v0.5.1**. A implementacao da especificacao
+v1.3.1 esta no checkout atual; esta auditoria nao publica uma nova release. Os
 instaladores e pacotes estao disponiveis na pagina de
 [releases do GitHub](https://github.com/idd-galcantara/ops-union/releases/tag/v0.5.1).
 
@@ -383,7 +385,11 @@ Ao fechar a conexao do navegador, o backend interrompe a requisicao de logs no c
 
 O workspace de logs usa o WebSocket agregado `WS /api/logs` para manter um unico transporte para
 as fontes confirmadas. O modo inicial e Live. O modo History precisa ser escolhido e aplicado pelo
-botao **Search**; ele usa uma unica captura finita com os limites tecnicos configurados.
+botao **Search**; ele usa uma unica captura finita com os limites tecnicos configurados. O Search
+permanece habilitado quando o workspace esta ocioso: mudancas pendentes sao confirmadas, e uma
+ativacao sem mudancas repete a operacao. Em Live isso substitui a sessao agregada e resolve faixas
+relativas no momento da ativacao; em History isso cria uma nova geracao. Enquanto a operacao esta
+ocupada, novas ativacoes sao bloqueadas, mas os controles de rascunho continuam editaveis.
 
 No modo History, o backend faz uma leitura finita `follow=false` por tupla exata
 `(cluster, namespace, pod, container)`, grava um snapshot temporario NDJSON com indice de linha,
@@ -437,7 +443,7 @@ ops-union/
 ├── docs/
 │   ├── DESIGN-SYSTEM.md
 │   ├── DISTRIBUTION.md
-│   ├── PLANO.md
+│   ├── PLAN.md
 │   ├── README-release-linux.md
 │   ├── README-release-mac.md
 │   ├── README-release-windows.md
@@ -492,8 +498,9 @@ npm run typecheck
 npm run build
 ```
 
-A validacao atual registrada inclui **174 testes**: 83 no backend e 91 no frontend. A suite focada
-de historico/protocolo/WebSocket do backend passou com **13/13** testes. Os testes verificam, entre outros pontos:
+A validacao da versao 1.3.1 registrada inclui **191 testes**: 88 no backend e 103 no frontend.
+Os typechecks do backend e frontend, o build do frontend e `git diff --check` tambem passaram. Os
+testes verificam, entre outros pontos:
 
 - normalizacao de pods e status;
 - parsing e validacao de alvos;
@@ -504,6 +511,7 @@ de historico/protocolo/WebSocket do backend passou com **13/13** testes. Os test
 - conversao de unidades de CPU e memoria;
 - presets e persistencia local;
 - destaque de texto em logs;
+- confirmacao e repeticao do Search, incluindo isolamento do rascunho durante uma operacao ocupada;
 - aquisicao historica finita, snapshots NDJSON, indices, limites, cancelamento, TTL, janelas e geracoes obsoletas;
 - redimensionamento dos paineis.
 
@@ -516,9 +524,9 @@ Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegado
 - Nao ha retry, timeout ou circuit breaker explicito para chamadas Kubernetes.
 - O visualizador de logs nao reconecta automaticamente.
 - Durante a pausa do visualizador, as linhas recebidas sao descartadas; o buffer mantem no maximo 5.000 linhas.
-- A implementacao e os testes focados cobrem a transicao historico-para-Live; ainda nao houve interacao de navegador/Electron nem integracao de WebSocket History em QA. Rotacao/reinicio de containers, falhas de retry de limpeza e limpeza apos restart do desktop tambem permanecem sem verificacao ao vivo.
+- A implementacao e os testes focados cobrem a repeticao do Search e a transicao historico-para-Live. A contagem de sockets/generations pela UI, a interacao de navegador/Electron, screen reader e os testes responsivos/high-zoom permanecem sem harness; rotacao/reinicio de containers, falhas de retry de limpeza e limpeza apos restart do desktop tambem permanecem sem verificacao ao vivo.
 - Os limites de memoria decodificada em voo estao implementados e cobertos por testes: 4 MiB por fonte e 32 MiB por sessao. Nao foi executado um profiler de RSS, portanto esses limites nao sao uma medicao de RSS.
-- A validacao de QA nao executou o fan-out `POST /api/pods`; como os dois clusters de QA tinham metricas disponiveis, o comportamento de ausencia de metricas foi validado somente por testes unitarios.
+- A validacao read-only de QA cobriu health, contexts, describe, fontes do WebSocket agregado e metricas nos contextos disponiveis; nenhuma mutacao, packaging ou release foi executada.
 - Presets e larguras de paineis ficam apenas no navegador atual.
 - Nao ha validacao runtime de schema alem das validacoes implementadas nas rotas.
 - O modo de producao precisa de um servidor/reverse proxy que entregue o frontend e encaminhe `/api` e WebSocket para o backend; o proxy automatico descrito acima e configurado apenas no servidor de desenvolvimento do Vite.
@@ -534,6 +542,6 @@ Nao ha lint configurado no momento, nem uma suite end-to-end que abra o navegado
 
 ## Documentacao adicional
 
-- [Plano de desenvolvimento](docs/PLANO.md)
+- [Plano de desenvolvimento](docs/PLAN.md)
 - [Design system](docs/DESIGN-SYSTEM.md)
 - [Especificacoes](specs/)

@@ -1,7 +1,7 @@
 # ops-union - Definicao tecnica do Electron
 
 > Documento de referência da arquitetura e do comportamento de comunicação do
-> ops-union. O checkout atual inclui a implementacao de History da especificacao v1.3.0;
+> ops-union. O checkout atual inclui a implementacao da especificacao v1.3.1;
 > isso nao representa uma release publicada.
 
 ## 1. Objetivo e escopo
@@ -595,6 +595,11 @@ conjunto exato de fontes confirmado pelo Search e nao abre um socket por pod, fo
   unica leitura finita `follow=false` por fonte, grava um snapshot NDJSON temporario com indice de
   linha/offset/timestamp e responde com progresso, estados por fonte, limites e janelas
   `history.window`.
+- O Search permanece habilitado quando o workspace esta ocioso. Com valores pendentes, confirma o
+  rascunho; com valores iguais, repete explicitamente a operacao. A repeticao Live substitui a
+  sessao agregada e resolve faixas relativas no momento da ativacao; a repeticao History cria uma
+  nova geracao. Ativacoes duplicadas sao bloqueadas enquanto a operacao esta ocupada, sem impedir
+  edicoes no rascunho.
 - Uma janela carrega `sessionId`, `snapshotId`, `generation`, fonte, cursores e indicacao de mais
   dados. Geracoes, cursores, tamanho de frame e taxa de requisicoes sao validados; respostas de
   geracao obsoleta sao rejeitadas ou ignoradas.
@@ -613,18 +618,16 @@ capturados continuam sujeitos ao estado parcial ou ao motivo do limite.
 
 Os estados visiveis incluem preparacao, leitura, pronto, parcial, falha, cancelamento e expiracao,
 alem dos estados por fonte `queued`, `reading`, `indexing`, `ready`, `partial`, `failed` e
-`cancelled`. A validacao registrada inclui 174 testes automatizados, sendo 83 no backend e 91 no
-frontend; a suite focada de historico/protocolo/WebSocket passou com 13/13. Typechecks e builds do
-backend, frontend e desktop, o build da raiz e `git diff --check` tambem passaram.
+`cancelled`. A validacao da versao 1.3.1 registrada inclui 191 testes automatizados, sendo 88 no
+backend e 103 no frontend. Os typechecks do backend e frontend, o build do frontend e `git diff
+--check` tambem passaram.
 
-A validacao de integracao foi somente leitura: health, contexts, namespaces/pods, describe,
-metricas, `kubectl top` e logs finitos pelo WebSocket do backend passaram nos dois clusters de QA,
-sem chamadas mutantes. O QA nao executou o fan-out `POST /api/pods` nem a integracao de WebSocket
-History; como os dois clusters tinham metricas, a ausencia de metricas foi coberta somente por
-testes unitarios. Interacao de navegador/Electron, rotacao/reinicio, falha de retry de limpeza,
-limpeza apos restart do desktop e profiling de RSS permanecem sem verificacao. Os limites de
-memoria decodificada em voo, de 4 MiB por fonte e 32 MiB por sessao, foram testados; nao sao uma
-medicao de RSS.
+A validacao de integracao da versao 1.3.1 foi somente leitura: health, contexts, describe, fontes
+do WebSocket agregado e metricas foram exercitados nos contextos QA disponiveis, sem chamadas
+mutantes. Contagem de sockets/generations pela UI, interacao de navegador/Electron, screen reader,
+layouts responsivos/high-zoom, rotacao/reinicio, falha de retry de limpeza, limpeza apos restart do
+desktop e profiling de RSS permanecem sem verificacao. Os limites de memoria decodificada em voo,
+de 4 MiB por fonte e 32 MiB por sessao, foram testados; nao sao uma medicao de RSS.
 
 ## 8. Chamadas IPC do Electron
 
@@ -827,7 +830,8 @@ Ao montar a aba Logs, o renderer mantem as fontes confirmadas e abre o WebSocket
 1. Live envia uma assinatura agregada e acrescenta eventos ao buffer limitado.
 2. History envia `history.start`, acompanha progresso/estado e solicita janelas limitadas ao redor
   da faixa virtualizada.
-3. Trocar o modo, intervalo ou fontes pelo Search substitui a sessao anterior.
+3. Trocar o modo, intervalo ou fontes pelo Search substitui a sessao anterior; repetir o Search sem
+  mudancas tambem cria uma nova sessao Live ou geracao History.
 4. Ao chegar ao fim History, a acao explicita de transicao fecha History e inicia uma nova sessao
   Live agregada.
 

@@ -18,53 +18,88 @@ activity.
 
 ## Tasks
 
-- [ ] 1.3.1-RS-1 Confirm the repeat boundary and current protocol capability.
+- [x] 1.3.1-RS-1 Confirm the repeat boundary and current protocol capability.
   - Review the existing Live replacement-session effect, History generation/query protocol, stale
     response guards, source-selection boundary, and completion events.
-  - Record whether an equal-value activation can be represented with the existing client/session
-    contract and identify the smallest missing trigger or identity field, if any.
+  - Record that the backend accepts one initial subscription per WebSocket, so Live repeat is
+    represented by one new socket and History repeat by one new socket plus one positive generation.
+  - Record whether the current client can capture the candidate values, activation-time resolved
+    range, and exact source tuples as one operation snapshot, identifying the smallest missing
+    trigger or identity field, if any.
   - Confirm that no new backend search endpoint, Kubernetes permission, or mutation path is needed.
-  - Validation: source review plus existing backend protocol/history/WebSocket/security tests.
+  - _Copilot agent: @ops-union-backend_
+  - Requirements: RS-1.4 through RS-1.8, RS-2.2, RS-5.3 through RS-5.5.
+  - Validation: source review plus `cd backend && npm test && npm run typecheck` and existing
+    protocol/history/WebSocket/security tests.
+  - Evidence: backend review confirmed one initial subscription per Live WebSocket, monotonic
+    History generations, and existing `history.terminal`/`history.query.ready` events. Backend
+    tests: 88 passed; typecheck passed; no backend change required.
 
-- [ ] 1.3.1-RS-2 Implement independent draft and operation state.
+- [x] 1.3.1-RS-2 Implement independent draft and operation state.
   - Keep draft/applied equality as the pending-change classifier.
   - Make idle Search availability independent of pending-change equality.
-  - Capture each activation in a distinct request/session attempt so equal-value activations cannot
-    be collapsed by state equality.
+  - Capture each accepted activation in an immutable snapshot with a monotonic request identity,
+    activation-time resolved range, and exact source tuples so equal-value activations cannot be
+    collapsed by state equality or later draft edits.
   - Ignore duplicate activation while the current operation is busy.
-  - Validation: focused frontend state tests for idle enabled, equal-value repeat, rapid duplicate,
-    invalid input, and draft edits during busy.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-1.1 through RS-1.3, RS-1.6 through RS-1.8, RS-2.1 through RS-2.2, RS-2.6 through RS-2.8, RS-3.1 through RS-3.2, RS-4.3 through RS-4.5.
+  - Validation: focused frontend state/component tests for idle enabled, equal-value repeat, rapid
+    duplicate, invalid input, snapshot immutability, and draft edits during busy.
+  - Evidence: `logsSearch.ts` now drives activation decisions and immutable snapshots used by
+    `LogViewer.tsx`; focused frontend tests cover repeat, busy rejection, invalid ranges, and
+    draft/snapshot isolation.
 
-- [ ] 1.3.1-RS-3 Preserve the activation matrix.
+- [x] 1.3.1-RS-3 Preserve the activation matrix.
   - Keep pending local-filter-only Search local for Live and compatible with the existing History
     query path.
   - Keep pending transport/mode changes as one replacement Live session or History generation.
   - Make equal-value Repeat Search refresh Live with a new aggregate session and History with a new
     generation.
   - Preserve selected source tuples and applied filters across the repeat operation.
-  - Validation: frontend tests asserting socket/session/generation counts, retained-event behavior,
-    relative-range refresh, and stale result rejection.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-1.4 through RS-1.6, RS-2.3 through RS-2.5, RS-5.1 through RS-5.5.
+  - Validation: frontend tests asserting one new socket/session or generation per repeat, no new
+    socket/generation for filter-only confirmation, retained-event behavior, activation-time
+    relative-range refresh, exact source scope, and stale result rejection.
+  - Evidence: activation helper tests cover Live/History repeats, local-only versus transport
+    decisions, activation-time relative ranges, and exact source snapshot cloning. Existing
+    history cache tests cover stale generation rejection. Browser-level transport counting is
+    unavailable because the repository has no browser/Electron test harness.
 
-- [ ] 1.3.1-RS-4 Implement mode-specific busy completion and feedback.
+- [x] 1.3.1-RS-4 Implement mode-specific busy completion and feedback.
   - Keep Search busy through Live acceptance or terminal failure.
   - Keep History Search busy through terminal snapshot status and initial query readiness, without
     conflating later virtualized window loading with the main Search operation.
   - Return Search to enabled idle state after completion, partial readiness, cancellation, or safe
     failure according to the applicable contract.
+  - Keep filter-only History confirmation idle after commit while same-generation query/window
+    loading uses its independent indicator; do not clear Search busy at `history.accepted` for a
+    transport-affecting History operation.
   - Preserve validation errors, connection status, History status, partial results, and safe error
     wording.
-  - Validation: focused tests for completion events, premature History acceptance, partial/error
-    outcomes, `aria-busy`, status text, and stable button geometry.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-2.7 through RS-2.8, RS-3.3 through RS-3.7, RS-4.1 through RS-4.3, RS-5.2.
+  - Validation: focused tests for `accepted` versus terminal/query-ready completion events,
+    premature History acceptance, filter-only History loading, partial/error/cancel outcomes,
+    `aria-busy`, status text, and stable button geometry.
+  - Evidence: `LogViewer.tsx` retains History transport busy until terminal plus query-ready,
+    keeps filter-only confirmation independent, and exposes `aria-busy`, loader, and status text.
+    Pure lifecycle tests passed; browser geometry/focus checks remain unavailable.
 
-- [ ] 1.3.1-RS-5 Run frontend regression and accessibility checks.
+- [x] 1.3.1-RS-5 Run frontend regression and accessibility checks.
   - Cover draft/applied semantics, local AND filters, Follow, ranges, Pause, retained-event Clear,
     Group, Wrap lines, source scope, keyboard activation, visible focus, and responsive layouts.
   - Verify Search remains usable at desktop, tablet, mobile, and high-zoom widths without overlap or
     page-level horizontal overflow.
-  - Validation: frontend test suite, typecheck, build, browser/Electron checks where available,
-    and `git diff --check`.
+  - _Copilot agent: @ops-union-frontend_
+  - Requirements: RS-4.1 through RS-4.6, RS-5.1 through RS-5.4, RA-1.1 through RA-1.5.
+  - Validation: `cd frontend && npm test && npm run typecheck && npm run build`, browser/Electron
+    checks where available, and `git diff --check`.
+  - Evidence: frontend tests: 103 passed; typecheck and build passed; `git diff --check` passed.
+    No browser, Electron, screen-reader, or responsive/high-zoom harness is present.
 
-- [ ] 1.3.1-RS-6 Run read-only integration and security evidence.
+- [x] 1.3.1-RS-6 Run read-only integration and security evidence.
   - Exercise one initial Search followed by same-value Live Repeat Search and same-value History
     Repeat Search.
   - Verify one replacement session or generation per idle activation, no duplicate operation under
@@ -72,8 +107,13 @@ activity.
     and preserved source scope.
   - Confirm no Kubernetes mutation, credential/kubeconfig exposure, new permission, packaging, or
     release action occurred.
-  - Validation: read-only integration QA record with environment, commands, evidence counts, and
-    explicit unavailable checks.
+  - _Copilot agent: @ops-union-integration-qa_
+  - Requirements: IQ-1.1 through IQ-1.5, RS-5.3 through RS-5.5.
+  - Validation: read-only integration QA record with environment, commands, operation/socket/
+    generation counts, evidence, and explicit unavailable checks.
+  - Evidence: read-only QA exercised health/contexts/describe, real aggregate WebSocket sources,
+    and metrics against available QA contexts; no Kubernetes mutation, packaging, or release was
+    performed. Repeat UI transport counts and browser accessibility checks remain unavailable.
 
 ## Validation record
 
@@ -81,11 +121,12 @@ Implementation owners SHALL append evidence here only after the corresponding ta
 validated. A checked task requires concrete test or source evidence and SHALL record residual
 limitations; it does not imply release approval.
 
-- Frontend focused tests: pending.
-- Backend protocol/history/WebSocket/security tests: pending compatibility review.
-- Frontend typecheck/build: pending.
-- Backend typecheck/build: pending if backend remains unchanged; otherwise pending.
-- Read-only integration and accessibility evidence: pending.
+- Frontend focused tests: 103 passed; typecheck and build passed.
+- Backend protocol/history/WebSocket/security tests: 88 passed; typecheck passed; no backend change.
+- Frontend typecheck/build: passed.
+- Backend typecheck/build: typecheck passed; backend source unchanged.
+- Read-only integration and accessibility evidence: read-only QA passed for available API/WebSocket
+  and cluster checks; browser/Electron/screen-reader/responsive checks unavailable.
 - Packaging, publishing, commit, and release: intentionally out of scope for this handoff.
 
 ## Definition of done

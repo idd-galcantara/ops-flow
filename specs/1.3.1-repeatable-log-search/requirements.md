@@ -34,6 +34,12 @@ Kubernetes mutation.
   a meaningful refresh request, not a no-op.
 - **Search operation:** The transport or query work started by a Search activation and tracked by
   the busy state until its defined completion or failure.
+- **Operation snapshot:** The immutable values captured by one accepted Search activation: the
+   candidate search values, the resolved UTC range, and the selected source tuples. Draft edits
+   after activation are not part of this snapshot.
+- **History initial result boundary:** The current-generation `history.terminal` event followed by
+   the current-generation `history.query.ready` event for the confirmed filters. A later
+   `history.query.window` or source window request has its existing independent loading state.
 - **Transport values:** Mode, period, custom range, and Follow values that determine a session or
   history generation.
 - **Local filters:** Pod, container, cluster, namespace, and message-text predicates over the
@@ -58,13 +64,19 @@ Kubernetes mutation.
    the refreshed session or query is established.
 7. Search SHALL remain unavailable only while the current Search operation is active, not merely
    because no draft changes are pending.
+8. Each accepted Search activation SHALL capture one immutable operation snapshot before starting
+   transport or query work. The snapshot SHALL include the candidate values being confirmed, the
+   resolved UTC range calculated at activation time, and the exact selected source tuples in their
+   existing order after existing deduplication. Later draft or source-selection changes SHALL not
+   mutate that operation.
 
 ### RS-2 - Draft, applied, and operation boundaries
 
 1. The existing draft/applied distinction SHALL remain authoritative for edits to mode, period,
    custom range, Follow, and local filters.
-2. A Search operation SHALL capture one coherent request snapshot at activation. Draft edits made
-   while that operation is busy SHALL not alter the request already in progress.
+2. A Search operation SHALL capture one coherent request snapshot at activation, including the
+   resolved range and source tuples described in RS-1.8. Draft edits made while that operation is
+   busy SHALL not alter the request already in progress.
 3. A pending transport change SHALL replace the active Live session or History generation exactly
    once when Search is confirmed.
 4. A pending local-filter-only change SHALL apply the filters using the existing local or History
@@ -76,6 +88,9 @@ Kubernetes mutation.
 7. A failed, cancelled, closed, or superseded operation SHALL clear the busy state according to
    its existing safe error/transition behavior and SHALL leave the user able to initiate a new
    Search when no replacement operation remains active.
+8. Initial workspace setup and subsequent History window/query-window loads SHALL not be counted
+   as a second Search operation. Their existing connection or window loading states SHALL remain
+   independent of the serialized Search-operation busy state.
 
 ### RS-3 - Busy state and completion semantics
 
@@ -85,13 +100,16 @@ Kubernetes mutation.
    one replacement session or History generation.
 3. In Live mode, the Search operation SHALL remain busy until the replacement aggregate session is
    accepted, or until a terminal connection/error outcome makes the operation no longer active.
-4. In History mode, the Search operation SHALL remain busy until the new generation reaches a
-   usable initial result boundary: the history capture has emitted its terminal status and the
-   initial confirmed query is ready, or a failure/cancellation outcome ends the operation.
-   Subsequent virtualized window loading SHALL use its existing independent loading state.
-5. A local-filter-only confirmation SHALL complete its Search operation after the applied filter
-   state is committed and the existing local result projection is updated; it SHALL not show a
-   transport loading state.
+4. In History mode, a transport-affecting Search operation SHALL remain busy until the new
+   generation reaches the History initial result boundary: the current-generation
+   `history.terminal` status and the current-generation `history.query.ready` event for the
+   confirmed filters, or a failure/cancellation outcome ends the operation. The first and later
+   virtualized window loads SHALL use their existing independent loading state.
+5. A local-filter-only confirmation SHALL complete its main Search operation after the applied
+   filter state is committed. In Live mode the retained-event projection is updated synchronously;
+   in History mode the existing query and window requests continue through their independent
+   History loading state. A filter-only confirmation SHALL not show the transport Search busy
+   state or open another Live socket or History generation.
 6. When the operation reaches its defined completion or failure outcome, the Search control SHALL
    return to its idle, enabled state even if the draft has no pending changes.
 7. The busy state SHALL not prevent the workspace from reporting partial results, safe errors,
